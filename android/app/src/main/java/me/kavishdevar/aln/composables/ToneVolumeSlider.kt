@@ -2,6 +2,7 @@ package me.kavishdevar.aln.composables
 
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -24,11 +24,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.kavishdevar.aln.AirPodsService
@@ -48,7 +49,7 @@ fun ToneVolumeSlider(service: AirPodsService, sharedPreferences: SharedPreferenc
         sharedPreferences.edit().putInt("tone_volume", sliderValue.floatValue.toInt()).apply()
     }
 
-    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5
+    val isDarkTheme = isSystemInDarkTheme()
 
     val trackColor = if (isDarkTheme) Color(0xFFB3B3B3) else Color(0xFF929491)
     val activeTrackColor = if (isDarkTheme) Color(0xFF007AFF) else Color(0xFF3C6DF5)
@@ -132,4 +133,10 @@ fun ToneVolumeSlider(service: AirPodsService, sharedPreferences: SharedPreferenc
             modifier = Modifier.padding(end = 4.dp)
         )
     }
+}
+
+@Preview
+@Composable
+fun ToneVolumeSliderPreview() {
+    ToneVolumeSlider(AirPodsService(), sharedPreferences = LocalContext.current.getSharedPreferences("preview", 0))
 }
