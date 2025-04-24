@@ -712,8 +712,12 @@ private slots:
             LOG_INFO("Already connected to the phone");
             return;
         }
-
         QBluetoothAddress phoneAddress(PHONE_MAC_ADDRESS);
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        if (!env.value("PHONE_MAC_ADDRESS").isEmpty())
+        {
+            QBluetoothAddress phoneAddress = QBluetoothAddress(env.value("PHONE_MAC_ADDRESS"));
+        }
         phoneSocket = new QBluetoothSocket(QBluetoothServiceInfo::L2capProtocol);
         connect(phoneSocket, &QBluetoothSocket::connected, this, [this]() {
             LOG_INFO("Connected to phone");
@@ -965,7 +969,13 @@ int main(int argc, char *argv[]) {
             socket.waitForBytesWritten(500);
             socket.disconnectFromServer();
         }
-        app.exit(); // exit already a process running
+        else
+        {
+            // Failed connection, log and abort
+            LOG_ERROR("Failed to connect to the original app instance");
+            LOG_DEBUG("Socket error: " << socket.errorString());
+        }
+        app.exit(); // exit; process already running
         return 0;
     }
     app.setQuitOnLastWindowClosed(false);
@@ -989,9 +999,18 @@ int main(int argc, char *argv[]) {
     QLocalServer server;
     QLocalServer::removeServer("app_server");
 
-    server.listen("app_server");
+    if (!server.listen("app_server"))
+    {
+        LOG_ERROR("Unable to start the listening server");
+        LOG_DEBUG("Server error: " << server.errorString());
+    }
+    else
+    {
+        LOG_DEBUG("Server started, waiting for connections...");
+    }
     QObject::connect(&server, &QLocalServer::newConnection, [&]() {
         QLocalSocket* socket = server.nextPendingConnection();
+        // Handles Proper Connection
         QObject::connect(socket, &QLocalSocket::readyRead, [socket, &engine]() {
             QString msg = socket->readAll();
             // Check if the message is "reopen", if so, trigger onOpenApp function
@@ -1006,7 +1025,22 @@ int main(int argc, char *argv[]) {
                     engine.loadFromModule("linux", "Main");
                 }
             }
+            else
+            {
+                LOG_ERROR("Unknown message received: " << msg);
+            }
             socket->disconnectFromServer();
+        });
+        // Handles connection errors
+        QObject::connect(socket, &QLocalSocket::errorOccurred, [socket]() {
+            LOG_ERROR("Failed to connect to the duplicate app instance");
+            LOG_DEBUG("Connection error: " << socket->errorString());
+        });
+        
+        // Handle server-level errors
+        QObject::connect(&server, &QLocalServer::serverError, [&]() {
+            LOG_ERROR("Server failed to accept a new connection");
+            LOG_DEBUG("Server error: " << server.errorString());
         });
     });
     return app.exec();
