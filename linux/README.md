@@ -1,4 +1,4 @@
-# AirPods Linux Native (ALN)
+# ALN Linux app
 
 A native Linux application to control your AirPods, with support for:
 
