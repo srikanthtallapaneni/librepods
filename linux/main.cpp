@@ -954,9 +954,10 @@ private:
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
-    // Check if app is already open
     QSharedMemory sharedMemory;
     sharedMemory.setKey("TcpServer-Key");
+
+    // Check if app is already open
     if(sharedMemory.create(1) == false) 
     {
         LOG_INFO("Another instance already running! Opening App Window Instead");
@@ -968,15 +969,15 @@ int main(int argc, char *argv[]) {
             socket.flush();
             socket.waitForBytesWritten(500);
             socket.disconnectFromServer();
+            app.exit(); // exit; process already running
+            return 0;
         }
         else
         {
-            // Failed connection, log and abort
-            LOG_ERROR("Failed to connect to the original app instance");
+            // Failed connection, log and open the app (assume it's not running)
+            LOG_ERROR("Failed to connect to the original app instance. Assuming it is not running.");
             LOG_DEBUG("Socket error: " << socket.errorString());
         }
-        app.exit(); // exit; process already running
-        return 0;
     }
     app.setQuitOnLastWindowClosed(false);
 
@@ -1042,6 +1043,11 @@ int main(int argc, char *argv[]) {
             LOG_ERROR("Server failed to accept a new connection");
             LOG_DEBUG("Server error: " << server.errorString());
         });
+    });
+
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
+        LOG_DEBUG("Application is about to quit. Cleaning up...");
+        sharedMemory.detach();
     });
     return app.exec();
 }
