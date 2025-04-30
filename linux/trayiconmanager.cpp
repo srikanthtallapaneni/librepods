@@ -56,12 +56,27 @@ void TrayIconManager::updateConversationalAwareness(bool enabled)
 
 void TrayIconManager::setupMenuActions()
 {
+    // Open action
+    QAction *openAction = new QAction("Open", trayMenu);
+    trayMenu->addAction(openAction);
+    connect(openAction, &QAction::triggered, qApp, [this](){emit openApp();});
+
+    // Settings Menu
+
+    QAction *settingsMenu = new QAction("Settings", trayMenu);
+    trayMenu->addAction(settingsMenu);
+    connect(settingsMenu, &QAction::triggered, qApp, [this](){emit openSettings();});
+
+    trayMenu->addSeparator();
+
     // Conversational Awareness Toggle
     caToggleAction = new QAction("Toggle Conversational Awareness", trayMenu);
     caToggleAction->setCheckable(true);
     trayMenu->addAction(caToggleAction);
     connect(caToggleAction, &QAction::triggered, this, [this](bool checked)
             { emit conversationalAwarenessToggled(checked); });
+
+    trayMenu->addSeparator();
 
     // Noise Control Options
     noiseControlGroup = new QActionGroup(trayMenu);
@@ -81,6 +96,8 @@ void TrayIconManager::setupMenuActions()
         connect(action, &QAction::triggered, this, [this, mode = option.second]()
                 { emit noiseControlChanged(mode); });
     }
+
+    trayMenu->addSeparator();
 
     // Quit action
     QAction *quitAction = new QAction("Quit", trayMenu);

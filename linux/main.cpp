@@ -1,5 +1,6 @@
 #include <QSettings>
-
+#include <QLocalServer>
+#include <QLocalSocket>
 #include "main.h"
 #include "airpods_packets.h"
 #include "logger.h"
@@ -38,7 +39,7 @@ class AirPodsTrayApp : public QObject {
     Q_PROPERTY(bool hideOnStart READ hideOnStart CONSTANT)
 
 public:
-    AirPodsTrayApp(bool debugMode, bool hideOnStart, QObject *parent = nullptr)
+    AirPodsTrayApp(bool debugMode, bool hideOnStart, QQmlApplicationEngine *parent = nullptr)
       : QObject(parent)
       , debugMode(debugMode)
       , m_battery(new Battery(this)) 
@@ -46,6 +47,7 @@ public:
       , m_settings(new QSettings("AirPodsTrayApp", "AirPodsTrayApp"))
       , m_autoStartManager(new AutoStartManager(this))
       , m_hideOnStart(hideOnStart)
+      , parent(parent)
       {
         if (debugMode) {
             QLoggingCategory::setFilterRules("airpodsApp.debug=true");
@@ -58,6 +60,8 @@ public:
         trayManager = new TrayIconManager(this);
         trayManager->setNotificationsEnabled(loadNotificationsEnabled());
         connect(trayManager, &TrayIconManager::trayClicked, this, &AirPodsTrayApp::onTrayIconActivated);
+        connect(trayManager, &TrayIconManager::openApp, this, &AirPodsTrayApp::onOpenApp);
+        connect(trayManager, &TrayIconManager::openSettings, this, &AirPodsTrayApp::onOpenSettings);
         connect(trayManager, &TrayIconManager::noiseControlChanged, this, qOverload<NoiseControlMode>(&AirPodsTrayApp::setNoiseControlMode));
         connect(trayManager, &TrayIconManager::conversationalAwarenessToggled, this, &AirPodsTrayApp::setConversationalAwareness);
         connect(this, &AirPodsTrayApp::batteryStatusChanged, trayManager, &TrayIconManager::updateBatteryStatus);
@@ -146,6 +150,9 @@ public:
 private:
     bool debugMode;
     bool isConnectedLocally = false;
+
+    QQmlApplicationEngine *parent = nullptr;
+
     struct {
         bool isAvailable = true;
         bool isEnabled = true; // Ability to disable the feature
@@ -349,6 +356,30 @@ private slots:
             window->show();
             window->raise();
             window->requestActivate();
+        }
+    }
+
+    void onOpenApp()
+    {
+        QObject *rootObject = parent->rootObjects().first();
+        if (rootObject) {
+            QMetaObject::invokeMethod(rootObject, "reopen", Q_ARG(QVariant, "app"));
+        }
+        else
+        {
+            parent->loadFromModule("linux", "Main");
+        }
+    }
+
+    void onOpenSettings()
+    {
+        QObject *rootObject = parent->rootObjects().first();
+        if (rootObject) {
+            QMetaObject::invokeMethod(rootObject, "reopen", Q_ARG(QVariant, "settings"));
+        }
+        else
+        {
+            parent->loadFromModule("linux", "Main");
         }
     }
 
@@ -681,8 +712,12 @@ private slots:
             LOG_INFO("Already connected to the phone");
             return;
         }
-
         QBluetoothAddress phoneAddress(PHONE_MAC_ADDRESS);
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        if (!env.value("PHONE_MAC_ADDRESS").isEmpty())
+        {
+            QBluetoothAddress phoneAddress = QBluetoothAddress(env.value("PHONE_MAC_ADDRESS"));
+        }
         phoneSocket = new QBluetoothSocket(QBluetoothServiceInfo::L2capProtocol);
         connect(phoneSocket, &QBluetoothSocket::connected, this, [this]() {
             LOG_INFO("Connected to phone");
@@ -918,6 +953,32 @@ private:
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
+
+    QSharedMemory sharedMemory;
+    sharedMemory.setKey("TcpServer-Key");
+
+    // Check if app is already open
+    if(sharedMemory.create(1) == false) 
+    {
+        LOG_INFO("Another instance already running! Opening App Window Instead");
+        QLocalSocket socket;
+        // Connect to the original app, then trigger the reopen signal
+        socket.connectToServer("app_server");
+        if (socket.waitForConnected(500)) {
+            socket.write("reopen");
+            socket.flush();
+            socket.waitForBytesWritten(500);
+            socket.disconnectFromServer();
+            app.exit(); // exit; process already running
+            return 0;
+        }
+        else
+        {
+            // Failed connection, log and open the app (assume it's not running)
+            LOG_ERROR("Failed to connect to the original app instance. Assuming it is not running.");
+            LOG_DEBUG("Socket error: " << socket.errorString());
+        }
+    }
     app.setQuitOnLastWindowClosed(false);
 
     bool debugMode = false;
@@ -935,6 +996,59 @@ int main(int argc, char *argv[]) {
     AirPodsTrayApp *trayApp = new AirPodsTrayApp(debugMode, hideOnStart, &engine);
     engine.rootContext()->setContextProperty("airPodsTrayApp", trayApp);
     engine.loadFromModule("linux", "Main");
+
+    QLocalServer server;
+    QLocalServer::removeServer("app_server");
+
+    if (!server.listen("app_server"))
+    {
+        LOG_ERROR("Unable to start the listening server");
+        LOG_DEBUG("Server error: " << server.errorString());
+    }
+    else
+    {
+        LOG_DEBUG("Server started, waiting for connections...");
+    }
+    QObject::connect(&server, &QLocalServer::newConnection, [&]() {
+        QLocalSocket* socket = server.nextPendingConnection();
+        // Handles Proper Connection
+        QObject::connect(socket, &QLocalSocket::readyRead, [socket, &engine]() {
+            QString msg = socket->readAll();
+            // Check if the message is "reopen", if so, trigger onOpenApp function
+            if (msg == "reopen") {
+                LOG_INFO("Reopening app window");
+                QObject *rootObject = engine.rootObjects().first();
+                if (rootObject) {
+                    QMetaObject::invokeMethod(rootObject, "reopen", Q_ARG(QVariant, "app"));
+                }
+                else
+                {
+                    engine.loadFromModule("linux", "Main");
+                }
+            }
+            else
+            {
+                LOG_ERROR("Unknown message received: " << msg);
+            }
+            socket->disconnectFromServer();
+        });
+        // Handles connection errors
+        QObject::connect(socket, &QLocalSocket::errorOccurred, [socket]() {
+            LOG_ERROR("Failed to connect to the duplicate app instance");
+            LOG_DEBUG("Connection error: " << socket->errorString());
+        });
+        
+        // Handle server-level errors
+        QObject::connect(&server, &QLocalServer::serverError, [&]() {
+            LOG_ERROR("Server failed to accept a new connection");
+            LOG_DEBUG("Server error: " << server.errorString());
+        });
+    });
+
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
+        LOG_DEBUG("Application is about to quit. Cleaning up...");
+        sharedMemory.detach();
+    });
     return app.exec();
 }
 

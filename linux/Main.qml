@@ -9,8 +9,32 @@ ApplicationWindow {
     width: 400
     height: 300
     title: "AirPods Settings"
+    objectName: "mainWindowObject"
 
     onClosing: mainWindow.visible = false
+
+    function reopen(pageToLoad) {
+        if (pageToLoad == "settings")
+        {
+            if (stackView.depth == 1)
+            {
+                stackView.push(settingsPage)
+            }
+        }
+        else
+        {
+            if (stackView.depth > 1)
+            {
+                stackView.pop()
+            }
+        }
+
+        if (!mainWindow.visible) {
+            mainWindow.visible = true
+        }
+        raise()
+        requestActivate()
+    }
 
     // Mouse area for handling back/forward navigation
     MouseArea {

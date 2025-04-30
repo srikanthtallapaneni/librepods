@@ -54,4 +54,6 @@ signals:
     void trayClicked();
     void noiseControlChanged(AirpodsTrayApp::Enums::NoiseControlMode);
     void conversationalAwarenessToggled(bool enabled);
+    void openApp();
+    void openSettings();
 };
