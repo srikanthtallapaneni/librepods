@@ -43,9 +43,10 @@ See our [pinned issue](https://github.com/kavishdevar/librepods/issues/20) for a
 The Linux version runs as a system tray app. Connect your AirPods and enjoy:
 
 - Battery monitoring
-- Ear detection with auto-pause
+- Automatic Ear detection
+- Conversational Awareness
+- Switching Noise Control modes
 - Device renaming
-- Media controls
 
 > [!NOTE]
 > Work in progress, but core functionality is stable and usable.
