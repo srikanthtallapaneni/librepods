@@ -367,7 +367,7 @@ private slots:
         }
         else
         {
-            parent->loadFromModule("linux", "Main");
+            loadMainModule();
         }
     }
 
@@ -379,7 +379,7 @@ private slots:
         }
         else
         {
-            parent->loadFromModule("linux", "Main");
+            loadMainModule();
         }
     }
 
@@ -908,6 +908,10 @@ private slots:
         connectToPhone();
     }
 
+    void loadMainModule() {
+        parent->load(QUrl(QStringLiteral("qrc:/linux/Main.qml")));
+    }
+
 signals:
     void noiseControlModeChanged(NoiseControlMode mode);
     void earDetectionStatusChanged(const QString &status);
@@ -995,7 +999,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<Battery>("me.kavishdevar.Battery", 1, 0, "Battery");
     AirPodsTrayApp *trayApp = new AirPodsTrayApp(debugMode, hideOnStart, &engine);
     engine.rootContext()->setContextProperty("airPodsTrayApp", trayApp);
-    engine.loadFromModule("linux", "Main");
+    trayApp->loadMainModule();
 
     QLocalServer server;
     QLocalServer::removeServer("app_server");
@@ -1012,7 +1016,7 @@ int main(int argc, char *argv[]) {
     QObject::connect(&server, &QLocalServer::newConnection, [&]() {
         QLocalSocket* socket = server.nextPendingConnection();
         // Handles Proper Connection
-        QObject::connect(socket, &QLocalSocket::readyRead, [socket, &engine]() {
+        QObject::connect(socket, &QLocalSocket::readyRead, [socket, &engine, &trayApp]() {
             QString msg = socket->readAll();
             // Check if the message is "reopen", if so, trigger onOpenApp function
             if (msg == "reopen") {
@@ -1023,7 +1027,7 @@ int main(int argc, char *argv[]) {
                 }
                 else
                 {
-                    engine.loadFromModule("linux", "Main");
+                    trayApp->loadMainModule();
                 }
             }
             else
