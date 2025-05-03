@@ -1,10 +1,12 @@
-# LibrePods
-
 ![LibrePods Banner](/imgs/banner.png)
 
-*AirPods liberated from Apple's ecosystem*
-
 [![XDA Thread](https://img.shields.io/badge/XDA_Forums-Thread-orange)](https://xdaforums.com/t/app-root-for-now-airpodslikenormal-unlock-apple-exclusive-airpods-features-on-android.4707585/)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/releases/latest)
+[![GitHub all releases](https://img.shields.io/github/downloads/kavishdevar/librepods/total)](https://github.com/kavishdevar/librepods/releases)
+[![GitHub stars](https://img.shields.io/github/stars/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/issues)
+[![GitHub license](https://img.shields.io/github/license/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/blob/main/LICENSE)
+[![GitHub contributors](https://img.shields.io/github/contributors/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/graphs/contributors)
 
 ## What is LibrePods?
 
@@ -125,6 +127,10 @@ For developers interested in the protocol details, check out the [AAP Definition
 Check out the demo below:
 
 https://github.com/user-attachments/assets/d08f8a51-cd52-458b-8e55-9b44f4d5f3ab
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=kavishdevar/librepods&type=Date)](https://star-history.com/#kavishdevar/librepods&Date)
 
 # License
 
