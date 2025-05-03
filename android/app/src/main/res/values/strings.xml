@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">ALN</string>
+    <string name="app_name" translatable="false">LibrePods</string>
     <string name="title_activity_custom_device" translatable="false">GATT Testing</string>
     <string name="app_widget_description">See your AirPods battery status right from your home screen!</string>
     <string name="accessibility">Accessibility</string>
@@ -49,4 +49,14 @@
     <string name="island_moved_to_remote_text">Moved to Linux</string>
     <string name="head_tracking">Head Tracking</string>
     <string name="head_gestures_details">Nod to answer calls, and shake your head to decline.</string>
+    <string name="general_settings_header">General</string>
+    <string name="qs_click_behavior_title">Quick Settings Tile Action</string>
+    <string name="qs_click_behavior_dialog_desc">Show noise control dialog on tap.</string>
+    <string name="qs_click_behavior_cycle_desc">Cycle through modes on tap.</string>
+    <string name="developer_options_header">Developer</string>
+    <string name="more_settings_title">Open AirPods Settings</string>
+    <string name="more_settings_subtitle">Manage AirPods features and preferences</string>
+    <string name="ear_detection">Automatic Ear Detection</string>
+    <string name="auto_play">Auto Play</string>
+    <string name="auto_pause">Auto Pause</string>
 </resources>

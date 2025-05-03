@@ -6,21 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "me.kavishdevar.aln"
+    namespace = "me.kavishdevar.librepods"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "me.kavishdevar.aln"
+        applicationId = "me.kavishdevar.librepods"
         minSdk = 28
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.0.3"
-
-        externalNativeBuild {
-            cmake {
-                cppFlags += ""
-            }
-        }
+        versionCode = 4
+        versionName = "0.1.0"
     }
 
     buildTypes {
