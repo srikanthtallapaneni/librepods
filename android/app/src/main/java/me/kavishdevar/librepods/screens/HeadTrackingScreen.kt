@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -92,6 +93,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -138,6 +140,7 @@ fun HeadTrackingScreen(navController: NavController) {
                             if (ServiceManager.getService()?.isHeadTrackingActive == true) ServiceManager.getService()?.stopHeadTracking()
                         },
                         shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.width(180.dp)
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -153,6 +156,9 @@ fun HeadTrackingScreen(navController: NavController) {
                                 color = if (isDarkTheme) Color(0xFF007AFF) else Color(0xFF3C6DF5),
                                 fontFamily = FontFamily(Font(R.font.sf_pro))
                             ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 },

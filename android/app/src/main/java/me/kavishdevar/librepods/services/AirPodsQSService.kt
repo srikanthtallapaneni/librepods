@@ -31,6 +31,8 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.material3.ExperimentalMaterial3Api
+import me.kavishdevar.librepods.MainActivity
 import me.kavishdevar.librepods.QuickSettingsDialogActivity
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.utils.AirPodsNotifications
@@ -260,4 +262,42 @@ class AirPodsQSService : TileService() {
              else -> R.drawable.airpods
          }
      }
+     
+    @ExperimentalMaterial3Api
+    override fun onTileAdded() {
+        super.onTileAdded()
+        Log.d("AirPodsQSService", "Tile added")
+        
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
+    @ExperimentalMaterial3Api
+    fun openMainActivity() {
+        Log.d("AirPodsQSService", "Opening MainActivity")
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val pendingIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    Intent(this, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    },
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+                startActivityAndCollapse(pendingIntent)
+            } else {
+                @Suppress("DEPRECATION")
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivityAndCollapse(intent)
+            }
+            Log.d("AirPodsQSService", "Called startActivityAndCollapse for MainActivity")
+        } catch (e: Exception) {
+            Log.e("AirPodsQSService", "Error launching MainActivity: $e")
+        }
+    }
 }

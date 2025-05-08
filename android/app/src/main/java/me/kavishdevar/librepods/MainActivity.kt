@@ -186,6 +186,8 @@ fun Main() {
         permissions = listOf(
             "android.permission.BLUETOOTH_CONNECT",
             "android.permission.BLUETOOTH_SCAN",
+            "android.permission.BLUETOOTH",
+            "android.permission.BLUETOOTH_ADMIN",
             "android.permission.BLUETOOTH_ADVERTISE",
             "android.permission.POST_NOTIFICATIONS",
             "android.permission.READ_PHONE_STATE",
@@ -517,16 +519,16 @@ fun PermissionsScreen(
                 ),
             )
         }
-        
+
         if (!canDrawOverlays && basicPermissionsGranted) {
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Button(
                 onClick = {
                     val editor = context.getSharedPreferences("settings", MODE_PRIVATE).edit()
                     editor.putBoolean("overlay_permission_skipped", true)
                     editor.apply()
-                    
+
                     val intent = Intent(context, MainActivity::class.java)
                     intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     context.startActivity(intent)

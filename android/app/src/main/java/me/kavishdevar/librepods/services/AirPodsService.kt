@@ -26,12 +26,14 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
+import android.bluetooth.BluetoothAssignedNumbers.APPLE
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothSocket
 import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -39,6 +41,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.media.AudioManager
+import android.net.Uri
 import android.os.BatteryManager
 import android.os.Binder
 import android.os.Build
@@ -46,6 +49,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.ParcelUuid
+import android.os.UserHandle
 import android.provider.Settings
 import android.telecom.TelecomManager
 import android.telephony.PhoneStateListener
@@ -85,6 +89,26 @@ import me.kavishdevar.librepods.utils.LongPressPackets
 import me.kavishdevar.librepods.utils.MediaController
 import me.kavishdevar.librepods.utils.PopupWindow
 import me.kavishdevar.librepods.utils.RadareOffsetFinder
+import me.kavishdevar.librepods.utils.SystemApisUtils
+import me.kavishdevar.librepods.utils.SystemApisUtils.DEVICE_TYPE_UNTETHERED_HEADSET
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_COMPANION_APP
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_DEVICE_TYPE
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_MAIN_BATTERY
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_MAIN_ICON
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_MANUFACTURER_NAME
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_MODEL_NAME
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_CASE_BATTERY
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_CASE_CHARGING
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_CASE_ICON
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_CASE_LOW_BATTERY_THRESHOLD
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_LEFT_BATTERY
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_LEFT_CHARGING
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_LEFT_ICON
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_LEFT_LOW_BATTERY_THRESHOLD
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_BATTERY
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_CHARGING
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_ICON
+import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_LOW_BATTERY_THRESHOLD
 import me.kavishdevar.librepods.utils.isHeadTrackingData
 import me.kavishdevar.librepods.widgets.BatteryWidget
 import me.kavishdevar.librepods.widgets.NoiseControlWidget
@@ -295,7 +319,7 @@ class AirPodsService : Service() {
     object BatteryChangedIntentReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
             if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
-                ServiceManager.getService()?.updateBatteryWidget()
+                ServiceManager.getService()?.updateBattery()
             } else if (intent.action == AirPodsNotifications.DISCONNECT_RECEIVERS) {
                 try {
                     context?.unregisterReceiver(this)
@@ -308,7 +332,7 @@ class AirPodsService : Service() {
 
     fun setPhoneBatteryInWidget(enabled: Boolean) {
         widgetMobileBatteryEnabled = enabled
-        updateBatteryWidget()
+        updateBattery()
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -369,7 +393,8 @@ class AirPodsService : Service() {
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    fun updateBatteryWidget() {
+    fun updateBattery() {
+        // Update widget
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, BatteryWidget::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
@@ -463,6 +488,43 @@ class AirPodsService : Service() {
             }
         }
         appWidgetManager.updateAppWidget(widgetIds, remoteViews)
+
+        // set metadata
+        device?.let {
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_CASE_BATTERY,
+                batteryNotification.getBattery().find { it.component == BatteryComponent.CASE }?.level.toString().toByteArray()
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_CASE_CHARGING,
+                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.CASE}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_LEFT_BATTERY,
+                batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT }?.level.toString().toByteArray()
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_LEFT_CHARGING,
+                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_RIGHT_BATTERY,
+                batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT }?.level.toString().toByteArray()
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_RIGHT_CHARGING,
+                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
+            )
+        }
+
+        // broadcast
+//        broadcastBatteryInformation()
     }
 
     fun updateNoiseControlWidget() {
@@ -678,6 +740,168 @@ class AirPodsService : Service() {
     private lateinit var connectionReceiver: BroadcastReceiver
     private lateinit var disconnectionReceiver: BroadcastReceiver
 
+    private fun resToUri(resId: Int): Uri? {
+        return try {
+            Uri.Builder()
+                .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                .authority("me.kavishdevar.librepods")
+                .appendPath(applicationContext.resources.getResourceTypeName(resId))
+                .appendPath(applicationContext.resources.getResourceEntryName(resId))
+                .build()
+        } catch (e: Resources.NotFoundException) {
+            null
+        }
+    }
+
+    private val VENDOR_SPECIFIC_HEADSET_EVENT_IPHONEACCEV = "+IPHONEACCEV"
+    private val VENDOR_SPECIFIC_HEADSET_EVENT_IPHONEACCEV_BATTERY_LEVEL = 1
+    private val APPLE = 0x004C
+    private val ACTION_BATTERY_LEVEL_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED"
+    private val EXTRA_BATTERY_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL"
+    private val PACKAGE_ASI = "com.google.android.settings.intelligence"
+    private val ACTION_ASI_UPDATE_BLUETOOTH_DATA = "batterywidget.impl.action.update_bluetooth_data"
+
+    @Suppress("MissingPermission")
+    fun broadcastBatteryInformation() {
+        if (device == null) return
+
+        val batteryList = batteryNotification.getBattery()
+        val leftBattery = batteryList.find { it.component == BatteryComponent.LEFT }
+        val rightBattery = batteryList.find { it.component == BatteryComponent.RIGHT }
+
+        // Calculate unified battery level (minimum of left and right)
+        val batteryUnified = minOf(
+            leftBattery?.level ?: 100,
+            rightBattery?.level ?: 100
+        )
+
+        // Check charging status
+        val isLeftCharging = leftBattery?.status == BatteryStatus.CHARGING
+        val isRightCharging = rightBattery?.status == BatteryStatus.CHARGING
+        val isChargingMain = isLeftCharging && isRightCharging
+
+        // Create arguments for vendor-specific event
+        val arguments = arrayOf<Any>(
+            1, // Number of key/value pairs
+            VENDOR_SPECIFIC_HEADSET_EVENT_IPHONEACCEV_BATTERY_LEVEL, // IndicatorType: Battery Level
+            batteryUnified // Battery Level
+        )
+
+        // Broadcast vendor-specific event
+        val intent = Intent(android.bluetooth.BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT).apply {
+            putExtra(android.bluetooth.BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD, VENDOR_SPECIFIC_HEADSET_EVENT_IPHONEACCEV)
+            putExtra(android.bluetooth.BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD_TYPE, android.bluetooth.BluetoothHeadset.AT_CMD_TYPE_SET)
+            putExtra(android.bluetooth.BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_ARGS, arguments)
+            putExtra(BluetoothDevice.EXTRA_DEVICE, device)
+            putExtra(BluetoothDevice.EXTRA_NAME, device?.name)
+            addCategory("${android.bluetooth.BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY}.$APPLE")
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                sendBroadcastAsUser(
+                    intent,
+                    UserHandle.getUserHandleForUid(-1),
+                    Manifest.permission.BLUETOOTH_CONNECT
+                )
+            } else {
+                sendBroadcastAsUser(intent, UserHandle.getUserHandleForUid(-1))
+            }
+        } catch (e: Exception) {
+            Log.e("AirPodsService", "Failed to send vendor-specific event: ${e.message}")
+        }
+
+        // Broadcast battery level changes
+        val batteryIntent = Intent(ACTION_BATTERY_LEVEL_CHANGED).apply {
+            putExtra(BluetoothDevice.EXTRA_DEVICE, device)
+            putExtra(EXTRA_BATTERY_LEVEL, batteryUnified)
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                sendBroadcast(batteryIntent, Manifest.permission.BLUETOOTH_CONNECT)
+            } else {
+                sendBroadcastAsUser(batteryIntent, UserHandle.getUserHandleForUid(-1))
+            }
+        } catch (e: Exception) {
+            Log.e("AirPodsService", "Failed to send battery level broadcast: ${e.message}")
+        }
+
+        // Update Android Settings Intelligence's battery widget
+        val statusIntent = Intent(ACTION_ASI_UPDATE_BLUETOOTH_DATA).apply {
+            setPackage(PACKAGE_ASI)
+            putExtra(ACTION_BATTERY_LEVEL_CHANGED, intent)
+        }
+
+        try {
+            sendBroadcastAsUser(statusIntent, UserHandle.getUserHandleForUid(-1))
+        } catch (e: Exception) {
+            Log.e("AirPodsService", "Failed to send ASI battery level broadcast: ${e.message}")
+        }
+
+        Log.d("AirPodsService", "Broadcast battery level $batteryUnified% to system")
+    }
+
+    private fun setMetadatas(d: BluetoothDevice) {
+        d.let{ device ->
+            val metadataSet = SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_MAIN_ICON,
+                    resToUri(R.drawable.pro_2).toString().toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_MODEL_NAME,
+                    "AirPods Pro (2 Gen.)".toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_DEVICE_TYPE,
+                    device.DEVICE_TYPE_UNTETHERED_HEADSET.toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_UNTETHERED_CASE_ICON,
+                    resToUri(R.drawable.pro_2_case).toString().toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_UNTETHERED_RIGHT_ICON,
+                    resToUri(R.drawable.pro_2_right).toString().toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_UNTETHERED_LEFT_ICON,
+                    resToUri(R.drawable.pro_2_left).toString().toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_MANUFACTURER_NAME,
+                    "Apple".toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_COMPANION_APP,
+                    "me.kavisdevar.librepods".toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_UNTETHERED_CASE_LOW_BATTERY_THRESHOLD,
+                    "20".toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_UNTETHERED_LEFT_LOW_BATTERY_THRESHOLD,
+                    "20".toByteArray()
+                ) &&
+                SystemApisUtils.setMetadata(
+                    device,
+                    device.METADATA_UNTETHERED_RIGHT_LOW_BATTERY_THRESHOLD,
+                    "20".toByteArray()
+                )
+            Log.d("AirPodsService", "Metadata set: $metadataSet")
+        }
+    }
+
     @SuppressLint("InlinedApi", "MissingPermission", "UnspecifiedRegisterReceiverFlag")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("AirPodsService", "Service started")
@@ -778,6 +1002,8 @@ class AirPodsService : Service() {
                         Log.d("AirPodsService", "$name connected")
                         showPopup(this@AirPodsService, name.toString())
                         connectToSocket(device!!)
+                        Log.d("AirPodsService", "Setting metadata")
+                        setMetadatas(device!!)
                         isConnectedLocally = true
                         macAddress = device!!.address
                         sharedPreferences.edit {
@@ -850,6 +1076,7 @@ class AirPodsService : Service() {
                                     if (connectedDevices.isNotEmpty()) {
                                         if (!CrossDevice.isAvailable) {
                                             connectToSocket(device)
+                                            setMetadatas(device)
                                             macAddress = device.address
                                             sharedPreferences.edit {
                                                 putString("mac_address", macAddress)
@@ -1186,7 +1413,7 @@ class AirPodsService : Service() {
                                             ArrayList(batteryNotification.getBattery())
                                         )
                                     })
-                                    updateBatteryWidget()
+                                    updateBattery()
                                     updateNotificationContent(
                                         true,
                                         this@AirPodsService.getSharedPreferences(

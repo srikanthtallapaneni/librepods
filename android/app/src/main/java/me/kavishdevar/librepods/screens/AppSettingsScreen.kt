@@ -71,6 +71,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -106,6 +107,7 @@ fun AppSettingsScreen(navController: NavController) {
                             navController.popBackStack()
                         },
                         shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.width(180.dp)
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -121,6 +123,9 @@ fun AppSettingsScreen(navController: NavController) {
                                 color = if (isDarkTheme) Color(0xFF007AFF) else Color(0xFF3C6DF5),
                                 fontFamily = FontFamily(Font(R.font.sf_pro))
                             ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 },
@@ -142,9 +147,21 @@ fun AppSettingsScreen(navController: NavController) {
 
             val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
             val textColor = if (isDarkTheme) Color.White else Color.Black
-            val accentColor = if (isDarkTheme) Color(0xFF007AFF) else Color(0xFF3C6DF5)
 
             IndependentToggle("Show phone battery in widget", ServiceManager.getService()!!, "setPhoneBatteryInWidget", sharedPreferences)
+
+            Text(
+                text = stringResource(R.string.conversational_awareness_customization).uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = (if (isSystemInDarkTheme()) Color.White else Color.Black).copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp)
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
 
             Column (
                 modifier = Modifier
@@ -169,17 +186,6 @@ fun AppSettingsScreen(navController: NavController) {
                 val trackColor = if (isDarkTheme) Color(0xFFB3B3B3) else Color(0xFFD9D9D9)
                 val thumbColor = if (isDarkTheme) Color(0xFFFFFFFF) else Color(0xFFFFFFFF)
                 val labelTextColor = if (isDarkTheme) Color.White else Color.Black
-
-                Text(
-                    text = stringResource(R.string.conversational_awareness_customization),
-                    style = TextStyle(
-                        fontSize = 20.sp,
-                        color = textColor
-                    ),
-                    modifier = Modifier
-                        .padding(top = 12.dp, bottom = 4.dp)
-                )
-
 
                 var conversationalAwarenessPauseMusicEnabled by remember {
                     mutableStateOf(
@@ -361,6 +367,70 @@ fun AppSettingsScreen(navController: NavController) {
                             color = labelTextColor
                         ),
                         modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        backgroundColor,
+                        RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                var openDialogForControlling by remember {
+                    mutableStateOf(
+                        sharedPreferences.getString("qs_click_behavior", "dialog") == "dialog"
+                    )
+                }
+
+                fun updateQsClickBehavior(enabled: Boolean) {
+                    openDialogForControlling = enabled
+                    sharedPreferences.edit().putString("qs_click_behavior", if (enabled) "dialog" else "cycle").apply()
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            updateQsClickBehavior(!openDialogForControlling)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 16.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = "Open dialog for controlling",
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (openDialogForControlling)
+                                   "If disabled, clicking on the QS will cycle through modes"
+                                   else "If enabled, it will show a dialog for controlling noise control mode and conversational awareness",
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = openDialogForControlling,
+                        onCheckedChange = {
+                            updateQsClickBehavior(it)
+                        }
                     )
                 }
             }

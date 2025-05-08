@@ -19,15 +19,9 @@
 
 package me.kavishdevar.librepods.widgets
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
-import android.content.Intent
-import android.widget.RemoteViews
-import androidx.compose.material3.ExperimentalMaterial3Api
-import me.kavishdevar.librepods.MainActivity
-import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.services.ServiceManager
 
 class BatteryWidget : AppWidgetProvider() {
@@ -36,6 +30,6 @@ class BatteryWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        ServiceManager.getService()?.updateBatteryWidget()
+        ServiceManager.getService()?.updateBattery()
     }
 }

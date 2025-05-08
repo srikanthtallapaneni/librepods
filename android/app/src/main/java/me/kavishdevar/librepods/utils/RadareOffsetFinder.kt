@@ -416,9 +416,9 @@ class RadareOffsetFinder(context: Context) {
                 Log.e(TAG, "rabin2 command failed with exit code $exitCode")
             }
 
-            // findAndSaveL2cuProcessCfgReqOffset(libraryPath, envSetup)
-            // findAndSaveL2cCsmConfigOffset(libraryPath, envSetup)
-            findAndSaveL2cuSendPeerInfoReqOffset(libraryPath, envSetup)
+//            findAndSaveL2cuProcessCfgReqOffset(libraryPath, envSetup)
+//            findAndSaveL2cCsmConfigOffset(libraryPath, envSetup)
+//            findAndSaveL2cuSendPeerInfoReqOffset(libraryPath, envSetup)
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find function offset", e)

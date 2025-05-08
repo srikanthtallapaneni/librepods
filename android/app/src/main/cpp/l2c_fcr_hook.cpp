@@ -32,9 +32,7 @@
 static HookFunType hook_func = nullptr;
 #define L2CEVT_L2CAP_CONFIG_REQ     4
 #define L2CEVT_L2CAP_CONFIG_RSP 15
-// Define all necessary structures for the L2CAP stack
 
-// Forward declarations for types needed by the new hook
 struct t_l2c_lcb;
 typedef struct _BT_HDR {
     uint16_t event;
@@ -44,7 +42,6 @@ typedef struct _BT_HDR {
     uint8_t data[];
 } BT_HDR;
 
-// Define base FCR structures
 typedef struct {
     uint8_t mode;
     uint8_t tx_win_sz;
@@ -130,17 +127,7 @@ static void (*original_l2c_csm_config)(tL2C_CCB* p_ccb, uint8_t event, void* p_d
 static void (*original_l2cu_send_peer_info_req)(tL2C_LCB* p_lcb, uint16_t info_type) = nullptr;
 
 uint8_t fake_l2c_fcr_chk_chan_modes(void* p_ccb) {
-    LOGI("l2c_fcr_chk_chan_modes hooked");
-    auto* ccb = static_cast<tL2C_CCB*>(p_ccb);
-    LOGI("Original FCR mode: 0x%02x", ccb->our_cfg.fcr.mode);
-
-    ccb->our_cfg.fcr.mode = 0;
-    ccb->our_cfg.fcr_present = true;
-    ccb->peer_cfg.fcr.mode = 0;
-    ccb->peer_cfg.fcr_present = true;
-
-    LOGI("FCR mode set to Basic Mode (0) for both local and peer config, here's the new desired FCR mode: 0x%02x, and the peer's FCR mode: 0x%02x", ccb->our_cfg.fcr.mode, ccb->peer_cfg.fcr.mode);
-
+    LOGI("l2c_fcr_chk_chan_modes hooked, returning true.");
     return 1;
 }
 

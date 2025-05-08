@@ -24,6 +24,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.widget.RemoteViews
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.services.ServiceManager
@@ -77,6 +78,7 @@ class NoiseControlWidget : AppWidgetProvider() {
         super.onReceive(context, intent)
         if (intent.action == "ACTION_SET_ANC_MODE") {
             val mode = intent.getIntExtra("ANC_MODE", 1)
+            Log.d("NoiseControlWidget", "Setting ANC mode to $mode")
             ServiceManager.getService()?.setANCMode(mode)
         }
     }

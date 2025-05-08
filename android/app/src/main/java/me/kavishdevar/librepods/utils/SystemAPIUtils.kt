@@ -1,6 +1,8 @@
 package me.kavishdevar.librepods.utils
 
 import android.bluetooth.BluetoothDevice
+import android.util.Log
+import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 object SystemApisUtils {
 
@@ -282,4 +284,23 @@ object SystemApisUtils {
     const val ACTION_BLUETOOTH_HANDSFREE_BATTERY_CHANGED = "android.intent.action.BLUETOOTH_HANDSFREE_BATTERY_CHANGED"
     const val EXTRA_SHOW_BT_HANDSFREE_BATTERY = "android.intent.extra.show_bluetooth_handsfree_battery"
     const val EXTRA_BT_HANDSFREE_BATTERY_LEVEL = "android.intent.extra.bluetooth_handsfree_battery_level"
+
+    /**
+     * Helper method to set metadata using HiddenApiBypass
+     */
+     fun setMetadata(device: BluetoothDevice, key: Int, value: ByteArray): Boolean {
+        return try {
+            val result = HiddenApiBypass.invoke(
+                BluetoothDevice::class.java,
+                device,
+                "setMetadata",
+                key,
+                value
+            ) as Boolean
+            result
+        } catch (e: Exception) {
+            Log.e("SystemApisUtils", "Failed to set metadata for key $key", e)
+            false
+        }
+    }
 }
