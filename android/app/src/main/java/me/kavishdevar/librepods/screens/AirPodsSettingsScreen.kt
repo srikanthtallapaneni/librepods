@@ -102,6 +102,7 @@ import me.kavishdevar.librepods.utils.AirPodsNotifications
 @Composable
 fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
                           navController: NavController, isConnected: Boolean, isRemotelyConnected: Boolean) {
+    var isLocallyConnected by remember { mutableStateOf(isConnected) }
     var isRemotelyConnected by remember { mutableStateOf(isRemotelyConnected) }
     val sharedPreferences = LocalContext.current.getSharedPreferences("settings", MODE_PRIVATE)
     var device by remember { mutableStateOf(dev) }
@@ -111,6 +112,10 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
                 sharedPreferences.getString("name", device?.name ?: "AirPods Pro").toString()
             )
         )
+    }
+
+    LaunchedEffect(service) {
+        isLocallyConnected = service.isConnectedLocally
     }
 
     val nameChangeListener = remember {
@@ -144,22 +149,37 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
     }
 
     val context = LocalContext.current
-    val bluetoothReceiver = remember {
+    
+    val connectionReceiver = remember {
         object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == "me.kavishdevar.librepods.AIRPODS_CONNECTED_REMOTELY") {
-                    coroutineScope.launch {
-                        handleRemoteConnection(true)
+                when (intent?.action) {
+                    "me.kavishdevar.librepods.AIRPODS_CONNECTED_REMOTELY" -> {
+                        coroutineScope.launch {
+                            handleRemoteConnection(true)
+                        }
                     }
-                } else if (intent?.action == "me.kavishdevar.librepods.AIRPODS_DISCONNECTED_REMOTELY") {
-                    coroutineScope.launch {
-                        handleRemoteConnection(false)
+                    "me.kavishdevar.librepods.AIRPODS_DISCONNECTED_REMOTELY" -> {
+                        coroutineScope.launch {
+                            handleRemoteConnection(false)
+                        }
                     }
-                } else if (intent?.action == AirPodsNotifications.DISCONNECT_RECEIVERS) {
-                    try {
-                        context?.unregisterReceiver(this)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
+                    AirPodsNotifications.AIRPODS_CONNECTED -> {
+                        coroutineScope.launch {
+                            isLocallyConnected = true
+                        }
+                    }
+                    AirPodsNotifications.AIRPODS_DISCONNECTED -> {
+                        coroutineScope.launch {
+                            isLocallyConnected = false
+                        }
+                    }
+                    AirPodsNotifications.DISCONNECT_RECEIVERS -> {
+                        try {
+                            context?.unregisterReceiver(this)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+                        }
                     }
                 }
             }
@@ -170,16 +190,22 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
         val filter = IntentFilter().apply {
             addAction("me.kavishdevar.librepods.AIRPODS_CONNECTED_REMOTELY")
             addAction("me.kavishdevar.librepods.AIRPODS_DISCONNECTED_REMOTELY")
+            addAction(AirPodsNotifications.AIRPODS_CONNECTED)
+            addAction(AirPodsNotifications.AIRPODS_DISCONNECTED)
             addAction(AirPodsNotifications.DISCONNECT_RECEIVERS)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(bluetoothReceiver, filter, RECEIVER_EXPORTED)
+            context.registerReceiver(connectionReceiver, filter, RECEIVER_EXPORTED)
         } else {
-            context.registerReceiver(bluetoothReceiver, filter)
+            context.registerReceiver(connectionReceiver, filter)
         }
         onDispose {
-            context.unregisterReceiver(bluetoothReceiver)
+            try {
+                context.unregisterReceiver(connectionReceiver)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -266,7 +292,7 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        if (isConnected == true || isRemotelyConnected == true) {
+        if (isLocallyConnected || isRemotelyConnected) {
             Column(
                 modifier = Modifier
                     .haze(hazeState)
