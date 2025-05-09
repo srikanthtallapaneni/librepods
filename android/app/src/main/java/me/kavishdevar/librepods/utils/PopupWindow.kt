@@ -24,8 +24,12 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.PixelFormat
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -51,6 +55,7 @@ class PopupWindow(
     private var isClosing = false
     private var autoCloseHandler = Handler(Looper.getMainLooper())
     private var autoCloseRunnable: Runnable? = null
+    private var batteryUpdateReceiver: BroadcastReceiver? = null
 
     @Suppress("DEPRECATION")
     private val mParams: WindowManager.LayoutParams = WindowManager.LayoutParams().apply {
@@ -145,6 +150,8 @@ class PopupWindow(
                     interpolator = DecelerateInterpolator()
                     start()
                 }
+                
+                registerBatteryUpdateReceiver()
 
                 autoCloseRunnable = Runnable { close() }
                 autoCloseHandler.postDelayed(autoCloseRunnable!!, 12000)
@@ -155,15 +162,43 @@ class PopupWindow(
         }
     }
 
-    @SuppressLint("SetTextI18n")
-    fun updateBatteryStatus(batteryNotification: AirPodsNotifications.BatteryNotification) {
-        val batteryStatus = batteryNotification.getBattery()
+    private fun registerBatteryUpdateReceiver() {
+        batteryUpdateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == AirPodsNotifications.BATTERY_DATA) {
+                    val batteryList = intent.getParcelableArrayListExtra<Battery>("data")
+                    if (batteryList != null) {
+                        updateBatteryStatusFromList(batteryList)
+                    }
+                }
+            }
+        }
         
+        val filter = IntentFilter(AirPodsNotifications.BATTERY_DATA)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(batteryUpdateReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            context.registerReceiver(batteryUpdateReceiver, filter)
+        }
+    }
+
+    private fun unregisterBatteryUpdateReceiver() {
+        batteryUpdateReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+                batteryUpdateReceiver = null
+            } catch (e: Exception) {
+                Log.e("PopupWindow", "Error unregistering battery receiver: ${e.message}")
+            }
+        }
+    }
+    
+    private fun updateBatteryStatusFromList(batteryList: List<Battery>) {
         val batteryLeftText = mView.findViewById<TextView>(R.id.left_battery)
         val batteryRightText = mView.findViewById<TextView>(R.id.right_battery)
         val batteryCaseText = mView.findViewById<TextView>(R.id.case_battery)
 
-        batteryLeftText.text = batteryStatus.find { it.component == BatteryComponent.LEFT }?.let {
+        batteryLeftText.text = batteryList.find { it.component == BatteryComponent.LEFT }?.let {
             if (it.status != BatteryStatus.DISCONNECTED) {
                 "\uDBC3\uDC8E    ${it.level}%"
             } else {
@@ -171,7 +206,7 @@ class PopupWindow(
             }
         } ?: ""
         
-        batteryRightText.text = batteryStatus.find { it.component == BatteryComponent.RIGHT }?.let {
+        batteryRightText.text = batteryList.find { it.component == BatteryComponent.RIGHT }?.let {
             if (it.status != BatteryStatus.DISCONNECTED) {
                 "\uDBC3\uDC8D    ${it.level}%"
             } else {
@@ -179,7 +214,7 @@ class PopupWindow(
             }
         } ?: ""
         
-        batteryCaseText.text = batteryStatus.find { it.component == BatteryComponent.CASE }?.let {
+        batteryCaseText.text = batteryList.find { it.component == BatteryComponent.CASE }?.let {
             if (it.status != BatteryStatus.DISCONNECTED) {
                 "\uDBC3\uDE6C    ${it.level}%"
             } else {
@@ -188,12 +223,19 @@ class PopupWindow(
         } ?: ""
     }
 
+    @SuppressLint("SetTextI18s")
+    fun updateBatteryStatus(batteryNotification: AirPodsNotifications.BatteryNotification) {
+        val batteryStatus = batteryNotification.getBattery()
+        updateBatteryStatusFromList(batteryStatus)
+    }
+
     fun close() {
         try {
             if (isClosing) return
             isClosing = true
             
             autoCloseRunnable?.let { autoCloseHandler.removeCallbacks(it) }
+            unregisterBatteryUpdateReceiver()
             
             val vid = mView.findViewById<VideoView>(R.id.video)
             vid.stopPlayback()
