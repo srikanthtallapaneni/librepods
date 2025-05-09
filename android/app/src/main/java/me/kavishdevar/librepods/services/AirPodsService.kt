@@ -910,11 +910,45 @@ class AirPodsService : Service() {
         startForegroundNotification()
         initGestureDetector()
 
+        sharedPreferences = getSharedPreferences("settings", MODE_PRIVATE)
+        
+        with(sharedPreferences) {
+            val editor = edit()
+            
+            if (!contains("conversational_awareness_pause_music")) editor.putBoolean("conversational_awareness_pause_music", false)
+            if (!contains("personalized_volume")) editor.putBoolean("personalized_volume", false)
+            if (!contains("automatic_ear_detection")) editor.putBoolean("automatic_ear_detection", true)
+            if (!contains("long_press_nc")) editor.putBoolean("long_press_nc", true)
+            if (!contains("off_listening_mode")) editor.putBoolean("off_listening_mode", false)
+            if (!contains("show_phone_battery_in_widget")) editor.putBoolean("show_phone_battery_in_widget", true)
+            if (!contains("single_anc")) editor.putBoolean("single_anc", true)
+            if (!contains("long_press_transparency")) editor.putBoolean("long_press_transparency", true)
+            if (!contains("conversational_awareness")) editor.putBoolean("conversational_awareness", true)
+            if (!contains("relative_conversational_awareness_volume")) editor.putBoolean("relative_conversational_awareness_volume", true)
+            if (!contains("long_press_adaptive")) editor.putBoolean("long_press_adaptive", true)
+            if (!contains("loud_sound_reduction")) editor.putBoolean("loud_sound_reduction", true)
+            if (!contains("long_press_off")) editor.putBoolean("long_press_off", false)
+            if (!contains("volume_control")) editor.putBoolean("volume_control", true)
+            if (!contains("head_gestures")) editor.putBoolean("head_gestures", true)
+            
+            if (!contains("adaptive_strength")) editor.putInt("adaptive_strength", 51)
+            if (!contains("tone_volume")) editor.putInt("tone_volume", 75)
+            if (!contains("conversational_awareness_volume")) editor.putInt("conversational_awareness_volume", 43)
+            
+            if (!contains("textColor")) editor.putLong("textColor", -1L)
+            
+            if (!contains("qs_click_behavior")) editor.putString("qs_click_behavior", "cycle")
+            if (!contains("name")) editor.putString("name", "AirPods")
+            
+            editor.apply()
+        }
+        
+        earDetectionEnabled = sharedPreferences.getBoolean("automatic_ear_detection", true)
+        
         ancModeReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == "me.kavishdevar.librepods.SET_ANC_MODE") {
                     if (intent.hasExtra("mode")) {
-                        // If a specific mode is requested, use it
                         val mode = intent.getIntExtra("mode", -1)
                         if (mode in 1..4) {
                             setANCMode(mode)
