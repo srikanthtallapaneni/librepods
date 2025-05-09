@@ -26,6 +26,9 @@ import android.os.Looper
 import android.util.Log
 import android.view.KeyEvent
 import me.kavishdevar.librepods.services.ServiceManager
+import kotlin.div
+import kotlin.text.compareTo
+import kotlin.times
 
 object MediaController {
     private var initialVolume: Int? = null
@@ -38,7 +41,7 @@ object MediaController {
     var pausedForCrossDevice = false
 
     private var relativeVolume: Boolean = false
-    private var conversationalAwarenessVolume: Int = 1/12
+    private var conversationalAwarenessVolume: Int = 2
     private var conversationalAwarenessPauseMusic: Boolean = false
 
     fun initialize(audioManager: AudioManager, sharedPreferences: SharedPreferences) {
@@ -49,7 +52,7 @@ object MediaController {
         this.sharedPreferences = sharedPreferences
         Log.d("MediaController", "Initializing MediaController")
         relativeVolume = sharedPreferences.getBoolean("relative_conversational_awareness_volume", false)
-        conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 100/12)
+        conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) / 12)
         conversationalAwarenessPauseMusic = sharedPreferences.getBoolean("conversational_awareness_pause_music", false)
 
         sharedPreferences.registerOnSharedPreferenceChangeListener { _, key ->
@@ -134,11 +137,18 @@ object MediaController {
 
     @Synchronized
     fun startSpeaking() {
-        Log.d("MediaController", "Starting speaking")
+        Log.d("MediaController", "Starting speaking max vol: ${audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)}, current vol: ${audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)}, conversationalAwarenessVolume: $conversationalAwarenessVolume, relativeVolume: $relativeVolume")
+        
         if (initialVolume == null) {
             initialVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            Log.d("MediaController", "Initial Volume Set: $initialVolume")
-            val targetVolume = if (relativeVolume) initialVolume!! * conversationalAwarenessVolume * 1/100 else if ( initialVolume!! > audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * conversationalAwarenessVolume * 1/100) audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * conversationalAwarenessVolume * 1/100 else initialVolume!!
+            Log.d("MediaController", "Initial Volume: $initialVolume")
+            val targetVolume = if (relativeVolume) {
+                (initialVolume!! * conversationalAwarenessVolume / 100)
+            } else if (initialVolume!! > (audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * conversationalAwarenessVolume / 100)) {
+                (audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * conversationalAwarenessVolume / 100)
+            } else {
+                initialVolume!!
+            }
             smoothVolumeTransition(initialVolume!!, targetVolume.toInt())
             if (conversationalAwarenessPauseMusic) {
                 sendPause(force = true)
@@ -160,6 +170,7 @@ object MediaController {
     }
 
     private fun smoothVolumeTransition(fromVolume: Int, toVolume: Int) {
+        Log.d("MediaController", "Smooth volume transition from $fromVolume to $toVolume")
         val step = if (fromVolume < toVolume) 1 else -1
         val delay = 50L
         var currentVolume = fromVolume
