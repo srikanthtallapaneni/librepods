@@ -407,7 +407,7 @@ fun PermissionsScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "To provide the best AirPods experience, we need a few permissions",
+            text = "The following permissions are required to use the app. Please grant them to continue.",
             style = TextStyle(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
