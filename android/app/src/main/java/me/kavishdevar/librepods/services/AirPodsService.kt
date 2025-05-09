@@ -901,13 +901,58 @@ class AirPodsService : Service() {
             Log.d("AirPodsService", "Metadata set: $metadataSet")
         }
     }
-
+    val ancModeFilter = IntentFilter("me.kavishdevar.librepods.SET_ANC_MODE")
+    var ancModeReceiver: BroadcastReceiver? = null
     @SuppressLint("InlinedApi", "MissingPermission", "UnspecifiedRegisterReceiverFlag")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("AirPodsService", "Service started")
         ServiceManager.setService(this)
         startForegroundNotification()
         initGestureDetector()
+
+        ancModeReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "me.kavishdevar.librepods.SET_ANC_MODE") {
+                    if (intent.hasExtra("mode")) {
+                        // If a specific mode is requested, use it
+                        val mode = intent.getIntExtra("mode", -1)
+                        if (mode in 1..4) {
+                            setANCMode(mode)
+                        }
+                    } else {
+                        val currentMode = ancNotification.status
+                        val offListeningMode = sharedPreferences.getBoolean("off_listening_mode", true)
+
+                        val nextMode = if (offListeningMode) {
+                            when (currentMode) {
+                                1 -> 2
+                                2 -> 3
+                                3 -> 4
+                                4 -> 1
+                                else -> 1
+                            }
+                        } else {
+                            when (currentMode) {
+                                1 -> 2
+                                2 -> 3
+                                3 -> 4
+                                4 -> 2
+                                else -> 2
+                            }
+                        }
+
+                        setANCMode(nextMode)
+                        Log.d("AirPodsService", "Cycling ANC mode from $currentMode to $nextMode (offListeningMode: $offListeningMode)")
+                    }
+                }
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(ancModeReceiver, ancModeFilter, RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(ancModeReceiver, ancModeFilter)
+        }
         val audioManager =
             this@AirPodsService.getSystemService(AUDIO_SERVICE) as AudioManager
         MediaController.initialize(
@@ -1959,6 +2004,11 @@ class AirPodsService : Service() {
         Log.d("AirPodsService", "Service stopped is being destroyed for some reason!")
         try {
             unregisterReceiver(bluetoothReceiver)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        try {
+            unregisterReceiver(ancModeReceiver)
         } catch (e: Exception) {
             e.printStackTrace()
         }
