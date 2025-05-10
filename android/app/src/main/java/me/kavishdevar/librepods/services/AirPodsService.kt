@@ -146,8 +146,34 @@ object ServiceManager {
 }
 
 // @Suppress("unused")
-class AirPodsService : Service() {
+class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeListener {
     var macAddress = ""
+
+    data class ServiceConfig(
+        var deviceName: String = "AirPods",
+        var earDetectionEnabled: Boolean = true,
+        var conversationalAwarenessPauseMusic: Boolean = false,
+        var personalizedVolume: Boolean = false,
+        var longPressNC: Boolean = true,
+        var offListeningMode: Boolean = false,
+        var showPhoneBatteryInWidget: Boolean = true,
+        var singleANC: Boolean = true,
+        var longPressTransparency: Boolean = true,
+        var conversationalAwareness: Boolean = true,
+        var relativeConversationalAwarenessVolume: Boolean = true,
+        var longPressAdaptive: Boolean = true,
+        var loudSoundReduction: Boolean = true,
+        var longPressOff: Boolean = false,
+        var volumeControl: Boolean = true,
+        var headGestures: Boolean = true,
+        var adaptiveStrength: Int = 51,
+        var toneVolume: Int = 75,
+        var conversationalAwarenessVolume: Int = 43,
+        var textColor: Long = -1L,
+        var qsClickBehavior: String = "cycle"
+    )
+
+    private lateinit var config: ServiceConfig
 
     inner class LocalBinder : Binder() {
         fun getService(): AirPodsService = this@AirPodsService
@@ -170,6 +196,76 @@ class AirPodsService : Service() {
 
         inMemoryLogs.addAll(sharedPreferencesLogs.getStringSet(packetLogKey, emptySet()) ?: emptySet())
         _packetLogsFlow.value = inMemoryLogs.toSet()
+        
+        sharedPreferences = getSharedPreferences("settings", MODE_PRIVATE)
+        initializeConfig()
+        
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this)
+    }
+
+    private fun initializeConfig() {
+        config = ServiceConfig(
+            deviceName = sharedPreferences.getString("name", "AirPods") ?: "AirPods",
+            earDetectionEnabled = sharedPreferences.getBoolean("automatic_ear_detection", true),
+            conversationalAwarenessPauseMusic = sharedPreferences.getBoolean("conversational_awareness_pause_music", false),
+            personalizedVolume = sharedPreferences.getBoolean("personalized_volume", false),
+            longPressNC = sharedPreferences.getBoolean("long_press_nc", true),
+            offListeningMode = sharedPreferences.getBoolean("off_listening_mode", false),
+            showPhoneBatteryInWidget = sharedPreferences.getBoolean("show_phone_battery_in_widget", true),
+            singleANC = sharedPreferences.getBoolean("single_anc", true),
+            longPressTransparency = sharedPreferences.getBoolean("long_press_transparency", true),
+            conversationalAwareness = sharedPreferences.getBoolean("conversational_awareness", true),
+            relativeConversationalAwarenessVolume = sharedPreferences.getBoolean("relative_conversational_awareness_volume", true),
+            longPressAdaptive = sharedPreferences.getBoolean("long_press_adaptive", true),
+            loudSoundReduction = sharedPreferences.getBoolean("loud_sound_reduction", true),
+            longPressOff = sharedPreferences.getBoolean("long_press_off", false),
+            volumeControl = sharedPreferences.getBoolean("volume_control", true),
+            headGestures = sharedPreferences.getBoolean("head_gestures", true),
+            adaptiveStrength = sharedPreferences.getInt("adaptive_strength", 51),
+            toneVolume = sharedPreferences.getInt("tone_volume", 75),
+            conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 43),
+            textColor = sharedPreferences.getLong("textColor", -1L),
+            qsClickBehavior = sharedPreferences.getString("qs_click_behavior", "cycle") ?: "cycle"
+        )
+    }
+
+    override fun onSharedPreferenceChanged(preferences: SharedPreferences?, key: String?) {
+        if (preferences == null || key == null) return
+        
+        when(key) {
+            "name" -> config.deviceName = preferences.getString(key, "AirPods") ?: "AirPods"
+            "automatic_ear_detection" -> config.earDetectionEnabled = preferences.getBoolean(key, true)
+            "conversational_awareness_pause_music" -> config.conversationalAwarenessPauseMusic = preferences.getBoolean(key, false)
+            "personalized_volume" -> config.personalizedVolume = preferences.getBoolean(key, false)
+            "long_press_nc" -> config.longPressNC = preferences.getBoolean(key, true)
+            "off_listening_mode" -> {
+                config.offListeningMode = preferences.getBoolean(key, false)
+                updateNoiseControlWidget()
+            }
+            "show_phone_battery_in_widget" -> {
+                config.showPhoneBatteryInWidget = preferences.getBoolean(key, true)
+                widgetMobileBatteryEnabled = config.showPhoneBatteryInWidget
+                updateBattery()
+            }
+            "single_anc" -> config.singleANC = preferences.getBoolean(key, true)
+            "long_press_transparency" -> config.longPressTransparency = preferences.getBoolean(key, true)
+            "conversational_awareness" -> config.conversationalAwareness = preferences.getBoolean(key, true)
+            "relative_conversational_awareness_volume" -> config.relativeConversationalAwarenessVolume = preferences.getBoolean(key, true)
+            "long_press_adaptive" -> config.longPressAdaptive = preferences.getBoolean(key, true)
+            "loud_sound_reduction" -> config.loudSoundReduction = preferences.getBoolean(key, true)
+            "long_press_off" -> config.longPressOff = preferences.getBoolean(key, false)
+            "volume_control" -> config.volumeControl = preferences.getBoolean(key, true)
+            "head_gestures" -> config.headGestures = preferences.getBoolean(key, true)
+            "adaptive_strength" -> config.adaptiveStrength = preferences.getInt(key, 51)
+            "tone_volume" -> config.toneVolume = preferences.getInt(key, 75)
+            "conversational_awareness_volume" -> config.conversationalAwarenessVolume = preferences.getInt(key, 43)
+            "textColor" -> config.textColor = preferences.getLong(key, -1L)
+            "qs_click_behavior" -> config.qsClickBehavior = preferences.getString(key, "cycle") ?: "cycle"
+        }
+        
+        if (key == "mac_address") {
+            macAddress = preferences.getString(key, "") ?: ""
+        }
     }
 
     private fun logPacket(packet: ByteArray, source: String) {
@@ -541,7 +637,7 @@ class AirPodsService : Service() {
             it.setInt(
                 R.id.widget_transparency_button,
                 "setBackgroundResource",
-                if (ancStatus == 3) (if (sharedPreferences.getBoolean("off_listening_mode", true)) R.drawable.widget_button_checked_shape_middle else R.drawable.widget_button_checked_shape_start) else (if (sharedPreferences.getBoolean("off_listening_mode", true)) R.drawable.widget_button_shape_middle else R.drawable.widget_button_shape_start)
+                if (ancStatus == 3) (if (config.offListeningMode) R.drawable.widget_button_checked_shape_middle else R.drawable.widget_button_checked_shape_start) else (if (config.offListeningMode) R.drawable.widget_button_shape_middle else R.drawable.widget_button_shape_start)
             )
             it.setInt(
                 R.id.widget_adaptive_button,
@@ -555,19 +651,19 @@ class AirPodsService : Service() {
             )
             it.setViewVisibility(
                 R.id.widget_off_button,
-                if (sharedPreferences.getBoolean("off_listening_mode", true)) View.VISIBLE else View.GONE
+                if (config.offListeningMode) View.VISIBLE else View.GONE
             )
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 it.setViewLayoutMargin(
                     R.id.widget_transparency_button,
                     RemoteViews.MARGIN_START,
-                    if (sharedPreferences.getBoolean("off_listening_mode", true)) 2f else 12f,
+                    if (config.offListeningMode) 2f else 12f,
                     TypedValue.COMPLEX_UNIT_DIP
                 )
             } else {
                 it.setViewPadding(
                     R.id.widget_transparency_button,
-                    if (sharedPreferences.getBoolean("off_listening_mode", true)) 2.dpToPx() else 12.dpToPx(),
+                    if (config.offListeningMode) 2.dpToPx() else 12.dpToPx(),
                     12.dpToPx(),
                     2.dpToPx(),
                     12.dpToPx()
@@ -598,7 +694,7 @@ class AirPodsService : Service() {
         if (connected) {
             updatedNotification = NotificationCompat.Builder(this, "background_service_status")
                 .setSmallIcon(R.drawable.airpods)
-                .setContentTitle(airpodsName)
+                .setContentTitle(airpodsName ?: config.deviceName)
                 .setContentText(
                     """${
                         batteryList?.find { it.component == BatteryComponent.LEFT }?.let {
@@ -648,14 +744,14 @@ class AirPodsService : Service() {
     @RequiresApi(Build.VERSION_CODES.Q)
     fun handleIncomingCall() {
         if (isInCall) return
-
-        initGestureDetector()
-
-        gestureDetector?.startDetection { accepted ->
-            if (accepted) {
-                answerCall()
-            } else {
-                rejectCall()
+        if (config.headGestures) {
+            initGestureDetector()
+            gestureDetector?.startDetection { accepted ->
+                if (accepted) {
+                    answerCall()
+                } else {
+                    rejectCall()
+                }
             }
         }
     }
@@ -943,7 +1039,7 @@ class AirPodsService : Service() {
             editor.apply()
         }
         
-        earDetectionEnabled = sharedPreferences.getBoolean("automatic_ear_detection", true)
+        initializeConfig()
         
         ancModeReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -955,7 +1051,7 @@ class AirPodsService : Service() {
                         }
                     } else {
                         val currentMode = ancNotification.status
-                        val offListeningMode = sharedPreferences.getBoolean("off_listening_mode", true)
+                        val offListeningMode = config.offListeningMode
 
                         val nextMode = if (offListeningMode) {
                             when (currentMode) {
@@ -1013,7 +1109,7 @@ class AirPodsService : Service() {
                 when (state) {
                     TelephonyManager.CALL_STATE_RINGING -> {
                         if (CrossDevice.isAvailable && !isConnectedLocally && earDetectionNotification.status.contains(0x00)) takeOver()
-                        if (sharedPreferences.getBoolean("head_gestures", false)) {
+                        if (config.headGestures) {
                             callNumber = phoneNumber
                             handleIncomingCall()
                         }
@@ -1032,7 +1128,7 @@ class AirPodsService : Service() {
         }
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
 
-        if (sharedPreferences.getBoolean("show_phone_battery_in_widget", true)) {
+        if (config.showPhoneBatteryInWidget) {
             widgetMobileBatteryEnabled = true
             val batteryChangedIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
             batteryChangedIntentFilter.addAction(AirPodsNotifications.DISCONNECT_RECEIVERS)
@@ -1067,19 +1163,16 @@ class AirPodsService : Service() {
                     } else {
                         intent.getParcelableExtra("device") as BluetoothDevice?
                     }
-                    val name = this@AirPodsService.getSharedPreferences("settings", MODE_PRIVATE)
-                        .getString("name", device?.name)
-                    if (this@AirPodsService.getSharedPreferences("settings", MODE_PRIVATE)
-                            .getString("name", null) == null
-                    ) {
-                        this@AirPodsService.getSharedPreferences("settings", MODE_PRIVATE).edit {
-                            putString("name", name)
-                        }
+                    
+                    if (config.deviceName == "AirPods" && device?.name != null) {
+                        config.deviceName = device?.name ?: "AirPods"
+                        sharedPreferences.edit { putString("name", config.deviceName) }
                     }
+                    
                     Log.d("AirPodsCrossDevice", CrossDevice.isAvailable.toString())
                     if (!CrossDevice.isAvailable) {
-                        Log.d("AirPodsService", "$name connected")
-                        showPopup(this@AirPodsService, name.toString())
+                        Log.d("AirPodsService", "${config.deviceName} connected")
+                        showPopup(this@AirPodsService, config.deviceName)
                         connectToSocket(device!!)
                         Log.d("AirPodsService", "Setting metadata")
                         setMetadatas(device!!)
@@ -1090,7 +1183,7 @@ class AirPodsService : Service() {
                         }
                         updateNotificationContent(
                             true,
-                            name.toString(),
+                            config.deviceName,
                             batteryNotification.getBattery()
                         )
                     }
@@ -1351,7 +1444,7 @@ class AirPodsService : Service() {
                                     earReceiver = object : BroadcastReceiver() {
                                         override fun onReceive(context: Context, intent: Intent) {
                                             val data = intent.getByteArrayExtra("data")
-                                            if (data != null && earDetectionEnabled) {
+                                            if (data != null && config.earDetectionEnabled) {
                                                 inEar =
                                                     if (data.find { it == 0x02.toByte() } != null || data.find { it == 0x03.toByte() } != null) {
                                                         data[0] == 0x00.toByte() || data[1] == 0x00.toByte()
@@ -1657,6 +1750,11 @@ class AirPodsService : Service() {
                 0x00
             )
         )
+
+        if (config.offListeningMode != enabled) {
+            config.offListeningMode = enabled
+            sharedPreferences.edit { putBoolean("off_listening_mode", enabled) }
+        }
         updateNoiseControlWidget()
     }
 
@@ -1676,6 +1774,11 @@ class AirPodsService : Service() {
                 0x00
             )
         sendPacket(bytes)
+
+        if (config.adaptiveStrength != strength) {
+            config.adaptiveStrength = strength
+            sharedPreferences.edit { putInt("adaptive_strength", strength) }
+        }
     }
 
     fun setPressSpeed(speed: Int) {
@@ -1741,12 +1844,22 @@ class AirPodsService : Service() {
             0x00
         )
         sendPacket(bytes)
+
+        if (config.volumeControl != enabled) {
+            config.volumeControl = enabled
+            sharedPreferences.edit { putBoolean("volume_control", enabled) }
+        }
     }
 
     fun setToneVolume(volume: Int) {
         val bytes =
             byteArrayOf(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x1F, volume.toByte(), 0x50, 0x00, 0x00)
         sendPacket(bytes)
+
+        if (config.toneVolume != volume) {
+            config.toneVolume = volume
+            sharedPreferences.edit { putInt("tone_volume", volume) }
+        }
     }
 
     val earDetectionNotification = AirPodsNotifications.EarDetection()
@@ -1755,10 +1868,11 @@ class AirPodsService : Service() {
     val conversationAwarenessNotification =
         AirPodsNotifications.ConversationalAwarenessNotification()
 
-    var earDetectionEnabled = true
-
     fun setEarDetection(enabled: Boolean) {
-        earDetectionEnabled = enabled
+        if (config.earDetectionEnabled != enabled) {
+            config.earDetectionEnabled = enabled
+            sharedPreferences.edit { putBoolean("automatic_ear_detection", enabled) }
+        }
     }
 
     fun getBattery(): List<Battery> {
@@ -1865,6 +1979,12 @@ class AirPodsService : Service() {
         ) + nameBytes
         sendPacket(bytes)
         val hex = bytes.joinToString(" ") { "%02X".format(it) }
+        
+        if (config.deviceName != name) {
+            config.deviceName = name
+            sharedPreferences.edit { putString("name", name) }
+        }
+        
         updateNotificationContent(true, name, batteryNotification.getBattery())
         Log.d("AirPodsService", "setName: $name, sent packet: $hex")
     }
@@ -1877,12 +1997,22 @@ class AirPodsService : Service() {
             "04 00 04 00 17 00 00 00 10 00 12 00 08 E${if (enabled) "6" else "5"} 05 10 02 42 0B 08 50 10 02 1A 05 02 ${if (enabled) "32" else "00"} 00 00 00"
         bytes = hex.split(" ").map { it.toInt(16).toByte() }.toByteArray()
         sendPacket(bytes)
+        
+        if (config.personalizedVolume != enabled) {
+            config.personalizedVolume = enabled
+            sharedPreferences.edit { putBoolean("personalized_volume", enabled) }
+        }
     }
 
     fun setLoudSoundReduction(enabled: Boolean) {
         val hex = "52 1B 00 0${if (enabled) "1" else "0"}"
         val bytes = hex.split(" ").map { it.toInt(16).toByte() }.toByteArray()
         sendPacket(bytes)
+        
+        if (config.loudSoundReduction != enabled) {
+            config.loudSoundReduction = enabled
+            sharedPreferences.edit { putBoolean("loud_sound_reduction", enabled) }
+        }
     }
 
     fun findChangedIndex(oldArray: BooleanArray, newArray: BooleanArray): Int {
@@ -2036,6 +2166,9 @@ class AirPodsService : Service() {
     override fun onDestroy() {
         clearPacketLogs()
         Log.d("AirPodsService", "Service stopped is being destroyed for some reason!")
+        
+        sharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
+        
         try {
             unregisterReceiver(bluetoothReceiver)
         } catch (e: Exception) {
