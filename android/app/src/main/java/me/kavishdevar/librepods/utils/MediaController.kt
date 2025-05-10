@@ -37,6 +37,7 @@ object MediaController {
     var userPlayedTheMedia = false
     private lateinit var sharedPreferences: SharedPreferences
     private val handler = Handler(Looper.getMainLooper())
+    private lateinit var preferenceChangeListener: SharedPreferences.OnSharedPreferenceChangeListener
 
     var pausedForCrossDevice = false
 
@@ -52,22 +53,24 @@ object MediaController {
         this.sharedPreferences = sharedPreferences
         Log.d("MediaController", "Initializing MediaController")
         relativeVolume = sharedPreferences.getBoolean("relative_conversational_awareness_volume", false)
-        conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) / 12)
+        conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) / 0.4)
         conversationalAwarenessPauseMusic = sharedPreferences.getBoolean("conversational_awareness_pause_music", false)
 
-        sharedPreferences.registerOnSharedPreferenceChangeListener { _, key ->
+        preferenceChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 "relative_conversational_awareness_volume" -> {
                     relativeVolume = sharedPreferences.getBoolean("relative_conversational_awareness_volume", false)
                 }
                 "conversational_awareness_volume" -> {
-                    conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 100/12)
+                    conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * 0.4)
                 }
                 "conversational_awareness_pause_music" -> {
                     conversationalAwarenessPauseMusic = sharedPreferences.getBoolean("conversational_awareness_pause_music", false)
                 }
             }
         }
+
+        sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener)
 
         audioManager.registerAudioPlaybackCallback(cb, null)
     }
