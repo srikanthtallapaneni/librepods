@@ -82,7 +82,6 @@ object MediaController {
             if (configs != null && !iPausedTheMedia) {
                 Log.d("MediaController", "Seems like the user changed the state of media themselves, now I won't play until the ear detection pauses it.")
                 handler.postDelayed({
-                    iPausedTheMedia = !audioManager.isMusicActive
                     userPlayedTheMedia = audioManager.isMusicActive
                 }, 7) // i have no idea why android sends an event a hundred times after the user does something.
             }
@@ -98,9 +97,9 @@ object MediaController {
 
     @Synchronized
     fun sendPause(force: Boolean = false) {
-        Log.d("MediaController", "Sending pause with iPausedTheMedia: $iPausedTheMedia, userPlayedTheMedia: $userPlayedTheMedia")
-        if ((audioManager.isMusicActive && !userPlayedTheMedia) || force) {
-            iPausedTheMedia = true
+        Log.d("MediaController", "Sending pause with iPausedTheMedia: $iPausedTheMedia, userPlayedTheMedia: $userPlayedTheMedia, isMusicActive: ${audioManager.isMusicActive}, force: $force")
+        if ((audioManager.isMusicActive) && (!userPlayedTheMedia || force)) {
+            iPausedTheMedia = if (force) audioManager.isMusicActive else true
             userPlayedTheMedia = false
             audioManager.dispatchMediaKeyEvent(
                 KeyEvent(
