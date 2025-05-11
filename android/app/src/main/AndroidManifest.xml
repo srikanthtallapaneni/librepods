@@ -44,6 +44,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LibrePods"
+        android:description="@string/app_description"
         tools:ignore="UnusedAttribute"
         tools:targetApi="31">
         <receiver
