@@ -78,9 +78,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import dev.chrisbanes.haze.HazeEffectScope
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.CupertinoMaterials
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.launch
@@ -149,7 +151,7 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
     }
 
     val context = LocalContext.current
-    
+
     val connectionReceiver = remember {
         object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -232,14 +234,13 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
                     )
                 },
                 modifier = Modifier
-                    .hazeChild(
+                    .hazeEffect(
                         state = hazeState,
                         style = CupertinoMaterials.thick(),
-                        block = {
+                        block = fun HazeEffectScope.() {
                             alpha =
                                 if (verticalScrollState.value > 60.dp.value * mDensity.floatValue) 1f else 0f
-                        }
-                    )
+                        })
                     .drawBehind {
                         mDensity.floatValue = density
                         val strokeWidth = 0.7.dp.value * density
@@ -295,7 +296,7 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
         if (isLocallyConnected || isRemotelyConnected) {
             Column(
                 modifier = Modifier
-                    .haze(hazeState)
+                    .hazeSource(hazeState)
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
                     .verticalScroll(

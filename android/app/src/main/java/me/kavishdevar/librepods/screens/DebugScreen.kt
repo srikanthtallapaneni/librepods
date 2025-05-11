@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,6 +50,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Send
@@ -89,33 +91,18 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import dev.chrisbanes.haze.HazeEffectScope
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.CupertinoMaterials
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CoroutineScope
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.utils.BatteryStatus
 import me.kavishdevar.librepods.utils.isHeadTrackingData
-import me.kavishdevar.librepods.composables.StyledSwitch
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.ui.input.pointer.PointerInputChange
 
 data class PacketInfo(
     val type: String,
@@ -349,13 +336,13 @@ fun DebugScreen(navController: NavController) {
     val scrollOffset by remember { derivedStateOf { listState.firstVisibleItemScrollOffset } }
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
-    
+
     val showMenu = remember { mutableStateOf(false) }
-    
+
     val airPodsService = remember { ServiceManager.getService() }
     val packetLogs = airPodsService?.packetLogsFlow?.collectAsState(emptySet())?.value ?: emptySet()
     val shouldScrollToBottom = remember { mutableStateOf(true) }
-    
+
     val refreshTrigger = remember { mutableStateOf(0) }
     LaunchedEffect(refreshTrigger.value) {
         while(true) {
@@ -363,16 +350,16 @@ fun DebugScreen(navController: NavController) {
             refreshTrigger.value = refreshTrigger.value + 1
         }
     }
-    
+
     val expandedItems = remember { mutableStateOf(setOf<Int>()) }
-    
+
     fun copyToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Packet Data", text)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(context, "Packet copied to clipboard", Toast.LENGTH_SHORT).show()
     }
-    
+
     LaunchedEffect(packetLogs.size, refreshTrigger.value) {
         if (shouldScrollToBottom.value && packetLogs.isNotEmpty()) {
             listState.animateScrollToItem(packetLogs.size - 1)
@@ -415,7 +402,7 @@ fun DebugScreen(navController: NavController) {
                                 tint = if (isSystemInDarkTheme()) Color.White else Color.Black
                             )
                         }
-                        
+
                         DropdownMenu(
                             expanded = showMenu.value,
                             onDismissRequest = { showMenu.value = false },
@@ -446,17 +433,17 @@ fun DebugScreen(navController: NavController) {
                                         )
                                     }
                                 },
-                                onClick = { 
+                                onClick = {
                                     shouldScrollToBottom.value = !shouldScrollToBottom.value
                                     showMenu.value = false
                                 }
                             )
-                            
+
                             HorizontalDivider(
                                 color = if (isSystemInDarkTheme()) Color(0xFF3A3A3C) else Color(0xFFE5E5EA),
                                 thickness = 0.5.dp
                             )
-                            
+
                             DropdownMenuItem(
                                 text = {
                                     Row(
@@ -478,7 +465,7 @@ fun DebugScreen(navController: NavController) {
                                         )
                                     }
                                 },
-                                onClick = { 
+                                onClick = {
                                     ServiceManager.getService()?.clearLogs()
                                     expandedItems.value = emptySet()
                                     showMenu.value = false
@@ -487,13 +474,12 @@ fun DebugScreen(navController: NavController) {
                         }
                     }
                 },
-                modifier = Modifier.hazeChild(
+                modifier = Modifier.hazeEffect(
                     state = hazeState,
                     style = CupertinoMaterials.thick(),
-                    block = {
+                    block = fun HazeEffectScope.() {
                         alpha = if (scrollOffset > 0) 1f else 0f
-                    }
-                ),
+                    }),
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
@@ -502,7 +488,7 @@ fun DebugScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .haze(hazeState)
+                .hazeSource(hazeState)
                 .padding(top = paddingValues.calculateTopPadding())
                 .navigationBarsPadding()
         ) {
@@ -633,7 +619,7 @@ fun DebugScreen(navController: NavController) {
                                     airPodsService?.value?.sendPacket(packet.value.text)
                                     packet.value = TextFieldValue("")
                                     focusManager.clearFocus()
-                                    
+
                                     if (shouldScrollToBottom.value && packetLogs.isNotEmpty()) {
                                         coroutineScope.launch {
                                             try {
@@ -643,6 +629,7 @@ fun DebugScreen(navController: NavController) {
                                                     scrollOffset = 0
                                                 )
                                             } catch (e: Exception) {
+                                                e.printStackTrace()
                                                 listState.scrollToItem(
                                                     index = (packetLogs.size - 1).coerceAtLeast(0)
                                                 )
