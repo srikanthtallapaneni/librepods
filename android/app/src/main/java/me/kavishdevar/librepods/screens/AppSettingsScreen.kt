@@ -35,8 +35,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Refresh
@@ -76,9 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import me.kavishdevar.librepods.R
-import me.kavishdevar.librepods.composables.IndependentToggle
 import me.kavishdevar.librepods.composables.StyledSwitch
-import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.utils.RadareOffsetFinder
 import kotlin.math.roundToInt
 
@@ -89,8 +89,25 @@ fun AppSettingsScreen(navController: NavController) {
     val name = remember { mutableStateOf(sharedPreferences.getString("name", "") ?: "") }
     val isDarkTheme = isSystemInDarkTheme()
     val context = LocalContext.current
+    val scrollState = rememberScrollState()
 
     var showResetDialog by remember { mutableStateOf(false) }
+
+    var showPhoneBatteryInWidget by remember {
+        mutableStateOf(sharedPreferences.getBoolean("show_phone_battery_in_widget", true))
+    }
+    var conversationalAwarenessPauseMusicEnabled by remember {
+        mutableStateOf(sharedPreferences.getBoolean("conversational_awareness_pause_music", false))
+    }
+    var relativeConversationalAwarenessVolumeEnabled by remember {
+        mutableStateOf(sharedPreferences.getBoolean("relative_conversational_awareness_volume", true))
+    }
+    var openDialogForControlling by remember {
+        mutableStateOf(sharedPreferences.getString("qs_click_behavior", "dialog") == "dialog")
+    }
+    var disconnectWhenNotWearing by remember {
+        mutableStateOf(sharedPreferences.getBoolean("disconnect_when_not_wearing", false))
+    }
 
     Scaffold(
         topBar = {
@@ -141,24 +158,88 @@ fun AppSettingsScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(scrollState)
         ) {
             val isDarkTheme = isSystemInDarkTheme()
-
             val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
             val textColor = if (isDarkTheme) Color.White else Color.Black
 
-            IndependentToggle("Show phone battery in widget", ServiceManager.getService()!!, "setPhoneBatteryInWidget", sharedPreferences)
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringResource(R.string.conversational_awareness_customization).uppercase(),
+                text = "Widget".uppercase(),
                 style = TextStyle(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Light,
-                    color = (if (isSystemInDarkTheme()) Color.White else Color.Black).copy(alpha = 0.6f),
+                    color = textColor.copy(alpha = 0.6f),
                     fontFamily = FontFamily(Font(R.font.sf_pro))
                 ),
-                modifier = Modifier.padding(8.dp, bottom = 2.dp)
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+            
+            Column (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        backgroundColor,
+                        RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            showPhoneBatteryInWidget = !showPhoneBatteryInWidget
+                            sharedPreferences.edit().putBoolean("show_phone_battery_in_widget", showPhoneBatteryInWidget).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = "Show phone battery in widget",
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Display your phone's battery level in the widget alongside AirPods battery",
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = showPhoneBatteryInWidget,
+                        onCheckedChange = {
+                            showPhoneBatteryInWidget = it
+                            sharedPreferences.edit().putBoolean("show_phone_battery_in_widget", it).apply()
+                        }
+                    )
+                }
+            }
+
+            Text(
+                text = "Conversational Awareness".uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = textColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -166,42 +247,22 @@ fun AppSettingsScreen(navController: NavController) {
             Column (
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(275.sp.value.dp)
                     .background(
                         backgroundColor,
                         RoundedCornerShape(14.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 val sliderValue = remember { mutableFloatStateOf(0f) }
                 LaunchedEffect(sliderValue) {
                     if (sharedPreferences.contains("conversational_awareness_volume")) {
-                        sliderValue.floatValue = sharedPreferences.getInt("conversational_awareness_volume", 0).toFloat()
+                        sliderValue.floatValue = sharedPreferences.getInt("conversational_awareness_volume", 43).toFloat()
                     }
-                }
-                LaunchedEffect(sliderValue.floatValue) {
-                    sharedPreferences.edit().putInt("conversational_awareness_volume", sliderValue.floatValue.toInt()).apply()
-                }
-
-                val trackColor = if (isDarkTheme) Color(0xFFB3B3B3) else Color(0xFFD9D9D9)
-                val thumbColor = if (isDarkTheme) Color(0xFFFFFFFF) else Color(0xFFFFFFFF)
-                val labelTextColor = if (isDarkTheme) Color.White else Color.Black
-
-                var conversationalAwarenessPauseMusicEnabled by remember {
-                    mutableStateOf(
-                        sharedPreferences.getBoolean("conversational_awareness_pause_music", true)
-                    )
                 }
 
                 fun updateConversationalAwarenessPauseMusic(enabled: Boolean) {
                     conversationalAwarenessPauseMusicEnabled = enabled
                     sharedPreferences.edit().putBoolean("conversational_awareness_pause_music", enabled).apply()
-                }
-
-                var relativeConversationalAwarenessVolumeEnabled by remember {
-                    mutableStateOf(
-                        sharedPreferences.getBoolean("relative_conversational_awareness_volume", true)
-                    )
                 }
 
                 fun updateRelativeConversationalAwarenessVolume(enabled: Boolean) {
@@ -212,11 +273,6 @@ fun AppSettingsScreen(navController: NavController) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(85.sp.value.dp)
-                        .background(
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color.Transparent
-                        )
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
@@ -228,6 +284,7 @@ fun AppSettingsScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
+                            .padding(vertical = 8.dp)
                             .padding(end = 4.dp)
                     ) {
                         Text(
@@ -255,11 +312,6 @@ fun AppSettingsScreen(navController: NavController) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(85.sp.value.dp)
-                        .background(
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color.Transparent
-                        )
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
@@ -271,6 +323,7 @@ fun AppSettingsScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
+                            .padding(vertical = 8.dp)
                             .padding(end = 4.dp)
                     ) {
                         Text(
@@ -295,20 +348,31 @@ fun AppSettingsScreen(navController: NavController) {
                     )
                 }
 
+                Text(
+                    text = "Conversational Awareness Volume",
+                    fontSize = 16.sp,
+                    color = textColor,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+
+                val trackColor = if (isDarkTheme) Color(0xFFB3B3B3) else Color(0xFFD9D9D9)
                 val activeTrackColor = if (isDarkTheme) Color(0xFF007AFF) else Color(0xFF3C6DF5)
+                val thumbColor = if (isDarkTheme) Color(0xFFFFFFFF) else Color(0xFFFFFFFF)
 
                 Slider(
                     value = sliderValue.floatValue,
                     onValueChange = {
                         sliderValue.floatValue = it
+                        sharedPreferences.edit().putInt("conversational_awareness_volume", it.toInt()).apply()
                     },
                     valueRange = 10f..85f,
                     onValueChangeFinished = {
                         sliderValue.floatValue = sliderValue.floatValue.roundToInt().toFloat()
                     },
                     modifier = Modifier
-                        .weight(1f)
-                        .height(36.dp),
+                        .fillMaxWidth()
+                        .height(36.dp)
+                        .padding(vertical = 4.dp),
                     colors = SliderDefaults.colors(
                         thumbColor = thumbColor,
                         activeTrackColor = activeTrackColor,
@@ -347,7 +411,9 @@ fun AppSettingsScreen(navController: NavController) {
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
@@ -355,7 +421,7 @@ fun AppSettingsScreen(navController: NavController) {
                         style = TextStyle(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Light,
-                            color = labelTextColor
+                            color = textColor.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier.padding(start = 4.dp)
                     )
@@ -364,15 +430,26 @@ fun AppSettingsScreen(navController: NavController) {
                         style = TextStyle(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Light,
-                            color = labelTextColor
+                            color = textColor.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier.padding(end = 4.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
+            Text(
+                text = "Quick Settings Tile".uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = textColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(2.dp))
+            
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -380,14 +457,8 @@ fun AppSettingsScreen(navController: NavController) {
                         backgroundColor,
                         RoundedCornerShape(14.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
-                var openDialogForControlling by remember {
-                    mutableStateOf(
-                        sharedPreferences.getString("qs_click_behavior", "dialog") == "dialog"
-                    )
-                }
-
                 fun updateQsClickBehavior(enabled: Boolean) {
                     openDialogForControlling = enabled
                     sharedPreferences.edit().putString("qs_click_behavior", if (enabled) "dialog" else "cycle").apply()
@@ -407,7 +478,7 @@ fun AppSettingsScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(vertical = 16.dp)
+                            .padding(vertical = 8.dp)
                             .padding(end = 4.dp)
                     ) {
                         Text(
@@ -435,7 +506,83 @@ fun AppSettingsScreen(navController: NavController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Ear Detection".uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = textColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        backgroundColor,
+                        RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                fun updateDisconnectWhenNotWearing(enabled: Boolean) {
+                    disconnectWhenNotWearing = enabled
+                    sharedPreferences.edit().putBoolean("disconnect_when_not_wearing", enabled).apply()
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            updateDisconnectWhenNotWearing(!disconnectWhenNotWearing)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = "Disconnect AirPods when not wearing",
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "You will still be able to control them with the app - this just disconnects the audio.",
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = disconnectWhenNotWearing,
+                        onCheckedChange = {
+                            updateDisconnectWhenNotWearing(it)
+                        }
+                    )
+                }
+            }
+
+            Text(
+                text = "Advanced Options".uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = textColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
+            )
 
             Button(
                 onClick = { showResetDialog = true },
@@ -469,6 +616,8 @@ fun AppSettingsScreen(navController: NavController) {
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
 
             if (showResetDialog) {
                 AlertDialog(

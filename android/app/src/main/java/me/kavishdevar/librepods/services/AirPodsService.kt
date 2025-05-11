@@ -166,6 +166,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         var longPressOff: Boolean = false,
         var volumeControl: Boolean = true,
         var headGestures: Boolean = true,
+        var disconnectWhenNotWearing: Boolean = false,
         var adaptiveStrength: Int = 51,
         var toneVolume: Int = 75,
         var conversationalAwarenessVolume: Int = 43,
@@ -221,6 +222,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             longPressOff = sharedPreferences.getBoolean("long_press_off", false),
             volumeControl = sharedPreferences.getBoolean("volume_control", true),
             headGestures = sharedPreferences.getBoolean("head_gestures", true),
+            disconnectWhenNotWearing = sharedPreferences.getBoolean("disconnect_when_not_wearing", false),
             adaptiveStrength = sharedPreferences.getInt("adaptive_strength", 51),
             toneVolume = sharedPreferences.getInt("tone_volume", 75),
             conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 43),
@@ -256,6 +258,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             "long_press_off" -> config.longPressOff = preferences.getBoolean(key, false)
             "volume_control" -> config.volumeControl = preferences.getBoolean(key, true)
             "head_gestures" -> config.headGestures = preferences.getBoolean(key, true)
+            "disconnect_when_not_wearing" -> config.disconnectWhenNotWearing = preferences.getBoolean(key, false)
             "adaptive_strength" -> config.adaptiveStrength = preferences.getInt(key, 51)
             "tone_volume" -> config.toneVolume = preferences.getInt(key, 75)
             "conversational_awareness_volume" -> config.conversationalAwarenessVolume = preferences.getInt(key, 43)
@@ -1026,6 +1029,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             if (!contains("long_press_off")) editor.putBoolean("long_press_off", false)
             if (!contains("volume_control")) editor.putBoolean("volume_control", true)
             if (!contains("head_gestures")) editor.putBoolean("head_gestures", true)
+            if (!contains("disconnect_when_not_wearing")) editor.putBoolean("disconnect_when_not_wearing", false)
             
             if (!contains("adaptive_strength")) editor.putInt("adaptive_strength", 51)
             if (!contains("tone_volume")) editor.putInt("tone_volume", 75)
@@ -1498,7 +1502,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                                     }
                                                 } else if (newInEarData == listOf(false, false)) {
                                                     MediaController.sendPause(force = true)
-                                                    disconnectAudio(this@AirPodsService, device)
+                                                    if (config.disconnectWhenNotWearing) {
+                                                        disconnectAudio(this@AirPodsService, device)
+                                                    }
                                                 }
 
                                                 if (inEarData.contains(false) && newInEarData == listOf(
