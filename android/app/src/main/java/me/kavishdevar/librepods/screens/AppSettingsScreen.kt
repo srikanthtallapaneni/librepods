@@ -64,8 +64,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -78,16 +80,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeEffectScope
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.CupertinoMaterials
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.composables.StyledSwitch
 import me.kavishdevar.librepods.utils.RadareOffsetFinder
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun AppSettingsScreen(navController: NavController) {
     val sharedPreferences = LocalContext.current.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -115,19 +119,31 @@ fun AppSettingsScreen(navController: NavController) {
     var disconnectWhenNotWearing by remember {
         mutableStateOf(sharedPreferences.getBoolean("disconnect_when_not_wearing", false))
     }
-
+    var mDensity by remember { mutableFloatStateOf(0f) }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
-                modifier = Modifier.hazeChild(
+                modifier = Modifier.hazeEffect(
                     state = hazeState,
-                    style = HazeDefaults.style(
-                        backgroundColor = if (isDarkTheme) Color(0xFF000000).copy(alpha = 0.7f) 
-                                          else Color(0xFFF2F2F7).copy(alpha = 0.7f),
-                        tint = Color.White.copy(alpha = 0.2f)
-                    )
-                ),
+                    style = CupertinoMaterials.thick(),
+                    block = fun HazeEffectScope.() {
+                        alpha =
+                            if (scrollState.value > 60.dp.value * mDensity) 1f else 0f
+                    })
+                    .drawBehind {
+                        mDensity = density
+                        val strokeWidth = 0.7.dp.value * density
+                        val y = size.height - strokeWidth / 2
+                        if (scrollState.value > 60.dp.value * density) {
+                            drawLine(
+                                if (isDarkTheme) Color.DarkGray else Color.LightGray,
+                                Offset(0f, y),
+                                Offset(size.width, y),
+                                strokeWidth
+                            )
+                        }
+                    },
                 title = {
                     Text(
                         text = stringResource(R.string.app_settings),
@@ -177,10 +193,7 @@ fun AppSettingsScreen(navController: NavController) {
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState)
-                .haze(
-                    state = hazeState,
-                    style = HazeDefaults.style(backgroundColor = Color.Transparent)
-                )
+                .hazeSource(state = hazeState)
         ) {
             val isDarkTheme = isSystemInDarkTheme()
             val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
@@ -200,7 +213,7 @@ fun AppSettingsScreen(navController: NavController) {
             )
 
             Spacer(modifier = Modifier.height(2.dp))
-            
+
             Column (
                 modifier = Modifier
                     .fillMaxWidth()
@@ -468,9 +481,9 @@ fun AppSettingsScreen(navController: NavController) {
                 ),
                 modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
             )
-            
+
             Spacer(modifier = Modifier.height(2.dp))
-            
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

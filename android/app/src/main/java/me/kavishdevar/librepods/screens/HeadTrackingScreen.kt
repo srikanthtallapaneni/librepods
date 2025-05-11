@@ -72,6 +72,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -101,10 +102,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeEffectScope
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.CupertinoMaterials
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -117,6 +120,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
+@ExperimentalHazeMaterialsApi
 @RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -131,23 +135,36 @@ fun HeadTrackingScreen(navController: NavController) {
     val isDarkTheme = isSystemInDarkTheme()
     val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
     val textColor = if (isDarkTheme) Color.White else Color.Black
-    
+
     val scrollState = rememberScrollState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val hazeState = remember { HazeState() }
-    
+
+    var mDensity by remember { mutableFloatStateOf(0f) }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
-                modifier = Modifier.hazeChild(
+                modifier = Modifier.hazeEffect(
                     state = hazeState,
-                    style = HazeDefaults.style(
-                        backgroundColor = if (isDarkTheme) Color(0xFF000000).copy(alpha = 0.7f) 
-                                          else Color(0xFFF2F2F7).copy(alpha = 0.7f),
-                        tint = Color.White.copy(alpha = 0.2f)
-                    )
-                ),
+                    style = CupertinoMaterials.thick(),
+                    block = fun HazeEffectScope.() {
+                        alpha =
+                            if (scrollState.value > 60.dp.value * mDensity) 1f else 0f
+                    })
+                    .drawBehind {
+                        mDensity = density
+                        val strokeWidth = 0.7.dp.value * density
+                        val y = size.height - strokeWidth / 2
+                        if (scrollState.value > 60.dp.value * density) {
+                            drawLine(
+                                if (isDarkTheme) Color.DarkGray else Color.LightGray,
+                                Offset(0f, y),
+                                Offset(size.width, y),
+                                strokeWidth
+                            )
+                        }
+                    },
                 title = {
                     Text(
                         stringResource(R.string.head_tracking),
@@ -246,10 +263,7 @@ fun HeadTrackingScreen(navController: NavController) {
                 .padding(horizontal = 16.dp)
                 .padding(top = 8.dp)
                 .verticalScroll(scrollState)
-                .haze(
-                    state = hazeState,
-                    style = HazeDefaults.style(backgroundColor = Color.Transparent)
-                )
+                .hazeSource(state = hazeState)
         ) {
             val sharedPreferences =
                 LocalContext.current.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -833,6 +847,7 @@ private fun AccelerationPlot() {
     }
 }
 
+@ExperimentalHazeMaterialsApi
 @RequiresApi(Build.VERSION_CODES.Q)
 @Preview
 @Composable
