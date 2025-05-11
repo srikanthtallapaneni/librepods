@@ -21,14 +21,13 @@ package me.kavishdevar.librepods.utils
 import android.content.SharedPreferences
 import android.media.AudioManager
 import android.media.AudioPlaybackConfiguration
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.KeyEvent
+import androidx.annotation.RequiresApi
 import me.kavishdevar.librepods.services.ServiceManager
-import kotlin.div
-import kotlin.text.compareTo
-import kotlin.times
 
 object MediaController {
     private var initialVolume: Int? = null
@@ -76,6 +75,7 @@ object MediaController {
     }
 
     val cb = object : AudioManager.AudioPlaybackCallback() {
+        @RequiresApi(Build.VERSION_CODES.R)
         override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) {
             super.onPlaybackConfigChanged(configs)
             Log.d("MediaController", "Playback config changed, iPausedTheMedia: $iPausedTheMedia")
@@ -140,7 +140,7 @@ object MediaController {
     @Synchronized
     fun startSpeaking() {
         Log.d("MediaController", "Starting speaking max vol: ${audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)}, current vol: ${audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)}, conversationalAwarenessVolume: $conversationalAwarenessVolume, relativeVolume: $relativeVolume")
-        
+
         if (initialVolume == null) {
             initialVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             Log.d("MediaController", "Initial Volume: $initialVolume")
