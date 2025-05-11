@@ -67,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -77,6 +78,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.composables.StyledSwitch
 import me.kavishdevar.librepods.utils.RadareOffsetFinder
@@ -90,6 +95,8 @@ fun AppSettingsScreen(navController: NavController) {
     val isDarkTheme = isSystemInDarkTheme()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val hazeState = remember { HazeState() }
 
     var showResetDialog by remember { mutableStateOf(false) }
 
@@ -110,8 +117,17 @@ fun AppSettingsScreen(navController: NavController) {
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
+                modifier = Modifier.hazeChild(
+                    state = hazeState,
+                    style = HazeDefaults.style(
+                        backgroundColor = if (isDarkTheme) Color(0xFF000000).copy(alpha = 0.7f) 
+                                          else Color(0xFFF2F2F7).copy(alpha = 0.7f),
+                        tint = Color.White.copy(alpha = 0.2f)
+                    )
+                ),
                 title = {
                     Text(
                         text = stringResource(R.string.app_settings),
@@ -146,9 +162,10 @@ fun AppSettingsScreen(navController: NavController) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
-                )
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         containerColor = if (isSystemInDarkTheme()) Color(0xFF000000)
@@ -160,6 +177,10 @@ fun AppSettingsScreen(navController: NavController) {
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState)
+                .haze(
+                    state = hazeState,
+                    style = HazeDefaults.style(backgroundColor = Color.Transparent)
+                )
         ) {
             val isDarkTheme = isSystemInDarkTheme()
             val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)

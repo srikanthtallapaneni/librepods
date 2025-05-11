@@ -40,7 +40,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.PlayArrow
@@ -84,6 +86,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -98,6 +101,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -124,9 +131,23 @@ fun HeadTrackingScreen(navController: NavController) {
     val isDarkTheme = isSystemInDarkTheme()
     val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
     val textColor = if (isDarkTheme) Color.White else Color.Black
+    
+    val scrollState = rememberScrollState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val hazeState = remember { HazeState() }
+    
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
+                modifier = Modifier.hazeChild(
+                    state = hazeState,
+                    style = HazeDefaults.style(
+                        backgroundColor = if (isDarkTheme) Color(0xFF000000).copy(alpha = 0.7f) 
+                                          else Color(0xFFF2F2F7).copy(alpha = 0.7f),
+                        tint = Color.White.copy(alpha = 0.2f)
+                    )
+                ),
                 title = {
                     Text(
                         stringResource(R.string.head_tracking),
@@ -162,7 +183,7 @@ fun HeadTrackingScreen(navController: NavController) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
                 ),
                 actions = {
@@ -211,7 +232,8 @@ fun HeadTrackingScreen(navController: NavController) {
                             modifier = Modifier.scale(1.5f)
                         )
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         },
         containerColor = if (isSystemInDarkTheme()) Color(0xFF000000)
@@ -223,6 +245,11 @@ fun HeadTrackingScreen(navController: NavController) {
                 .padding(paddingValues = paddingValues)
                 .padding(horizontal = 16.dp)
                 .padding(top = 8.dp)
+                .verticalScroll(scrollState)
+                .haze(
+                    state = hazeState,
+                    style = HazeDefaults.style(backgroundColor = Color.Transparent)
+                )
         ) {
             val sharedPreferences =
                 LocalContext.current.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -311,7 +338,7 @@ fun HeadTrackingScreen(navController: NavController) {
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(top = 12.dp)
+                modifier = Modifier.padding(top = 12.dp, bottom = 24.dp)
             ) {
                 AnimatedContent(
                     targetState = gestureText,
