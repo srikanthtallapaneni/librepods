@@ -803,7 +803,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             notificationManager.notify(1, updatedNotification)
             notificationManager.cancel(2)
-        } else {
+        } else if (!socket.isConnected && isConnectedLocally) {
             showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
         }
     }
@@ -1256,11 +1256,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         sharedPreferences.edit {
                             putString("mac_address", macAddress)
                         }
-                        updateNotificationContent(
-                            true,
-                            config.deviceName,
-                            batteryNotification.getBattery()
-                        )
                     }
                 } else if (intent?.action == AirPodsNotifications.AIRPODS_DISCONNECTED) {
                     device = null
@@ -1444,7 +1439,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     withTimeout(5000L) {
                         try {
                             socket.connect()
+                            isConnectedLocally = true
                             this@AirPodsService.device = device
+                            updateNotificationContent(
+                                true,
+                                config.deviceName,
+                                batteryNotification.getBattery()
+                            )
                         } catch (e: Exception) {
                             showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
                             throw e
@@ -1455,7 +1456,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     }
                 }
                 this@AirPodsService.device = device
-                isConnectedLocally = true
                 socket.let { it ->
                     it.outputStream.write(Enums.HANDSHAKE.value)
                     it.outputStream.flush()
@@ -1734,11 +1734,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 showSocketConnectionFailureNotification("Failed to establish connection: ${e.message}")
                 isConnectedLocally = false
                 this@AirPodsService.device = device
-                updateNotificationContent(
-                    true,
-                    config.deviceName,
-                    null
-                )
+                updateNotificationContent(false)
             }
         }
     }
@@ -1798,7 +1794,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 CrossDevice.sendRemotePacket(CrossDevicePackets.AIRPODS_DATA_HEADER.packet + packet)
                 return
             }
-            if (this::socket.isInitialized && socket.isConnected && socket.outputStream != null) {
+            if (this::socket.isInitialized && socket.isConnected && socket.outputStream != null && isConnectedLocally) {
                 socket.outputStream?.write(packet)
                 socket.outputStream?.flush()
             } else {
