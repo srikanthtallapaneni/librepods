@@ -107,6 +107,7 @@ import me.kavishdevar.librepods.screens.HeadTrackingScreen
 import me.kavishdevar.librepods.screens.LongPress
 import me.kavishdevar.librepods.screens.Onboarding
 import me.kavishdevar.librepods.screens.RenameScreen
+import me.kavishdevar.librepods.screens.TroubleshootingScreen
 import me.kavishdevar.librepods.services.AirPodsService
 import me.kavishdevar.librepods.ui.theme.LibrePodsTheme
 import me.kavishdevar.librepods.utils.AirPodsNotifications
@@ -276,6 +277,9 @@ fun Main() {
                 }
                 composable("app_settings") {
                     AppSettingsScreen(navController)
+                }
+                composable("troubleshooting") {
+                    TroubleshootingScreen(navController)
                 }
                 composable("head_tracking") {
                     HeadTrackingScreen(navController)

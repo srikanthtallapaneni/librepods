@@ -59,4 +59,9 @@
     <string name="ear_detection">Automatic Ear Detection</string>
     <string name="auto_play">Auto Play</string>
     <string name="auto_pause">Auto Pause</string>
+    <string name="troubleshooting">Troubleshooting</string>
+    <string name="troubleshooting_description">Collect logs to diagnose issues with AirPods connection</string>
+    <string name="collect_logs">Collect Logs</string>
+    <string name="saved_logs">Saved Logs</string>
+    <string name="no_logs_found">No saved logs found</string>
 </resources>

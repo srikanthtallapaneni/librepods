@@ -804,6 +804,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             notificationManager.notify(1, updatedNotification)
             notificationManager.cancel(2)
         } else if (!socket.isConnected && isConnectedLocally) {
+            Log.d("AirPodsService", "<LogCollector:Complete:Failed> Socket not connected")
             showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
         }
     }
@@ -1423,6 +1424,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     @RequiresApi(Build.VERSION_CODES.R)
     @SuppressLint("MissingPermission", "UnspecifiedRegisterReceiverFlag")
     fun connectToSocket(device: BluetoothDevice) {
+        Log.d("AirPodsService", "<LogCollector:Start> Connecting to socket")
         HiddenApiBypass.addHiddenApiExemptions("Landroid/bluetooth/BluetoothSocket;")
         val uuid: ParcelUuid = ParcelUuid.fromString("74ec2172-0bad-4d01-8f77-997b2be0722a")
         if (isConnectedLocally != true && !CrossDevice.isAvailable) {
@@ -1446,12 +1448,15 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 config.deviceName,
                                 batteryNotification.getBattery()
                             )
+                            Log.d("AirPodsService", "<LogCollector:Complete:Success> Socket connected")
                         } catch (e: Exception) {
+                            Log.d("AirPodsService", "<LogCollector:Complete:Failed> Socket not connected")
                             showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
                             throw e
                         }
                     }
                     if (!socket.isConnected) {
+                        Log.d("AirPodsService", "<LogCollector:Complete:Failed> Socket not connected")
                         showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
                     }
                 }
@@ -1779,7 +1784,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 socket.outputStream?.flush()
             } else {
                 Log.d("AirPodsService", "Can't send packet: Socket not initialized or connected")
-                showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
             }
         } catch (e: Exception) {
             Log.e("AirPodsService", "Error sending packet: ${e.message}")
@@ -1799,7 +1803,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 socket.outputStream?.flush()
             } else {
                 Log.d("AirPodsService", "Can't send packet: Socket not initialized or connected")
-                showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
             }
         } catch (e: Exception) {
             Log.e("AirPodsService", "Error sending packet: ${e.message}")
