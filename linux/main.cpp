@@ -628,7 +628,7 @@ private slots:
         }
         // Get CA state
         else if (data.startsWith(AirPodsPackets::ConversationalAwareness::HEADER)) {
-            auto result = AirPodsPackets::ConversationalAwareness::parseCAState(data);
+            auto result = AirPodsPackets::ConversationalAwareness::parseState(data);
             if (result.has_value()) {
                 m_conversationalAwareness = result.value();
                 LOG_INFO("Conversational awareness state received: " << m_conversationalAwareness);
