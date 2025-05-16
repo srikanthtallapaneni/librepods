@@ -38,16 +38,6 @@ namespace AirPodsPackets
         }
     }
 
-    // VoiceTrigger for Siri
-    namespace VoiceTrigger
-    {
-        using Type = BasicControlCommand<0x12>;
-        static const QByteArray ENABLED = Type::ENABLED;
-        static const QByteArray DISABLED = Type::DISABLED;
-        static const QByteArray HEADER = Type::HEADER;
-        inline std::optional<bool> parseState(const QByteArray &data) { return Type::parseState(data); }
-    }
-
     // One Bud ANC Mode
     namespace OneBudANCMode
     {
@@ -92,16 +82,6 @@ namespace AirPodsPackets
         static const QByteArray DISABLED = Type::DISABLED;
         static const QByteArray HEADER = Type::HEADER;
         static const QByteArray DATA_HEADER = QByteArray::fromHex("040004004B00020001");
-        inline std::optional<bool> parseState(const QByteArray &data) { return Type::parseState(data); }
-    }
-
-    // In Case Tone
-    namespace InCaseTone
-    {
-        using Type = BasicControlCommand<0x31>;
-        static const QByteArray ENABLED = Type::ENABLED;
-        static const QByteArray DISABLED = Type::DISABLED;
-        static const QByteArray HEADER = Type::HEADER;
         inline std::optional<bool> parseState(const QByteArray &data) { return Type::parseState(data); }
     }
 
