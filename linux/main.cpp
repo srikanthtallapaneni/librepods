@@ -37,6 +37,7 @@ class AirPodsTrayApp : public QObject {
     Q_PROPERTY(bool notificationsEnabled READ notificationsEnabled WRITE setNotificationsEnabled NOTIFY notificationsEnabledChanged)
     Q_PROPERTY(int retryAttempts READ retryAttempts WRITE setRetryAttempts NOTIFY retryAttemptsChanged)
     Q_PROPERTY(bool hideOnStart READ hideOnStart CONSTANT)
+    Q_PROPERTY(bool oneBudANCMode READ oneBudANCMode WRITE setOneBudANCMode NOTIFY oneBudANCModeChanged)
 
 public:
     AirPodsTrayApp(bool debugMode, bool hideOnStart, QQmlApplicationEngine *parent = nullptr)
@@ -146,6 +147,7 @@ public:
     void setNotificationsEnabled(bool enabled) { trayManager->setNotificationsEnabled(enabled); }
     int retryAttempts() const { return m_retryAttempts; }
     bool hideOnStart() const { return m_hideOnStart; }
+    bool oneBudANCMode() const { return m_oneBudANCMode; }
 
 private:
     bool debugMode;
@@ -225,6 +227,29 @@ public slots:
         writePacketToSocket(packet, "Conversational awareness packet written: ");
         m_conversationalAwareness = enabled;
         emit conversationalAwarenessChanged(enabled);
+    }
+
+    void setOneBudANCMode(bool enabled)
+    {
+        if (m_oneBudANCMode == enabled)
+        {
+            LOG_INFO("One Bud ANC mode is already " << (enabled ? "enabled" : "disabled"));
+            return;
+        }
+
+        LOG_INFO("Setting One Bud ANC mode to: " << (enabled ? "enabled" : "disabled"));
+        QByteArray packet = enabled ? AirPodsPackets::OneBudANCMode::ENABLED
+                                    : AirPodsPackets::OneBudANCMode::DISABLED;
+
+        if (writePacketToSocket(packet, "One Bud ANC mode packet written: "))
+        {
+            m_oneBudANCMode = enabled;
+            emit oneBudANCModeChanged(enabled);
+        }
+        else
+        {
+            LOG_ERROR("Failed to send One Bud ANC mode command: socket not open");
+        }
     }
 
     void setRetryAttempts(int attempts)
@@ -698,6 +723,19 @@ private slots:
             }
             emit airPodsStatusChanged();
         }
+        else if (data.startsWith(AirPodsPackets::OneBudANCMode::HEADER)) {
+            auto result = AirPodsPackets::OneBudANCMode::parseState(data);
+            if (result.has_value())
+            {
+                m_oneBudANCMode = result.value();
+                LOG_INFO("One Bud ANC mode received: " << m_conversationalAwareness);
+                emit oneBudANCModeChanged(m_conversationalAwareness);
+            }
+            else
+            {
+                LOG_ERROR("Failed to parse One Bud ANC mode");
+            }
+        }
         else
         {
             LOG_DEBUG("Unrecognized packet format: " << data.toHex());
@@ -927,6 +965,7 @@ signals:
     void crossDeviceEnabledChanged(bool enabled);
     void notificationsEnabledChanged(bool enabled);
     void retryAttemptsChanged(int attempts);
+    void oneBudANCModeChanged(bool enabled);
 
 private:
     QBluetoothSocket *socket = nullptr;
@@ -954,6 +993,7 @@ private:
     bool m_secoundaryInEar = false;
     QByteArray m_magicAccIRK;
     QByteArray m_magicAccEncKey;
+    bool m_oneBudANCMode = false;
 };
 
 int main(int argc, char *argv[]) {
