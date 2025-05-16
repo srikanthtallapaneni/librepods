@@ -197,7 +197,7 @@ namespace AirPodsPackets
             quint16 len1 = (static_cast<quint8>(data.at(index)) << 8) | static_cast<quint8>(data.at(index + 1));
             if (len1 != 16)
                 return keys;
-            index += 3; // Skip length and reserved byte
+            index += 3; // Skip length (2 bytes) and reserved byte (1 byte)
 
             keys.magicAccIRK = data.mid(index, 16);
             index += 16;
@@ -210,7 +210,7 @@ namespace AirPodsPackets
             quint16 len2 = (static_cast<quint8>(data.at(index)) << 8) | static_cast<quint8>(data.at(index + 1));
             if (len2 != 16)
                 return keys;
-            index += 3; // Skip length and reserved byte
+            index += 3; // Skip length (2 bytes) and reserved byte (1 byte)
 
             keys.magicAccEncKey = data.mid(index, 16);
 
