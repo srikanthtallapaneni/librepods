@@ -27,6 +27,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
@@ -183,17 +184,30 @@ fun Main() {
     var canDrawOverlays by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     val overlaySkipped = remember { mutableStateOf(context.getSharedPreferences("settings", MODE_PRIVATE).getBoolean("overlay_permission_skipped", false)) }
 
-    val permissionState = rememberMultiplePermissionsState(
-        permissions = listOf(
+    val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        listOf(
             "android.permission.BLUETOOTH_CONNECT",
             "android.permission.BLUETOOTH_SCAN",
             "android.permission.BLUETOOTH",
             "android.permission.BLUETOOTH_ADMIN",
-            "android.permission.BLUETOOTH_ADVERTISE",
-            "android.permission.POST_NOTIFICATIONS",
-            "android.permission.READ_PHONE_STATE",
-            "android.permission.ANSWER_PHONE_CALLS",
+            "android.permission.BLUETOOTH_ADVERTISE"
         )
+    } else {
+        listOf(
+            "android.permission.BLUETOOTH",
+            "android.permission.BLUETOOTH_ADMIN",
+            "android.permission.ACCESS_FINE_LOCATION"
+        )
+    }
+    val otherPermissions = listOf(
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.ANSWER_PHONE_CALLS"
+    )
+    val allPermissions = bluetoothPermissions + otherPermissions
+    
+    val permissionState = rememberMultiplePermissionsState(
+        permissions = allPermissions
     )
     val airPodsService = remember { mutableStateOf<AirPodsService?>(null) }
 
