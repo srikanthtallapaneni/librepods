@@ -33,6 +33,12 @@ public:
         }
     }
 
+    void resetTrayIcon()
+    {
+        trayIcon->setIcon(QIcon(":/icons/assets/airpods.png"));
+        trayIcon->setToolTip("");
+    }
+
 signals:
     void notificationsEnabledChanged(bool enabled);
 
