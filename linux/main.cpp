@@ -440,6 +440,7 @@ private slots:
         trayManager->showNotification(
             tr("AirPods Disconnected"),
             tr("Your AirPods have been disconnected"));
+        trayManager->resetTrayIcon();
     }
 
     void bluezDeviceDisconnected(const QString &address, const QString &name)
