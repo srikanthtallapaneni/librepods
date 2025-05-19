@@ -213,6 +213,22 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     this@AirPodsService,
                     getSharedPreferences("settings", MODE_PRIVATE).getString("name", "AirPods Pro") ?: "AirPods"
                 )
+                val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
+                val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
+                val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
+                val leftCharging = bleManager.getMostRecentStatus()?.isLeftCharging
+                val rightCharging = bleManager.getMostRecentStatus()?.isRightCharging
+                val caseCharging = bleManager.getMostRecentStatus()?.isCaseCharging
+
+                batteryNotification.setBatteryDirect(
+                    leftLevel = leftLevel,
+                    leftCharging = leftCharging == true,
+                    rightLevel = rightLevel,
+                    rightCharging = rightCharging == true,
+                    caseLevel = caseLevel,
+                    caseCharging = caseCharging == true
+                )
+                sendBatteryBroadcast()
             } else {
                 Log.d("AirPodsBLEService", "Lid closed")
             }
@@ -227,6 +243,24 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
 
         override fun onBatteryChanged(device: BLEManager.AirPodsStatus) {
+            // if (!isConnectedLocally) {
+            //     val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
+            //     val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
+            //     val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
+            //     val leftCharging = bleManager.getMostRecentStatus()?.isLeftCharging
+            //     val rightCharging = bleManager.getMostRecentStatus()?.isRightCharging
+            //     val caseCharging = bleManager.getMostRecentStatus()?.isCaseCharging
+
+            //     batteryNotification.setBatteryDirect(
+            //         leftLevel = leftLevel,
+            //         leftCharging = leftCharging == true,
+            //         rightLevel = rightLevel,
+            //         rightCharging = rightCharging == true,
+            //         caseLevel = caseLevel,
+            //         caseCharging = caseCharging == true
+            //     )
+            //     updateBattery()
+            // }
             Log.d("AirPodsBLEService", "Battery changed")
         }
 
@@ -482,7 +516,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 config.showPhoneBatteryInWidget = preferences.getBoolean(key, true)
                 widgetMobileBatteryEnabled = config.showPhoneBatteryInWidget
                 updateBattery()
-            }            "relative_conversational_awareness_volume" -> config.relativeConversationalAwarenessVolume = preferences.getBoolean(key, true)
+            }
+            "relative_conversational_awareness_volume" -> config.relativeConversationalAwarenessVolume = preferences.getBoolean(key, true)
             "head_gestures" -> config.headGestures = preferences.getBoolean(key, true)
             "disconnect_when_not_wearing" -> config.disconnectWhenNotWearing = preferences.getBoolean(key, false)
             "conversational_awareness_volume" -> config.conversationalAwarenessVolume = preferences.getInt(key, 43)
@@ -735,9 +770,43 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         )
     }
 
+    fun setBatteryMetadata() {
+        device?.let {
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_CASE_BATTERY,
+                batteryNotification.getBattery().find { it.component == BatteryComponent.CASE }?.level.toString().toByteArray()
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_CASE_CHARGING,
+                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.CASE}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_LEFT_BATTERY,
+                batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT }?.level.toString().toByteArray()
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_LEFT_CHARGING,
+                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_RIGHT_BATTERY,
+                batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT }?.level.toString().toByteArray()
+            )
+            SystemApisUtils.setMetadata(
+                it,
+                it.METADATA_UNTETHERED_RIGHT_CHARGING,
+                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
+            )
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
-    fun updateBattery() {
-        // Update widget
+    fun updateBatteryWidget() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, BatteryWidget::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
@@ -831,40 +900,15 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             }
         }
         appWidgetManager.updateAppWidget(widgetIds, remoteViews)
+    }
 
-        // set metadata
-        device?.let {
-            SystemApisUtils.setMetadata(
-                it,
-                it.METADATA_UNTETHERED_CASE_BATTERY,
-                batteryNotification.getBattery().find { it.component == BatteryComponent.CASE }?.level.toString().toByteArray()
-            )
-            SystemApisUtils.setMetadata(
-                it,
-                it.METADATA_UNTETHERED_CASE_CHARGING,
-                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.CASE}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
-            )
-            SystemApisUtils.setMetadata(
-                it,
-                it.METADATA_UNTETHERED_LEFT_BATTERY,
-                batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT }?.level.toString().toByteArray()
-            )
-            SystemApisUtils.setMetadata(
-                it,
-                it.METADATA_UNTETHERED_LEFT_CHARGING,
-                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
-            )
-            SystemApisUtils.setMetadata(
-                it,
-                it.METADATA_UNTETHERED_RIGHT_BATTERY,
-                batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT }?.level.toString().toByteArray()
-            )
-            SystemApisUtils.setMetadata(
-                it,
-                it.METADATA_UNTETHERED_RIGHT_CHARGING,
-                (if (batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT}?.status == BatteryStatus.CHARGING) "1".toByteArray() else "0".toByteArray())
-            )
-        }
+    @SuppressLint("MissingPermission")
+    @OptIn(ExperimentalMaterial3Api::class)
+    fun updateBattery() {
+        setBatteryMetadata()
+        updateBatteryWidget()
+        sendBatteryBroadcast()
+        sendBatteryNotification()
     }
 
     fun updateNoiseControlWidget() {
@@ -937,6 +981,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        if (!::socket.isInitialized) {
+            return
+        }
         if (connected && socket.isConnected) {
             updatedNotification = NotificationCompat.Builder(this, "airpods_connection_status")
                 .setSmallIcon(R.drawable.airpods)

@@ -185,6 +185,19 @@ class AirPodsNotifications {
             return data.joinToString("") { "%02x".format(it) }.startsWith("040004000400")
         }
 
+        fun setBatteryDirect(
+            leftLevel: Int,
+            leftCharging: Boolean,
+            rightLevel: Int,
+            rightCharging: Boolean,
+            caseLevel: Int,
+            caseCharging: Boolean
+        ) {
+            first = Battery(BatteryComponent.LEFT, leftLevel, if (leftCharging) BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING)
+            second = Battery(BatteryComponent.RIGHT, rightLevel, if (rightCharging) BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING)
+            case = Battery(BatteryComponent.CASE, caseLevel, if (caseCharging) BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING)
+        }
+
         fun setBattery(data: ByteArray) {
             if (data.size != 22) {
                 return
