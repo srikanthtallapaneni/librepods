@@ -119,7 +119,29 @@ fun AppSettingsScreen(navController: NavController) {
     var disconnectWhenNotWearing by remember {
         mutableStateOf(sharedPreferences.getBoolean("disconnect_when_not_wearing", false))
     }
+
+    var takeoverWhenDisconnected by remember {
+        mutableStateOf(sharedPreferences.getBoolean("takeover_when_disconnected", true))
+    }
+    var takeoverWhenIdle by remember {
+        mutableStateOf(sharedPreferences.getBoolean("takeover_when_idle", true))
+    }
+    var takeoverWhenMusic by remember {
+        mutableStateOf(sharedPreferences.getBoolean("takeover_when_music", false))
+    }
+    var takeoverWhenCall by remember {
+        mutableStateOf(sharedPreferences.getBoolean("takeover_when_call", true))
+    }
+
+    var takeoverWhenRingingCall by remember {
+        mutableStateOf(sharedPreferences.getBoolean("takeover_when_ringing_call", true))
+    }
+    var takeoverWhenMediaStart by remember {
+        mutableStateOf(sharedPreferences.getBoolean("takeover_when_media_start", true))
+    }
+
     var mDensity by remember { mutableFloatStateOf(0f) }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -602,6 +624,299 @@ fun AppSettingsScreen(navController: NavController) {
                         checked = disconnectWhenNotWearing,
                         onCheckedChange = {
                             updateDisconnectWhenNotWearing(it)
+                        }
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.takeover_header).uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = textColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        backgroundColor,
+                        RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.takeover_airpods_state),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = textColor,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                )
+
+                // Disconnected
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            takeoverWhenDisconnected = !takeoverWhenDisconnected
+                            sharedPreferences.edit().putBoolean("takeover_when_disconnected", takeoverWhenDisconnected).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.takeover_disconnected),
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.takeover_disconnected_desc),
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = takeoverWhenDisconnected,
+                        onCheckedChange = {
+                            takeoverWhenDisconnected = it
+                            sharedPreferences.edit().putBoolean("takeover_when_disconnected", it).apply()
+                        }
+                    )
+                }
+
+                // Idle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            takeoverWhenIdle = !takeoverWhenIdle
+                            sharedPreferences.edit().putBoolean("takeover_when_idle", takeoverWhenIdle).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.takeover_idle),
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.takeover_idle_desc),
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = takeoverWhenIdle,
+                        onCheckedChange = {
+                            takeoverWhenIdle = it
+                            sharedPreferences.edit().putBoolean("takeover_when_idle", it).apply()
+                        }
+                    )
+                }
+
+                // Music
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            takeoverWhenMusic = !takeoverWhenMusic
+                            sharedPreferences.edit().putBoolean("takeover_when_music", takeoverWhenMusic).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.takeover_music),
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.takeover_music_desc),
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = takeoverWhenMusic,
+                        onCheckedChange = {
+                            takeoverWhenMusic = it
+                            sharedPreferences.edit().putBoolean("takeover_when_music", it).apply()
+                        }
+                    )
+                }
+
+                // Call
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            takeoverWhenCall = !takeoverWhenCall
+                            sharedPreferences.edit().putBoolean("takeover_when_call", takeoverWhenCall).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.takeover_call),
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.takeover_call_desc),
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = takeoverWhenCall,
+                        onCheckedChange = {
+                            takeoverWhenCall = it
+                            sharedPreferences.edit().putBoolean("takeover_when_call", it).apply()
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = stringResource(R.string.takeover_phone_state),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = textColor,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+
+                // Ringing Call
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            takeoverWhenRingingCall = !takeoverWhenRingingCall
+                            sharedPreferences.edit().putBoolean("takeover_when_ringing_call", takeoverWhenRingingCall).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.takeover_ringing_call),
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.takeover_ringing_call_desc),
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = takeoverWhenRingingCall,
+                        onCheckedChange = {
+                            takeoverWhenRingingCall = it
+                            sharedPreferences.edit().putBoolean("takeover_when_ringing_call", it).apply()
+                        }
+                    )
+                }
+
+                // Media Start
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            takeoverWhenMediaStart = !takeoverWhenMediaStart
+                            sharedPreferences.edit().putBoolean("takeover_when_media_start", takeoverWhenMediaStart).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.takeover_media_start),
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.takeover_media_start_desc),
+                            fontSize = 14.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = takeoverWhenMediaStart,
+                        onCheckedChange = {
+                            takeoverWhenMediaStart = it
+                            sharedPreferences.edit().putBoolean("takeover_when_media_start", it).apply()
                         }
                     )
                 }

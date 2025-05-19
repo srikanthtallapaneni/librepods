@@ -136,10 +136,23 @@ class AirPodsNotifications {
         }
 
         fun setStatus(data: ByteArray) {
-            if (data.size != 11) {
-                return
+            when (data.size) {
+                // if the whole packet is given
+                11 -> {
+                    status = data[7].toInt()
+                }
+                // if only the data is given
+                1 -> {
+                    status = data[0].toInt()
+                }
+                // if the value of control command is given
+                4 -> {
+                    status = data[0].toInt()
+                }
+                else -> {
+                    Log.d("ANC", "Invalid ANC data size: ${data.size}")
+                }
             }
-            status = data[7].toInt()
         }
 
         val name: String =

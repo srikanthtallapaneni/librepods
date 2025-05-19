@@ -61,5 +61,6 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.haze)
     implementation(libs.haze.materials)
+    implementation(libs.androidx.dynamicanimation)
     compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
 }
