@@ -226,6 +226,19 @@ ApplicationWindow {
                         onCheckedChanged: airPodsTrayApp.notificationsEnabled = checked
                     }
 
+                    Switch {
+                        visible: airPodsTrayApp.airpodsConnected
+                        text: "One Bud ANC Mode"
+                        checked: airPodsTrayApp.oneBudANCMode
+                        onCheckedChanged: airPodsTrayApp.oneBudANCMode = checked
+
+                        ToolTip {
+                            visible: parent.hovered
+                            text: "Enable ANC when using one AirPod\n(More noise reduction, but uses more battery)"
+                            delay: 500
+                        }
+                    }
+
                     Row {
                         spacing: 5
                         Label {
