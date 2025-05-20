@@ -263,6 +263,9 @@ class IslandWindow(private val context: Context) {
                     if (abs(deltaY) > 5 || isBeingDragged) {
                         isBeingDragged = true
 
+                        // Cancel auto close timer when dragging starts
+                        autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return@setOnTouchListener false)
+
                         val dampedDeltaY = if (deltaY > 0) {
                             initialY + (deltaY * 0.6f)
                         } else {
@@ -417,6 +420,7 @@ class IslandWindow(private val context: Context) {
     }
 
     private fun resetAutoCloseTimer() {
+        autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
         autoCloseHandler = Handler(Looper.getMainLooper())
         autoCloseRunnable = Runnable { close() }
         autoCloseHandler?.postDelayed(autoCloseRunnable!!, 4500)
@@ -501,7 +505,7 @@ class IslandWindow(private val context: Context) {
         }
         flingAnimator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
-                close()
+                forceClose()
             }
         })
 
@@ -556,7 +560,7 @@ class IslandWindow(private val context: Context) {
         normalizeAnimator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
                 ServiceManager.getService()?.startMainActivity()
-                close()
+                forceClose()
             }
         })
 
@@ -611,7 +615,12 @@ class IslandWindow(private val context: Context) {
             resetStretchEffects(0f)
 
             val videoView = islandView.findViewById<VideoView>(R.id.island_video_view)
-            videoView.stopPlayback()
+            try {
+                videoView.stopPlayback()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            
             val scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, containerView.scaleX, 0.5f)
             val scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, containerView.scaleY, 0.5f)
             val translationY = PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, containerView.translationY, -200f)
@@ -620,19 +629,56 @@ class IslandWindow(private val context: Context) {
                 interpolator = AnticipateOvershootInterpolator()
                 addListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
-                        containerView.visibility = View.GONE
-                        try {
-                            windowManager.removeView(containerView)
-                        } catch (e: Exception) {
-                            e("IslandWindow", "Error removing view: $e")
-                        }
-                        isClosing = false
+                        cleanupAndRemoveView()
                     }
                 })
                 start()
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            // Even if animation fails, ensure we cleanup
+            cleanupAndRemoveView()
+        }
+    }
+    
+    private fun cleanupAndRemoveView() {
+        containerView.visibility = View.GONE
+        try {
+            if (containerView.parent != null) {
+                windowManager.removeView(containerView)
+            }
+        } catch (e: Exception) {
+            e("IslandWindow", "Error removing view: $e")
+        }
+        isClosing = false
+        // Make sure all animations are canceled
+        springAnimation.cancel()
+        flingAnimator.cancel()
+    }
+    
+    fun forceClose() {
+        try {
+            if (isClosing) return
+            isClosing = true
+            
+            try {
+                context.unregisterReceiver(batteryReceiver)
+            } catch (e: Exception) {
+                // Silent catch - receiver might already be unregistered
+            }
+            
+            ServiceManager.getService()?.islandOpen = false
+            autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
+            
+            // Cancel all ongoing animations
+            springAnimation.cancel()
+            flingAnimator.cancel()
+            
+            // Immediately remove the view without animations
+            cleanupAndRemoveView()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isClosing = false
         }
     }
 }
