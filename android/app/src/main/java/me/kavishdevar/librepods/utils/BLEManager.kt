@@ -31,6 +31,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import me.kavishdevar.librepods.services.ServiceManager
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -79,6 +81,8 @@ class BLEManager(private val context: Context) {
     private var currentGlobalLidState: Boolean? = null
     private var lastBroadcastTime: Long = 0
     private val processedAddresses = mutableSetOf<String>()
+
+    private val lastValidCaseBatteryMap = mutableMapOf<String, Int>()
     private val modelNames = mapOf(
         0x0E20 to "AirPods Pro",
         0x1420 to "AirPods Pro 2",
@@ -204,6 +208,44 @@ class BLEManager(private val context: Context) {
         }
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun getEncryptionKeyFromPreferences(): ByteArray? {
+        val keyBase64 = sharedPreferences.getString(AACPManager.Companion.ProximityKeyType.ENC_KEY.name, null)
+        return if (keyBase64 != null) {
+            try {
+                Base64.decode(keyBase64)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to decode encryption key", e)
+                null
+            }
+        } else {
+            null
+        }
+    }
+
+    private fun decryptLastBytes(data: ByteArray, key: ByteArray): ByteArray? {
+        return try {
+            if (data.size < 16) {
+                return null
+            }
+            
+            val block = data.copyOfRange(data.size - 16, data.size)
+            val cipher = Cipher.getInstance("AES/ECB/NoPadding")
+            val secretKey = SecretKeySpec(key, "AES")
+            cipher.init(Cipher.DECRYPT_MODE, secretKey)
+            cipher.doFinal(block)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error decrypting data", e)
+            null
+        }
+    }
+
+    private fun formatBattery(byteVal: Int): Pair<Boolean, Int> {
+        val charging = (byteVal and 0x80) != 0
+        val level = byteVal and 0x7F
+        return Pair(charging, level)
+    }
+
     private fun processScanResult(result: ScanResult) {
         try {
             val scanRecord = result.scanRecord ?: return
@@ -228,9 +270,15 @@ class BLEManager(private val context: Context) {
             processedAddresses.add(address)
             lastBroadcastTime = System.currentTimeMillis()
 
-            val parsedStatus = parseProximityMessage(address, manufacturerData)
-            val previousStatus = deviceStatusMap[address]
+            val encryptionKey = getEncryptionKeyFromPreferences()
+            val decryptedData = if (encryptionKey != null) decryptLastBytes(manufacturerData, encryptionKey) else null
+            val parsedStatus = if (decryptedData != null && decryptedData.size == 16) {
+                parseProximityMessageWithDecryption(address, manufacturerData, decryptedData)
+            } else {
+                parseProximityMessage(address, manufacturerData)
+            }
 
+            val previousStatus = deviceStatusMap[address]
             deviceStatusMap[address] = parsedStatus
 
             airPodsStatusListener?.let { listener ->
@@ -279,6 +327,63 @@ class BLEManager(private val context: Context) {
         } catch (t: Throwable) {
             Log.e(TAG, "Error processing scan result", t)
         }
+    }
+
+    private fun parseProximityMessageWithDecryption(address: String, data: ByteArray, decrypted: ByteArray): AirPodsStatus {
+        val paired = data[2].toInt() == 1
+        val modelId = ((data[3].toInt() and 0xFF) shl 8) or (data[4].toInt() and 0xFF)
+        val model = modelNames[modelId] ?: "Unknown ($modelId)"
+
+        val status = data[5].toInt() and 0xFF
+        val flagsCase = data[7].toInt() and 0xFF
+        val lid = data[8].toInt() and 0xFF
+        val color = colorNames[data[9].toInt()] ?: "Unknown"
+        val conn = connStates[data[10].toInt()] ?: "Unknown (${data[10].toInt()})"
+
+        val primaryLeft = ((status shr 5) and 0x01) == 1
+        val thisInCase = ((status shr 6) and 0x01) == 1
+        val xorFactor = primaryLeft xor thisInCase
+
+        val isLeftInEar = if (xorFactor) (status and 0x08) != 0 else (status and 0x02) != 0
+        val isRightInEar = if (xorFactor) (status and 0x02) != 0 else (status and 0x08) != 0
+
+        val isFlipped = !primaryLeft
+        
+        val leftByteIndex = if (isFlipped) 2 else 1
+        val rightByteIndex = if (isFlipped) 1 else 2
+        
+        val (isLeftCharging, leftBattery) = formatBattery(decrypted[leftByteIndex].toInt() and 0xFF)
+        val (isRightCharging, rightBattery) = formatBattery(decrypted[rightByteIndex].toInt() and 0xFF)
+        
+        val rawCaseBatteryByte = decrypted[3].toInt() and 0xFF
+        val (isCaseCharging, rawCaseBattery) = formatBattery(rawCaseBatteryByte)
+
+        val caseBattery = if (rawCaseBatteryByte == 0xFF || (isCaseCharging && rawCaseBattery == 127)) {
+            lastValidCaseBatteryMap[address]
+        } else {
+            lastValidCaseBatteryMap[address] = rawCaseBattery
+            rawCaseBattery
+        }
+
+        val lidOpen = ((lid shr 3) and 0x01) == 0
+
+        return AirPodsStatus(
+            address = address,
+            lastSeen = System.currentTimeMillis(),
+            paired = paired,
+            model = model,
+            leftBattery = leftBattery,
+            rightBattery = rightBattery,
+            caseBattery = caseBattery,
+            isLeftInEar = isLeftInEar,
+            isRightInEar = isRightInEar,
+            isLeftCharging = isLeftCharging,
+            isRightCharging = isRightCharging,
+            isCaseCharging = isCaseCharging,
+            lidOpen = lidOpen,
+            color = color,
+            connectionState = conn
+        )
     }
 
     private fun cleanupStaleDevices() {
@@ -374,52 +479,6 @@ class BLEManager(private val context: Context) {
             color = color,
             connectionState = conn
         )
-    }
-
-    private val bleStatusListener = object : BLEManager.AirPodsStatusListener {
-        @SuppressLint("NewApi")
-        override fun onDeviceStatusChanged(
-            device: BLEManager.AirPodsStatus,
-            previousStatus: BLEManager.AirPodsStatus?
-        ) {
-            if (ServiceManager.getService()?.isConnectedLocally == true) {
-                Log.d("AirPodsBLEService", "Checking if audio should be connected")
-                ServiceManager.getService()?.manuallyCheckForAudioSource()
-                return
-            }
-
-            Log.d("AirPodsBLEService", "Device status changed, inEar: ${device.isLeftInEar}, ${device.isRightInEar}")
-
-            if (previousStatus != null && device.connectionState != previousStatus.connectionState) {
-                Log.d("AirPodsBLEService", "Connection state changed from ${previousStatus.connectionState} to ${device.connectionState}")
-
-                if (ServiceManager.getService()?.shouldTakeOverBasedOnAirPodsState(device.connectionState) == true) {
-                    Log.d("AirPodsBLEService", "Taking over based on AirPods state: ${device.connectionState}")
-
-                    val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-                    val bluetoothDevice = bluetoothManager.adapter.getRemoteDevice(context.getSharedPreferences(
-                        "settings", Context.MODE_PRIVATE).getString("mac_address", "") ?: "")
-
-                    ServiceManager.getService()?.connectToSocket(bluetoothDevice)
-                }
-            }
-        }
-
-        override fun onBroadcastFromNewAddress(device: BLEManager.AirPodsStatus) {
-            // Implement this method if needed
-        }
-
-        override fun onLidStateChanged(lidOpen: Boolean) {
-            // Implement this method if needed
-        }
-
-        override fun onEarStateChanged(device: BLEManager.AirPodsStatus, leftInEar: Boolean, rightInEar: Boolean) {
-            // Implement this method if needed
-        }
-
-        override fun onBatteryChanged(device: BLEManager.AirPodsStatus) {
-            // Implement this method if needed
-        }
     }
 
     companion object {
