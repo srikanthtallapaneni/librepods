@@ -336,14 +336,16 @@ class BLEManager(private val context: Context) {
         val isLeftInEar = if (xorFactor) (status and 0x08) != 0 else (status and 0x02) != 0
         val isRightInEar = if (xorFactor) (status and 0x02) != 0 else (status and 0x08) != 0
 
-        val leftBatteryNibble = if (xorFactor) (podsBattery shr 4) and 0x0F else podsBattery and 0x0F
-        val rightBatteryNibble = if (xorFactor) podsBattery and 0x0F else (podsBattery shr 4) and 0x0F
+        val isFlipped = !primaryLeft
+        
+        val leftBatteryNibble = if (isFlipped) (podsBattery shr 4) and 0x0F else podsBattery and 0x0F
+        val rightBatteryNibble = if (isFlipped) podsBattery and 0x0F else (podsBattery shr 4) and 0x0F
+        
+        val caseBattery = flagsCase and 0x0F
+        val flags = (flagsCase shr 4) and 0x0F
 
-        val caseBattery = (flagsCase shr 4) and 0x0F
-        val flags = flagsCase and 0x0F
-
-        val isRightCharging = if (xorFactor) (flags and 0x02) != 0 else (flags and 0x01) != 0
-        val isLeftCharging = if (xorFactor) (flags and 0x01) != 0 else (flags and 0x02) != 0
+        val isLeftCharging = if (isFlipped) (flags and 0x02) != 0 else (flags and 0x01) != 0
+        val isRightCharging = if (isFlipped) (flags and 0x01) != 0 else (flags and 0x02) != 0
         val isCaseCharging = (flags and 0x04) != 0
 
         val lidOpen = ((lid shr 3) and 0x01) == 0

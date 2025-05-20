@@ -88,11 +88,8 @@ object MediaController {
                     userPlayedTheMedia = audioManager.isMusicActive
                 }, 7) // i have no idea why android sends an event a hundred times after the user does something.
             }
-            Log.d("MediaController", "pausedforcrossdevice: $pausedForCrossDevice Ear detection status: ${ServiceManager.getService()?.earDetectionNotification?.status}, music active: ${audioManager.isMusicActive} and cross device available: ${CrossDevice.isAvailable}")
+            Log.d("MediaController", "pausedforcrossdevice: $pausedForCrossDevice")
             if (!pausedForCrossDevice && audioManager.isMusicActive) {
-                Log.d("MediaController", "Pausing for cross device and taking over.")
-                sendPause(true)
-                pausedForCrossDevice = true
                 ServiceManager.getService()?.takeOver("music")
             }
         }
@@ -142,6 +139,14 @@ object MediaController {
                     KeyEvent.KEYCODE_MEDIA_PLAY
                 )
             )
+        }
+        if (!audioManager.isMusicActive) {
+            Log.d("MediaController", "Setting iPausedTheMedia to false")
+            iPausedTheMedia = false
+        }
+        if (pausedForCrossDevice) {
+            Log.d("MediaController", "Setting pausedForCrossDevice to false")
+            pausedForCrossDevice = false
         }
     }
 

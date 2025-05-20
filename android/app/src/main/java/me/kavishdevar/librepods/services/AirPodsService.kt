@@ -213,6 +213,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     this@AirPodsService,
                     getSharedPreferences("settings", MODE_PRIVATE).getString("name", "AirPods Pro") ?: "AirPods"
                 )
+		        if (isConnectedLocally) return
                 val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
                 val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
                 val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
@@ -243,24 +244,23 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
 
         override fun onBatteryChanged(device: BLEManager.AirPodsStatus) {
-            // if (!isConnectedLocally) {
-            //     val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
-            //     val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
-            //     val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
-            //     val leftCharging = bleManager.getMostRecentStatus()?.isLeftCharging
-            //     val rightCharging = bleManager.getMostRecentStatus()?.isRightCharging
-            //     val caseCharging = bleManager.getMostRecentStatus()?.isCaseCharging
+            if (isConnectedLocally) return
+            val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
+            val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
+            val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
+            val leftCharging = bleManager.getMostRecentStatus()?.isLeftCharging
+            val rightCharging = bleManager.getMostRecentStatus()?.isRightCharging
+            val caseCharging = bleManager.getMostRecentStatus()?.isCaseCharging
 
-            //     batteryNotification.setBatteryDirect(
-            //         leftLevel = leftLevel,
-            //         leftCharging = leftCharging == true,
-            //         rightLevel = rightLevel,
-            //         rightCharging = rightCharging == true,
-            //         caseLevel = caseLevel,
-            //         caseCharging = caseCharging == true
-            //     )
-            //     updateBattery()
-            // }
+            batteryNotification.setBatteryDirect(
+                leftLevel = leftLevel,
+                leftCharging = leftCharging == true,
+                rightLevel = rightLevel,
+                rightCharging = rightCharging == true,
+                caseLevel = caseLevel,
+                caseCharging = caseCharging == true
+            )
+            updateBattery()
             Log.d("AirPodsBLEService", "Battery changed")
         }
 
@@ -413,6 +413,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 connectAudio(this@AirPodsService, device)
                 justEnabledA2dp = true
                 registerA2dpConnectionReceiver()
+                if (MediaController.getMusicActive()) {
+                    MediaController.userPlayedTheMedia = true
+                }
             } else if (newInEarData == listOf(false, false)) {
                 MediaController.sendPause(force = true)
                 if (config.disconnectWhenNotWearing) {
@@ -434,7 +437,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             if (newInEarData.sorted() != inEarData.sorted()) {
                 inEarData = newInEarData
-
                 if (inEar == true) {
                     if (!justEnabledA2dp) {
                         justEnabledA2dp = false
@@ -1674,8 +1676,19 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     @RequiresApi(Build.VERSION_CODES.R)
     @SuppressLint("MissingPermission")
      fun takeOver(takingOverFor: String) {
-        if (isConnectedLocally || !CrossDevice.isAvailable || bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true) {
-            Log.d("AirPodsService", "Already connected or not available for takeover")
+        if (isConnectedLocally) {
+            Log.d("AirPodsService", "Already connected locally, skipping")
+            return
+        }
+
+        if (CrossDevice.isAvailable) {
+            Log.d("AirPodsService", "CrossDevice is available, continuing")
+        } 
+        else if (bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true) {
+            Log.d("AirPodsService", "At least one AirPod is in ear, continuing")
+        }
+        else {
+            Log.d("AirPodsService", "CrossDevice not available and AirPods not in ear, skipping")
             return
         }
 
@@ -1684,6 +1697,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             "call" -> config.takeoverWhenRingingCall
             else -> false
         }
+
         if (!shouldTakeOverPState) {
             Log.d("AirPodsService", "Not taking over audio, phone state takeover disabled")
             return
@@ -1702,6 +1716,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         if (!shouldTakeOver) {
             Log.d("AirPodsService", "Not taking over audio, airpods state takeover disabled")
             return
+        }
+
+        if (takingOverFor == "music") {
+            Log.d("AirPodsService", "Pausing music so that it doesn't play through speakers")
+            MediaController.pausedForCrossDevice = true
+            MediaController.sendPause(true)
         }
 
         Log.d("AirPodsService", "Taking over audio")
@@ -1810,7 +1830,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     aacpManager.sendSetFeatureFlagsPacket()
                     aacpManager.sendNotificationRequest()
                     Log.d("AirPodsService", "Requesting proximity keys")
-                    aacpManager.sendRequestProximityKeys(AACPManager.Companion.ProximityKeyType.IRK.value)
+                    aacpManager.sendRequestProximityKeys((AACPManager.Companion.ProximityKeyType.IRK.value + AACPManager.Companion.ProximityKeyType.ENC_KEY.value).toByte())
                     CoroutineScope(Dispatchers.IO).launch {
                         aacpManager.sendPacket(aacpManager.createHandshakePacket())
                         delay(200)
@@ -1818,7 +1838,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         delay(200)
                         aacpManager.sendNotificationRequest()
                         delay(200)
-                        aacpManager.sendRequestProximityKeys(AACPManager.Companion.ProximityKeyType.IRK.value)
+                        aacpManager.sendRequestProximityKeys((AACPManager.Companion.ProximityKeyType.IRK.value+AACPManager.Companion.ProximityKeyType.ENC_KEY.value).toByte())
                         startHeadTracking()
                         Handler(Looper.getMainLooper()).postDelayed({
                             aacpManager.sendPacket(aacpManager.createHandshakePacket())
