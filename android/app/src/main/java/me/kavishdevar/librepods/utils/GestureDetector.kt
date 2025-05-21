@@ -87,12 +87,12 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         isRunning = true
         gestureDetectedCallback = onGestureDetected
 
+        Log.d(TAG, "started: ${airPodsService.startHeadTracking()}")
+
         clearData()
 
         prevHorizontal = 0.0
         prevVertical = 0.0
-
-        airPodsService.aacpManager.sendStartHeadTracking()
 
         detectionJob = CoroutineScope(Dispatchers.Default).launch {
             while (isRunning) {
@@ -117,7 +117,7 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         Log.d(TAG, "Stopping gesture detection")
         isRunning = false
 
-        if (!doNotStop) airPodsService.aacpManager.sendStopHeadTracking()
+        if (!doNotStop) airPodsService.stopHeadTracking()
 
         detectionJob?.cancel()
         detectionJob = null
