@@ -183,6 +183,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     private val maxLogEntries = 1000
     private val inMemoryLogs = mutableSetOf<String>()
 
+    private var handleIncomingCallOnceConnected = false
+
     lateinit var bleManager: BLEManager
     private val bleStatusListener = object : BLEManager.AirPodsStatusListener {
         @SuppressLint("NewApi")
@@ -197,7 +199,24 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     "mac_address", "") ?: "")
                 connectToSocket(bluetoothDevice)
             }
-            Log.d("AirPodsBLEService", "Device status changed, inEar: ${device.isLeftInEar}, ${device.isRightInEar}")
+            Log.d("AirPodsBLEService", "Device status changed")
+            if (isConnectedLocally) return
+            val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
+            val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
+            val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
+            val leftCharging = bleManager.getMostRecentStatus()?.isLeftCharging
+            val rightCharging = bleManager.getMostRecentStatus()?.isRightCharging
+            val caseCharging = bleManager.getMostRecentStatus()?.isCaseCharging
+
+            batteryNotification.setBatteryDirect(
+                leftLevel = leftLevel,
+                leftCharging = leftCharging == true,
+                rightLevel = rightLevel,
+                rightCharging = rightCharging == true,
+                caseLevel = caseLevel,
+                caseCharging = caseCharging == true
+            )
+            updateBattery()
         }
 
         override fun onBroadcastFromNewAddress(device: BLEManager.AirPodsStatus) {
@@ -213,7 +232,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     this@AirPodsService,
                     getSharedPreferences("settings", MODE_PRIVATE).getString("name", "AirPods Pro") ?: "AirPods"
                 )
-		        if (isConnectedLocally) return
+                if (isConnectedLocally) return
                 val leftLevel = bleManager.getMostRecentStatus()?.leftBattery?: 0
                 val rightLevel = bleManager.getMostRecentStatus()?.rightBattery?: 0
                 val caseLevel = bleManager.getMostRecentStatus()?.caseBattery?: 0
@@ -1049,11 +1068,14 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         if (isInCall) return
         if (config.headGestures) {
             initGestureDetector()
+            aacpManager.sendStartHeadTracking()
             gestureDetector?.startDetection { accepted ->
                 if (accepted) {
                     answerCall()
+                    handleIncomingCallOnceConnected = false
                 } else {
                     rejectCall()
+                    handleIncomingCallOnceConnected = false
                 }
             }
         }
@@ -1351,6 +1373,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     val ancModeFilter = IntentFilter("me.kavishdevar.librepods.SET_ANC_MODE")
     var ancModeReceiver: BroadcastReceiver? = null
+
+
 
     @SuppressLint("InlinedApi", "MissingPermission", "UnspecifiedRegisterReceiverFlag")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -1683,7 +1707,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         if (CrossDevice.isAvailable) {
             Log.d("AirPodsService", "CrossDevice is available, continuing")
-        } 
+        }
         else if (bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true) {
             Log.d("AirPodsService", "At least one AirPod is in ear, continuing")
         }
@@ -1722,6 +1746,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             Log.d("AirPodsService", "Pausing music so that it doesn't play through speakers")
             MediaController.pausedForCrossDevice = true
             MediaController.sendPause(true)
+        } else {
+            handleIncomingCallOnceConnected = true
         }
 
         Log.d("AirPodsService", "Taking over audio")
@@ -1839,13 +1865,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         aacpManager.sendNotificationRequest()
                         delay(200)
                         aacpManager.sendRequestProximityKeys((AACPManager.Companion.ProximityKeyType.IRK.value+AACPManager.Companion.ProximityKeyType.ENC_KEY.value).toByte())
-                        startHeadTracking()
+                        if (!handleIncomingCallOnceConnected) startHeadTracking() else handleIncomingCall()
                         Handler(Looper.getMainLooper()).postDelayed({
                             aacpManager.sendPacket(aacpManager.createHandshakePacket())
                             aacpManager.sendSetFeatureFlagsPacket()
                             aacpManager.sendNotificationRequest()
                             aacpManager.sendRequestProximityKeys(AACPManager.Companion.ProximityKeyType.IRK.value)
-                            stopHeadTracking()
+                            if (!handleIncomingCallOnceConnected) stopHeadTracking()
                         }, 5000)
 
                         sendBroadcast(
