@@ -52,6 +52,35 @@ class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModul
             }
         }
 
+        if (param.packageName == "com.google.android.settings") {
+            Log.i(TAG, "Settings app detected, hooking Bluetooth icon handling")
+            try {
+                val headerControllerClass = param.classLoader.loadClass(
+                    "com.google.android.settings.bluetooth.AdvancedBluetoothDetailsHeaderController")
+
+                val updateIconMethod = headerControllerClass.getDeclaredMethod(
+                    "updateIcon",
+                    android.widget.ImageView::class.java,
+                    String::class.java)
+
+                hook(updateIconMethod, BluetoothIconHooker::class.java)
+                Log.i(TAG, "Successfully hooked updateIcon method in Bluetooth settings")
+
+                try {
+                    val displayPreferenceMethod = headerControllerClass.getDeclaredMethod(
+                        "displayPreference",
+                        param.classLoader.loadClass("androidx.preference.PreferenceScreen"))
+
+                    hook(displayPreferenceMethod, BluetoothSettingsAirPodsHooker::class.java)
+                    Log.i(TAG, "Successfully hooked displayPreference for AirPods button injection")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to hook displayPreference: ${e.message}", e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to hook Bluetooth icon handler: ${e.message}", e)
+            }
+        }
+
         if (param.packageName == "com.android.settings") {
             Log.i(TAG, "Settings app detected, hooking Bluetooth icon handling")
             try {
