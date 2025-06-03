@@ -1,6 +1,4 @@
 com.android.bluetooth
-me.kavishdevar.librepods
-android
-com.android.systemui
+com.google.android.settings
 com.android.settings
 com.google.android.bluetooth
