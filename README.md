@@ -8,6 +8,7 @@
 [![GitHub license](https://img.shields.io/github/license/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/blob/main/LICENSE)
 [![GitHub contributors](https://img.shields.io/github/contributors/kavishdevar/librepods)](https://github.com/kavishdevar/librepods/graphs/contributors)
 
+
 ## What is LibrePods?
 
 LibrePods unlocks Apple's exclusive AirPods features on non-Apple devices. Get access to noise control modes, adaptive transparency, ear detection, battery status, and more - all the premium features you paid for but Apple locked to their ecosystem.
@@ -61,8 +62,8 @@ For installation and detailed info, see the [Linux README](/linux/README.md).
 |-------------------|-------------------|-------------------|
 | ![Settings 1](/android/imgs/settings-1.png) | ![Settings 2](/android/imgs/settings-2.png) | ![Debug Screen](/android/imgs/debug.png) |
 | ![Battery Notification and QS Tile for NC Mode](/android/imgs/notification-and-qs.png) | ![Popup](/android/imgs/popup.png) | ![Head Tracking and Gestures](/android/imgs/head-tracking-and-gestures.png) |
-| ![Long Press Configuration](/android/imgs/long-press.png) | ![Widget](/android/imgs/widget.png) | ![Customizations](/android/imgs/customizations.png) |
-| ![audio-popup](/android/imgs/audio-connected-island.png) | | |
+| ![Long Press Configuration](/android/imgs/long-press.png) | ![Widget](/android/imgs/widget.png) | ![Customizations 1](/android/imgs/customizations-2.png) |
+| ![Customizations 2](/android/imgs/customizations-2.png) | ![audio-popup](/android/imgs/audio-connected-island.png) | |
 
 #### Root Requirement
 
@@ -149,3 +150,5 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program over [here](/LICENSE). If not, see <https://www.gnu.org/licenses/>.
+
+All trademarks, logos, and brand names are the property of their respective owners. Use of them does not imply any affiliation with or endorsement by them. All AirPods images, symbols, and the SF Pro font are the property of Apple Inc.
