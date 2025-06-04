@@ -5,12 +5,12 @@ project(linux VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Widgets Bluetooth DBus)
+find_package(OpenSSL REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.4)
 
 qt_add_executable(applinux
     main.cpp
-    main.h
     logger.h
     mediacontroller.cpp
     mediacontroller.h
@@ -24,6 +24,10 @@ qt_add_executable(applinux
     autostartmanager.hpp
     BasicControlCommand.hpp
     deviceinfo.hpp
+    ble/bleutils.cpp
+    ble/bleutils.h
+    ble/blemanager.cpp
+    ble/blemanager.h
 )
 
 qt_add_qml_module(applinux
@@ -54,7 +58,7 @@ qt_add_resources(applinux "resources"
 )
 
 target_link_libraries(applinux
-    PRIVATE Qt6::Quick Qt6::Widgets Qt6::Bluetooth Qt6::DBus
+    PRIVATE Qt6::Quick Qt6::Widgets Qt6::Bluetooth Qt6::DBus OpenSSL::SSL OpenSSL::Crypto
 )
 
 include(GNUInstallDirs)
