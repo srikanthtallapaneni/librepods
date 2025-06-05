@@ -62,7 +62,7 @@ For installation and detailed info, see the [Linux README](/linux/README.md).
 |-------------------|-------------------|-------------------|
 | ![Settings 1](/android/imgs/settings-1.png) | ![Settings 2](/android/imgs/settings-2.png) | ![Debug Screen](/android/imgs/debug.png) |
 | ![Battery Notification and QS Tile for NC Mode](/android/imgs/notification-and-qs.png) | ![Popup](/android/imgs/popup.png) | ![Head Tracking and Gestures](/android/imgs/head-tracking-and-gestures.png) |
-| ![Long Press Configuration](/android/imgs/long-press.png) | ![Widget](/android/imgs/widget.png) | ![Customizations 1](/android/imgs/customizations-2.png) |
+| ![Long Press Configuration](/android/imgs/long-press.png) | ![Widget](/android/imgs/widget.png) | ![Customizations 1](/android/imgs/customizations-1.png) |
 | ![Customizations 2](/android/imgs/customizations-2.png) | ![audio-popup](/android/imgs/audio-connected-island.png) | |
 
 #### Root Requirement
