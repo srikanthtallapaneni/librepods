@@ -303,15 +303,15 @@ uintptr_t getModuleBase(const char *module_name) {
     return base_addr;
 }
 
-bool findAndHookFunction([[maybe_unused]] const char *library_path) {
+bool findAndHookFunction(const char *library_name) {
     if (!hook_func) {
         LOGE("Hook function not initialized");
         return false;
     }
 
-    uintptr_t base_addr = getModuleBase("libbluetooth_jni.so");
+    uintptr_t base_addr = getModuleBase(library_name);
     if (!base_addr) {
-        LOGE("Failed to get base address of libbluetooth_jni.so");
+        LOGE("Failed to get base address of %s", library_name);
         return false;
     }
 
@@ -397,11 +397,18 @@ bool findAndHookFunction([[maybe_unused]] const char *library_path) {
 
 void on_library_loaded(const char *name, [[maybe_unused]] void *handle) {
     if (strstr(name, "libbluetooth_jni.so")) {
-        LOGI("Detected Bluetooth library: %s", name);
+        LOGI("Detected Bluetooth JNI library: %s", name);
 
-        bool hooked = findAndHookFunction(name);
+        bool hooked = findAndHookFunction("libbluetooth_jni.so");
         if (!hooked) {
-            LOGE("Failed to hook Bluetooth library function");
+            LOGE("Failed to hook Bluetooth JNI library function");
+        }
+    } else if (strstr(name, "libbluetooth_qti.so")) {
+        LOGI("Detected Bluetooth QTI library: %s", name);
+
+        bool hooked = findAndHookFunction("libbluetooth_qti.so");
+        if (!hooked) {
+            LOGE("Failed to hook Bluetooth QTI library function");
         }
     }
 }
@@ -414,4 +421,3 @@ NativeOnModuleLoaded native_init(const NativeAPIEntries* entries) {
 
     return on_library_loaded;
 }
-
