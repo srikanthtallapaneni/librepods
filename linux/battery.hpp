@@ -7,6 +7,7 @@
 #include <climits>
 
 #include "airpods_packets.h"
+#include "logger.h"
 
 class Battery : public QObject
 {
@@ -128,10 +129,14 @@ public:
         // Emit signal to notify about battery status change
         emit batteryStatusChanged();
 
+        // Log which is left and right pod
+        LOG_INFO("Primary Pod:" << primaryPod);
+        LOG_INFO("Secondary Pod:" << secondaryPod);
+
         return true;
     }
 
-    bool parseEncryptedPacket(const QByteArray &packet, bool isLeftPodPrimary)
+    bool parseEncryptedPacket(const QByteArray &packet, bool isLeftPodPrimary, bool podInCase)
     {
         // Validate packet size (expect 16 bytes based on provided payloads)
         if (packet.size() != 16)
@@ -171,7 +176,9 @@ public:
         // Update states
         states[Component::Left] = {static_cast<quint8>(rawLeftBattery), isLeftCharging ? BatteryStatus::Charging : BatteryStatus::Discharging};
         states[Component::Right] = {static_cast<quint8>(rawRightBattery), isRightCharging ? BatteryStatus::Charging : BatteryStatus::Discharging};
-        states[Component::Case] = {static_cast<quint8>(rawCaseBattery), isCaseCharging ? BatteryStatus::Charging : BatteryStatus::Discharging};
+        if (podInCase) {
+            states[Component::Case] = {static_cast<quint8>(rawCaseBattery), isCaseCharging ? BatteryStatus::Charging : BatteryStatus::Discharging};
+        }
         primaryPod = isLeftPodPrimary ? Component::Left : Component::Right;
         secondaryPod = isLeftPodPrimary ? Component::Right : Component::Left;
         emit batteryStatusChanged();
