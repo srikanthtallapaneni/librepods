@@ -3,6 +3,7 @@
 #include <QDBusPendingReply>
 #include <QVariantMap>
 #include <QDBusReply>
+#include <QDBusConnectionInterface>
 
 PlayerStatusWatcher::PlayerStatusWatcher(const QString &playerService, QObject *parent)
     : QObject(parent),
@@ -44,4 +45,26 @@ void PlayerStatusWatcher::onServiceOwnerChanged(const QString &name, const QStri
     } else if (name == m_playerService && !newOwner.isEmpty()) {
         updateStatus(); // player appeared/reappeared
     }
+}
+
+QString PlayerStatusWatcher::getCurrentPlaybackStatus(const QString &playerService)
+{
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    QStringList services = bus.interface()->registeredServiceNames().value();
+
+    for (const QString &service : services) {
+        if (service.startsWith("org.mpris.MediaPlayer2.")) {
+            QDBusInterface iface(service, "/org/mpris/MediaPlayer2",
+                               "org.mpris.MediaPlayer2.Player", bus);
+            
+            if (iface.isValid()) {
+                QVariant status = iface.property("PlaybackStatus");
+                if (status.isValid() && status.toString() == "Playing") {
+                    return status.toString();
+                }
+            }
+        }
+    }
+
+    return QString();
 }
