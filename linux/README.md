@@ -21,14 +21,29 @@ A native Linux application to control your AirPods, with support for:
    sudo apt-get install qt6-base-dev qt6-declarative-dev qt6-connectivity-dev qt6-multimedia-dev \
         qml6-module-qtquick-controls qml6-module-qtqml-workerscript qml6-module-qtquick-templates \
         qml6-module-qtquick-window qml6-module-qtquick-layouts
-   ```
 
+    # For Fedora
+    sudo dnf install qt6-qtbase-devel qt6-qtconnectivity-devel \
+        qt6-qtmultimedia-devel qt6-qtdeclarative-devel
+   ```
+3. OpenSSL development headers
+
+    ```bash
+    # On Arch Linux / EndevaourOS, these are included in the OpenSSL package, so you might already have them installed.
+    sudo pacman -S openssl
+    
+    # For Debian / Ubuntu
+    sudo apt-get install libssl-devel
+    
+    # For Fedora
+    sudo dnf install openssl-devel
+    ```
 ## Setup
 
-1. Edit `main.h` and update `PHONE_MAC_ADDRESS` with your phone's Bluetooth MAC address:
+1. Set the `PHONE_MAC_ADDRESS` environment variable to your phone's Bluetooth MAC address by running the following:
 
-   ```cpp
-   #define PHONE_MAC_ADDRESS "XX:XX:XX:XX:XX:XX"  // Replace with your phone's MAC
+   ```bash
+   export PHONE_MAC_ADDRESS="XX:XX:XX:XX:XX:XX"  # Replace with your phone's MAC
    ```
 
 2. Build the application:
@@ -43,7 +58,7 @@ A native Linux application to control your AirPods, with support for:
 3. Run the application:
 
    ```bash
-   ./applinux
+   ./librepods
    ```
 
 ## Usage
