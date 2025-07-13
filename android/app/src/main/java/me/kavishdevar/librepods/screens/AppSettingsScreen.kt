@@ -183,6 +183,17 @@ fun AppSettingsScreen(navController: NavController) {
         mutableStateOf(sharedPreferences.getBoolean("use_alternate_head_tracking_packets", false))
     }
 
+    var bleOnlyMode by remember {
+        mutableStateOf(sharedPreferences.getBoolean("ble_only_mode", false))
+    }
+    
+    // Ensure the default value is properly set if not exists
+    LaunchedEffect(Unit) {
+        if (!sharedPreferences.contains("ble_only_mode")) {
+            sharedPreferences.edit().putBoolean("ble_only_mode", false).apply()
+        }
+    }
+
     var mDensity by remember { mutableFloatStateOf(0f) }
 
     fun validateHexInput(input: String): Boolean {
@@ -330,6 +341,69 @@ fun AppSettingsScreen(navController: NavController) {
                         onCheckedChange = {
                             showPhoneBatteryInWidget = it
                             sharedPreferences.edit().putBoolean("show_phone_battery_in_widget", it).apply()
+                        }
+                    )
+                }
+            }
+
+            Text(
+                text = "Connection Mode".uppercase(),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    color = textColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                ),
+                modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 24.dp)
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Column (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        backgroundColor,
+                        RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            bleOnlyMode = !bleOnlyMode
+                            sharedPreferences.edit().putBoolean("ble_only_mode", bleOnlyMode).apply()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 8.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = "BLE Only Mode",
+                            fontSize = 16.sp,
+                            color = textColor
+                        )
+                        Text(
+                            text = "Only use Bluetooth Low Energy for battery data and ear detection. Disables advanced features requiring L2CAP connection.",
+                            fontSize = 13.sp,
+                            color = textColor.copy(0.6f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+
+                    StyledSwitch(
+                        checked = bleOnlyMode,
+                        onCheckedChange = {
+                            bleOnlyMode = it
+                            sharedPreferences.edit().putBoolean("ble_only_mode", it).apply()
                         }
                     )
                 }

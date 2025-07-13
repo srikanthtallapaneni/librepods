@@ -57,10 +57,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -69,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.StemAction
 import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.utils.AACPManager
 import kotlin.experimental.and
@@ -81,6 +81,16 @@ fun RightDivider() {
         color = Color(0x40888888),
         modifier = Modifier
             .padding(start = 72.dp)
+    )
+}
+
+@Composable()
+fun RightDividerNoIcon() {
+    HorizontalDivider(
+        thickness = 1.5.dp,
+        color = Color(0x40888888),
+        modifier = Modifier
+            .padding(start = 20.dp)
     )
 }
 
@@ -104,6 +114,10 @@ fun LongPress(navController: NavController, name: String) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
     val deviceName = sharedPreferences.getString("name", "AirPods Pro")
+    val prefKey = if (name.lowercase() == "left") "left_long_press_action" else "right_long_press_action"
+    val longPressActionPref = sharedPreferences.getString(prefKey, StemAction.CYCLE_NOISE_CONTROL_MODES.name)
+    Log.d("PressAndHoldSettingsScreen", "Long press action preference ($prefKey): $longPressActionPref")
+    var longPressAction by remember { mutableStateOf(StemAction.valueOf(longPressActionPref ?: StemAction.CYCLE_NOISE_CONTROL_MODES.name)) }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -153,56 +167,88 @@ fun LongPress(navController: NavController, name: String) {
               .padding(horizontal = 16.dp)
               .padding(top = 8.dp)
         ) {
-            Text(
-                text = "NOISE CONTROL",
-                style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Light,
-                    color = textColor.copy(alpha = 0.6f),
-                ),
-                fontFamily = FontFamily(Font(R.font.sf_pro)),
-                modifier = Modifier
-                    .padding(8.dp, bottom = 4.dp)
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(backgroundColor, RoundedCornerShape(14.dp)),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val offListeningModeValue = ServiceManager.getService()!!.aacpManager.controlCommandStatusList.find {
-                    it.identifier == AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION
-                }?.value?.takeIf { it.isNotEmpty() }?.get(0)
-                val offListeningMode = offListeningModeValue == 1.toByte()
-                LongPressElement(
-                    name = "Off",
-                    enabled = offListeningMode,
-                    resourceId =  R.drawable.noise_cancellation,
-                    isFirst = true)
-                if (offListeningMode) RightDivider()
-                LongPressElement(
-                    name = "Transparency",
-                    resourceId = R.drawable.transparency,
-                    isFirst = !offListeningMode)
-                RightDivider()
-                LongPressElement(
-                    name = "Adaptive",
-                    resourceId = R.drawable.adaptive)
-                RightDivider()
-                LongPressElement(
-                    name = "Noise Cancellation",
-                    resourceId = R.drawable.noise_cancellation,
-                    isLast = true)
+                LongPressActionElement(
+                    name = "Noise Control",
+                    selected = longPressAction == StemAction.CYCLE_NOISE_CONTROL_MODES,
+                    onClick = {
+                        longPressAction = StemAction.CYCLE_NOISE_CONTROL_MODES
+                        sharedPreferences.edit().putString(prefKey, StemAction.CYCLE_NOISE_CONTROL_MODES.name).apply()
+                    },
+                    isFirst = true,
+                    isLast = false
+                )
+                RightDividerNoIcon()
+                LongPressActionElement(
+                    name = "Digital Assistant",
+                    selected = longPressAction == StemAction.DIGITAL_ASSISTANT,
+                    onClick = {
+                        longPressAction = StemAction.DIGITAL_ASSISTANT
+                        sharedPreferences.edit().putString(prefKey, StemAction.DIGITAL_ASSISTANT.name).apply()
+                    },
+                    isFirst = false,
+                    isLast = true
+                )
             }
-            Text(
-                "Press and hold the stem to cycle between the selected noise control modes.",
-                fontSize = 16.sp,
-                fontFamily = FontFamily(Font(R.font.sf_pro)),
-                color = textColor.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .padding(start = 16.dp, top = 4.dp)
-            )
+
+            if (longPressAction == StemAction.CYCLE_NOISE_CONTROL_MODES) {
+                Text(
+                    text = "NOISE CONTROL",
+                    style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Light,
+                        color = textColor.copy(alpha = 0.6f),
+                    ),
+                    fontFamily = FontFamily(Font(R.font.sf_pro)),
+                    modifier = Modifier
+                        .padding(top = 32.dp, bottom = 4.dp)
+                        .padding(horizontal = 8.dp)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(backgroundColor, RoundedCornerShape(14.dp)),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val offListeningModeValue = ServiceManager.getService()!!.aacpManager.controlCommandStatusList.find {
+                        it.identifier == AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION
+                    }?.value?.takeIf { it.isNotEmpty() }?.get(0)
+                    val offListeningMode = offListeningModeValue == 1.toByte()
+                    LongPressElement(
+                        name = "Off",
+                        enabled = offListeningMode,
+                        resourceId =  R.drawable.noise_cancellation,
+                        isFirst = true)
+                    if (offListeningMode) RightDivider()
+                    LongPressElement(
+                        name = "Transparency",
+                        resourceId = R.drawable.transparency,
+                        isFirst = !offListeningMode)
+                    RightDivider()
+                    LongPressElement(
+                        name = "Adaptive",
+                        resourceId = R.drawable.adaptive)
+                    RightDivider()
+                    LongPressElement(
+                        name = "Noise Cancellation",
+                        resourceId = R.drawable.noise_cancellation,
+                        isLast = true)
+                }
+                Text(
+                    "Press and hold the stem to cycle between the selected noise control modes.",
+                    fontSize = 16.sp,
+                    fontFamily = FontFamily(Font(R.font.sf_pro)),
+                    color = textColor.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .padding(start = 16.dp, top = 4.dp)
+                )
+            }
         }
     }
     Log.d("PressAndHoldSettingsScreen", "Current byte: ${ServiceManager.getService()!!.aacpManager.controlCommandStatusList.find {
@@ -336,7 +382,7 @@ fun LongPressElement(name: String, enabled: Boolean = true, resourceId: Int, isF
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
-                bitmap = ImageBitmap.imageResource(resourceId),
+                painter = painterResource(resourceId),
                 contentDescription = "Icon",
                 tint = Color(0xFF007AFF),
                 modifier = Modifier
@@ -382,5 +428,69 @@ fun LongPressElement(name: String, enabled: Boolean = true, resourceId: Int, isF
                     .scale(1.5f),
             )
         }
+    }
+}
+
+@Composable
+fun LongPressActionElement(
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    isFirst: Boolean = false,
+    isLast: Boolean = false
+) {
+    val darkMode = isSystemInDarkTheme()
+    val shape = when {
+        isFirst -> RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
+        isLast -> RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp)
+        else -> RoundedCornerShape(0.dp)
+    }
+    var backgroundColor by remember { mutableStateOf(if (darkMode) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)) }
+    val animatedBackgroundColor by animateColorAsState(targetValue = backgroundColor, animationSpec = tween(durationMillis = 500))
+    Row(
+        modifier = Modifier
+            .height(48.dp)
+            .background(animatedBackgroundColor, shape)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        backgroundColor = if (darkMode) Color(0x40888888) else Color(0x40D9D9D9)
+                        tryAwaitRelease()
+                        backgroundColor = if (darkMode) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+                        onClick()
+                    }
+                )
+            }
+            .padding(horizontal = 16.dp, vertical = 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            name,
+            fontSize = 16.sp,
+            fontFamily = FontFamily(Font(R.font.sf_pro)),
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
+        )
+        Checkbox(
+            checked = selected,
+            onCheckedChange = { onClick() },
+            colors = CheckboxDefaults.colors().copy(
+                checkedCheckmarkColor = Color(0xFF007AFF),
+                uncheckedCheckmarkColor = Color.Transparent,
+                checkedBoxColor = Color.Transparent,
+                uncheckedBoxColor = Color.Transparent,
+                checkedBorderColor = Color.Transparent,
+                uncheckedBorderColor = Color.Transparent,
+                disabledBorderColor = Color.Transparent,
+                disabledCheckedBoxColor = Color.Transparent,
+                disabledUncheckedBoxColor = Color.Transparent,
+                disabledUncheckedBorderColor = Color.Transparent
+            ),
+            modifier = Modifier
+                .height(24.dp)
+                .scale(1.5f),
+        )
     }
 }

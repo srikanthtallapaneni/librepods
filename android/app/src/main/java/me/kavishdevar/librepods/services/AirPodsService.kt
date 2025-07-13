@@ -77,12 +77,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 import me.kavishdevar.librepods.MainActivity
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.AirPodsNotifications
+import me.kavishdevar.librepods.constants.Battery
+import me.kavishdevar.librepods.constants.BatteryComponent
+import me.kavishdevar.librepods.constants.BatteryStatus
+import me.kavishdevar.librepods.constants.StemAction
+import me.kavishdevar.librepods.constants.isHeadTrackingData
 import me.kavishdevar.librepods.utils.AACPManager
-import me.kavishdevar.librepods.utils.AirPodsNotifications
+import me.kavishdevar.librepods.utils.AACPManager.Companion.StemPressType
 import me.kavishdevar.librepods.utils.BLEManager
-import me.kavishdevar.librepods.utils.Battery
-import me.kavishdevar.librepods.utils.BatteryComponent
-import me.kavishdevar.librepods.utils.BatteryStatus
 import me.kavishdevar.librepods.utils.BluetoothConnectionManager
 import me.kavishdevar.librepods.utils.CrossDevice
 import me.kavishdevar.librepods.utils.CrossDevicePackets
@@ -111,7 +114,6 @@ import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_
 import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_CHARGING
 import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_ICON
 import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_LOW_BATTERY_THRESHOLD
-import me.kavishdevar.librepods.utils.isHeadTrackingData
 import me.kavishdevar.librepods.widgets.BatteryWidget
 import me.kavishdevar.librepods.widgets.NoiseControlWidget
 import org.lsposed.hiddenapibypass.HiddenApiBypass
@@ -142,7 +144,7 @@ object ServiceManager {
 class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeListener {
     var macAddress = ""
     lateinit var aacpManager: AACPManager
-
+    var cameraActive = false
     data class ServiceConfig(
         var deviceName: String = "AirPods",
         var earDetectionEnabled: Boolean = true,
@@ -154,6 +156,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         var conversationalAwarenessVolume: Int = 43,
         var textColor: Long = -1L,
         var qsClickBehavior: String = "cycle",
+        var bleOnlyMode: Boolean = false,
 
         // AirPods state-based takeover
         var takeoverWhenDisconnected: Boolean = true,
@@ -163,7 +166,19 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         // Phone state-based takeover
         var takeoverWhenRingingCall: Boolean = true,
-        var takeoverWhenMediaStart: Boolean = true
+        var takeoverWhenMediaStart: Boolean = true,
+
+        var leftSinglePressAction: StemAction = StemAction.defaultActions[StemPressType.SINGLE_PRESS]!!,
+        var rightSinglePressAction: StemAction = StemAction.defaultActions[StemPressType.SINGLE_PRESS]!!,
+
+        var leftDoublePressAction: StemAction = StemAction.defaultActions[StemPressType.DOUBLE_PRESS]!!,
+        var rightDoublePressAction: StemAction = StemAction.defaultActions[StemPressType.DOUBLE_PRESS]!!,
+
+        var leftTriplePressAction: StemAction = StemAction.defaultActions[StemPressType.TRIPLE_PRESS]!!,
+        var rightTriplePressAction: StemAction = StemAction.defaultActions[StemPressType.TRIPLE_PRESS]!!,
+
+        var leftLongPressAction: StemAction = StemAction.defaultActions[StemPressType.LONG_PRESS]!!,
+        var rightLongPressAction: StemAction = StemAction.defaultActions[StemPressType.LONG_PRESS]!!,
     )
 
     private lateinit var config: ServiceConfig
@@ -192,7 +207,16 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             device: BLEManager.AirPodsStatus,
             previousStatus: BLEManager.AirPodsStatus?
         ) {
-            if (device.connectionState == "Disconnected") {
+            // Store MAC address for BLE-only mode if not already stored
+            if (config.bleOnlyMode && macAddress.isEmpty()) {
+                macAddress = device.address
+                sharedPreferences.edit {
+                    putString("mac_address", macAddress)
+                }
+                Log.d("AirPodsBLEService", "BLE-only mode: stored MAC address ${device.address}")
+            }
+
+            if (device.connectionState == "Disconnected" && !config.bleOnlyMode) {
                 Log.d("AirPodsBLEService", "Seems no device has taken over, we will.")
                 val bluetoothManager = getSystemService(BluetoothManager::class.java)
                 val bluetoothDevice = bluetoothManager.adapter.getRemoteDevice(sharedPreferences.getString(
@@ -259,7 +283,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             leftInEar: Boolean,
             rightInEar: Boolean
         ) {
-            Log.d("AirPodsBLEService", "Ear state changed")
+            Log.d("AirPodsBLEService", "Ear state changed - Left: $leftInEar, Right: $rightInEar")
+
+            // In BLE-only mode, ear detection is purely based on BLE data
+            if (config.bleOnlyMode) {
+                Log.d("AirPodsBLEService", "BLE-only mode: ear detection from BLE data")
+            }
         }
 
         override fun onBatteryChanged(device: BLEManager.AirPodsStatus) {
@@ -298,6 +327,67 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         initializeAACPManagerCallback()
 
         sharedPreferences.registerOnSharedPreferenceChangeListener(this)
+    }
+
+     fun cameraOpened() {
+        Log.d("AirPodsService", "Camera opened, gonna handle stem presses and take action if enabled")
+        val isCameraShutterUsed = listOf(
+            config.leftSinglePressAction,
+            config.rightSinglePressAction,
+            config.leftDoublePressAction,
+            config.rightDoublePressAction,
+            config.leftTriplePressAction,
+            config.rightTriplePressAction,
+            config.leftLongPressAction,
+            config.rightLongPressAction
+        ).any { it == StemAction.CAMERA_SHUTTER }
+
+        if (isCameraShutterUsed) {
+            Log.d("AirPodsService", "Camera opened, setting up stem actions")
+            cameraActive = true
+            setupStemActions(isCameraActive = true)
+        }
+     }
+
+    fun cameraClosed() {
+        cameraActive = false
+        setupStemActions()
+    }
+
+    fun isCustomAction(
+        action: StemAction?,
+        default: StemAction?,
+        isCameraActive: Boolean = false
+    ): Boolean {
+        Log.d("AirPodsService", "Checking if action $action is custom against default $default, camera active: $isCameraActive")
+        return action != default && (action != StemAction.CAMERA_SHUTTER || isCameraActive)
+    }
+
+    fun setupStemActions(isCameraActive: Boolean = false) {
+        val singlePressDefault = StemAction.defaultActions[StemPressType.SINGLE_PRESS]
+        val doublePressDefault = StemAction.defaultActions[StemPressType.DOUBLE_PRESS]
+        val triplePressDefault = StemAction.defaultActions[StemPressType.TRIPLE_PRESS]
+        val longPressDefault   = StemAction.defaultActions[StemPressType.LONG_PRESS]
+
+        val singlePressCustomized = isCustomAction(config.leftSinglePressAction, singlePressDefault, isCameraActive) ||
+            isCustomAction(config.rightSinglePressAction, singlePressDefault, isCameraActive)
+        val doublePressCustomized = isCustomAction(config.leftDoublePressAction, doublePressDefault, isCameraActive) ||
+            isCustomAction(config.rightDoublePressAction, doublePressDefault, isCameraActive)
+        val triplePressCustomized = isCustomAction(config.leftTriplePressAction, triplePressDefault, isCameraActive) ||
+            isCustomAction(config.rightTriplePressAction, triplePressDefault, isCameraActive)
+        val longPressCustomized = isCustomAction(config.leftLongPressAction, longPressDefault, isCameraActive) ||
+            isCustomAction(config.rightLongPressAction, longPressDefault, isCameraActive)
+        Log.d("AirPodsService", "Setting up stem actions: " +
+            "Single Press Customized: $singlePressCustomized, " +
+            "Double Press Customized: $doublePressCustomized, " +
+            "Triple Press Customized: $triplePressCustomized, " +
+            "Long Press Customized: $longPressCustomized")
+        aacpManager.sendStemConfigPacket(
+            singlePressCustomized,
+            doublePressCustomized,
+            triplePressCustomized,
+            longPressCustomized,
+        )
     }
 
     @ExperimentalEncodingApi
@@ -398,10 +488,56 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 }
             }
 
+            override fun onStemPressReceived(stemPress: ByteArray) {
+                val (stemPressType, bud) = aacpManager.parseStemPressResponse(stemPress)
+
+                Log.d("AirPodsParser", "Stem press received: $stemPressType on $bud")
+
+                val action = getActionFor(bud, stemPressType)
+                Log.d("AirPodsParser", "$bud $stemPressType action: $action")
+
+                action?.let { executeStemAction(it) }
+            }
+
             override fun onUnknownPacketReceived(packet: ByteArray) {
                 Log.d("AACPManager", "Unknown packet received: ${packet.joinToString(" ") { "%02X".format(it) }}")
             }
         })
+    }
+
+    private fun getActionFor(bud: AACPManager.Companion.StemPressBudType, type: StemPressType): StemAction? {
+        return when (type) {
+            StemPressType.SINGLE_PRESS -> if (bud == AACPManager.Companion.StemPressBudType.LEFT) config.leftSinglePressAction else config.rightSinglePressAction
+            StemPressType.DOUBLE_PRESS -> if (bud == AACPManager.Companion.StemPressBudType.LEFT) config.leftDoublePressAction else config.rightDoublePressAction
+            StemPressType.TRIPLE_PRESS -> if (bud == AACPManager.Companion.StemPressBudType.LEFT) config.leftTriplePressAction else config.rightTriplePressAction
+            StemPressType.LONG_PRESS -> if (bud == AACPManager.Companion.StemPressBudType.LEFT) config.leftLongPressAction else config.rightLongPressAction
+        }
+    }
+
+    private fun executeStemAction(action: StemAction) {
+        when (action) {
+            StemAction.defaultActions[StemPressType.SINGLE_PRESS] -> {
+                Log.d("AirPodsParser", "Default single press action: Play/Pause, not taking action.")
+            }
+            StemAction.PLAY_PAUSE -> MediaController.sendPlayPause()
+            StemAction.PREVIOUS_TRACK -> MediaController.sendPreviousTrack()
+            StemAction.NEXT_TRACK -> MediaController.sendNextTrack()
+            StemAction.CAMERA_SHUTTER -> Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 27"))
+            StemAction.DIGITAL_ASSISTANT -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                } else {
+                    Log.w("AirPodsParser", "Digital Assistant action is not supported on this Android version.")
+                }
+            }
+            StemAction.CYCLE_NOISE_CONTROL_MODES -> {
+                Log.d("AirPodsParser", "Cycling noise control modes")
+                sendBroadcast(Intent("me.kavishdevar.librepods.SET_ANC_MODE"))
+            }
+        }
     }
 
     private fun processEarDetectionChange(earDetection: ByteArray) {
@@ -513,6 +649,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 43),
             textColor = sharedPreferences.getLong("textColor", -1L),
             qsClickBehavior = sharedPreferences.getString("qs_click_behavior", "cycle") ?: "cycle",
+            bleOnlyMode = sharedPreferences.getBoolean("ble_only_mode", false),
 
             // AirPods state-based takeover
             takeoverWhenDisconnected = sharedPreferences.getBoolean("takeover_when_disconnected", true),
@@ -522,7 +659,20 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             // Phone state-based takeover
             takeoverWhenRingingCall = sharedPreferences.getBoolean("takeover_when_ringing_call", true),
-            takeoverWhenMediaStart = sharedPreferences.getBoolean("takeover_when_media_start", true)
+            takeoverWhenMediaStart = sharedPreferences.getBoolean("takeover_when_media_start", true),
+
+            // Stem actions
+            leftSinglePressAction = StemAction.fromString(sharedPreferences.getString("left_single_press_action", "PLAY_PAUSE") ?: "PLAY_PAUSE")!!,
+            rightSinglePressAction = StemAction.fromString(sharedPreferences.getString("right_single_press_action", "PLAY_PAUSE") ?: "PLAY_PAUSE")!!,
+
+            leftDoublePressAction = StemAction.fromString(sharedPreferences.getString("left_double_press_action", "PREVIOUS_TRACK") ?: "NEXT_TRACK")!!,
+            rightDoublePressAction = StemAction.fromString(sharedPreferences.getString("right_double_press_action", "NEXT_TRACK") ?: "NEXT_TRACK")!!,
+
+            leftTriplePressAction = StemAction.fromString(sharedPreferences.getString("left_triple_press_action", "PREVIOUS_TRACK") ?: "PREVIOUS_TRACK")!!,
+            rightTriplePressAction = StemAction.fromString(sharedPreferences.getString("right_triple_press_action", "PREVIOUS_TRACK") ?: "PREVIOUS_TRACK")!!,
+
+            leftLongPressAction = StemAction.fromString(sharedPreferences.getString("left_long_press_action", "CYCLE_NOISE_CONTROL_MODES") ?: "CYCLE_NOISE_CONTROL_MODES")!!,
+            rightLongPressAction = StemAction.fromString(sharedPreferences.getString("right_long_press_action", "DIGITAL_ASSISTANT") ?: "DIGITAL_ASSISTANT")!!
         )
     }
 
@@ -544,6 +694,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             "conversational_awareness_volume" -> config.conversationalAwarenessVolume = preferences.getInt(key, 43)
             "textColor" -> config.textColor = preferences.getLong(key, -1L)
             "qs_click_behavior" -> config.qsClickBehavior = preferences.getString(key, "cycle") ?: "cycle"
+            "ble_only_mode" -> config.bleOnlyMode = preferences.getBoolean(key, false)
 
             // AirPods state-based takeover
             "takeover_when_disconnected" -> config.takeoverWhenDisconnected = preferences.getBoolean(key, true)
@@ -554,6 +705,55 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             // Phone state-based takeover
             "takeover_when_ringing_call" -> config.takeoverWhenRingingCall = preferences.getBoolean(key, true)
             "takeover_when_media_start" -> config.takeoverWhenMediaStart = preferences.getBoolean(key, true)
+
+            "left_single_press_action" -> {
+                config.leftSinglePressAction = StemAction.fromString(
+                    preferences.getString(key, "PLAY_PAUSE") ?: "PLAY_PAUSE"
+                )!!
+                setupStemActions()
+            }
+            "right_single_press_action" -> {
+                config.rightSinglePressAction = StemAction.fromString(
+                    preferences.getString(key, "PLAY_PAUSE") ?: "PLAY_PAUSE"
+                )!!
+                setupStemActions()
+            }
+            "left_double_press_action" -> {
+                config.leftDoublePressAction = StemAction.fromString(
+                    preferences.getString(key, "PREVIOUS_TRACK") ?: "PREVIOUS_TRACK"
+                )!!
+                setupStemActions()
+            }
+            "right_double_press_action" -> {
+                config.rightDoublePressAction = StemAction.fromString(
+                    preferences.getString(key, "NEXT_TRACK") ?: "NEXT_TRACK"
+                )!!
+                setupStemActions()
+            }
+            "left_triple_press_action" -> {
+                config.leftTriplePressAction = StemAction.fromString(
+                    preferences.getString(key, "PREVIOUS_TRACK") ?: "PREVIOUS_TRACK"
+                )!!
+                setupStemActions()
+            }
+            "right_triple_press_action" -> {
+                config.rightTriplePressAction = StemAction.fromString(
+                    preferences.getString(key, "PREVIOUS_TRACK") ?: "PREVIOUS_TRACK"
+                )!!
+                setupStemActions()
+            }
+            "left_long_press_action" -> {
+                config.leftLongPressAction = StemAction.fromString(
+                    preferences.getString(key, "CYCLE_NOISE_CONTROL_MODES") ?: "CYCLE_NOISE_CONTROL_MODES"
+                )!!
+                setupStemActions()
+            }
+            "right_long_press_action" -> {
+                config.rightLongPressAction = StemAction.fromString(
+                    preferences.getString(key, "DIGITAL_ASSISTANT") ?: "DIGITAL_ASSISTANT"
+                )!!
+                setupStemActions()
+            }
         }
 
         if (key == "mac_address") {
@@ -1002,10 +1202,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (!::socket.isInitialized) {
+        if (!::socket.isInitialized && !config.bleOnlyMode) {
             return
         }
-        if (connected && socket.isConnected) {
+        if (connected && (config.bleOnlyMode || socket.isConnected)) {
             updatedNotification = NotificationCompat.Builder(this, "airpods_connection_status")
                 .setSmallIcon(R.drawable.airpods)
                 .setContentTitle(airpodsName ?: config.deviceName)
@@ -1057,7 +1257,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             notificationManager.notify(1, updatedNotification)
             notificationManager.cancel(2)
-        } else if (!socket.isConnected && isConnectedLocally) {
+        } else if (!config.bleOnlyMode && !socket.isConnected && isConnectedLocally) {
             Log.d("AirPodsService", "<LogCollector:Complete:Failed> Socket not connected")
             showSocketConnectionFailureNotification("Socket created, but not connected. Is the Bluetooth process hooked?")
         }
@@ -1374,8 +1574,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     val ancModeFilter = IntentFilter("me.kavishdevar.librepods.SET_ANC_MODE")
     var ancModeReceiver: BroadcastReceiver? = null
 
-
-
     @SuppressLint("InlinedApi", "MissingPermission", "UnspecifiedRegisterReceiverFlag")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("AirPodsService", "Service started")
@@ -1426,6 +1624,24 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             if (!contains("qs_click_behavior")) editor.putString("qs_click_behavior", "cycle")
             if (!contains("name")) editor.putString("name", "AirPods")
+            if (!contains("ble_only_mode")) editor.putBoolean("ble_only_mode", false)
+
+            if (!contains("left_single_press_action")) editor.putString("left_single_press_action",
+                StemAction.defaultActions[StemPressType.SINGLE_PRESS]!!.name)
+            if (!contains("right_single_press_action")) editor.putString("right_single_press_action",
+                StemAction.defaultActions[StemPressType.SINGLE_PRESS]!!.name)
+            if (!contains("left_double_press_action")) editor.putString("left_double_press_action",
+                StemAction.defaultActions[StemPressType.DOUBLE_PRESS]!!.name)
+            if (!contains("right_double_press_action")) editor.putString("right_double_press_action",
+                StemAction.defaultActions[StemPressType.DOUBLE_PRESS]!!.name)
+            if (!contains("left_triple_press_action")) editor.putString("left_triple_press_action",
+                StemAction.defaultActions[StemPressType.TRIPLE_PRESS]!!.name)
+            if (!contains("right_triple_press_action")) editor.putString("right_triple_press_action",
+                StemAction.defaultActions[StemPressType.TRIPLE_PRESS]!!.name)
+            if (!contains("left_long_press_action")) editor.putString("left_long_press_action",
+                StemAction.defaultActions[StemPressType.LONG_PRESS]!!.name)
+            if (!contains("right_long_press_action")) editor.putString("right_long_press_action",
+                StemAction.defaultActions[StemPressType.LONG_PRESS]!!.name)
 
             editor.apply()
         }
@@ -1575,7 +1791,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     }
 
                     Log.d("AirPodsCrossDevice", CrossDevice.isAvailable.toString())
-                    if (!CrossDevice.isAvailable) {
+                    if (!CrossDevice.isAvailable && !config.bleOnlyMode) {
                         Log.d("AirPodsService", "${config.deviceName} connected")
                         CoroutineScope(Dispatchers.IO).launch {
                             connectToSocket(device!!)
@@ -1583,6 +1799,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         Log.d("AirPodsService", "Setting metadata")
                         setMetadatas(device!!)
                         isConnectedLocally = true
+                        macAddress = device!!.address
+                        sharedPreferences.edit {
+                            putString("mac_address", macAddress)
+                        }
+                    } else if (config.bleOnlyMode) {
+                        Log.d("AirPodsService", "BLE-only mode: skipping L2CAP connection")
                         macAddress = device!!.address
                         sharedPreferences.edit {
                             putString("mac_address", macAddress)
@@ -1647,11 +1869,17 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 if (profile == BluetoothProfile.A2DP) {
                                     val connectedDevices = proxy.connectedDevices
                                     if (connectedDevices.isNotEmpty()) {
-                                        if (!CrossDevice.isAvailable) {
+                                        if (!CrossDevice.isAvailable && !config.bleOnlyMode) {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 connectToSocket(device)
                                             }
                                             setMetadatas(device)
+                                            macAddress = device.address
+                                            sharedPreferences.edit {
+                                                putString("mac_address", macAddress)
+                                            }
+                                        } else if (config.bleOnlyMode) {
+                                            Log.d("AirPodsService", "BLE-only mode: skipping L2CAP connection")
                                             macAddress = device.address
                                             sharedPreferences.edit {
                                                 putString("mac_address", macAddress)
@@ -1760,14 +1988,26 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
 
         if (device != null) {
-            connectToSocket(device!!)
-            connectAudio(this, device)
+            if (config.bleOnlyMode) {
+                // In BLE-only mode, just show connecting status without actual L2CAP connection
+                Log.d("AirPodsService", "BLE-only mode: showing connecting status without L2CAP connection")
+                updateNotificationContent(
+                    true,
+                    config.deviceName,
+                    batteryNotification.getBattery()
+                )
+                // Set a temporary connecting state
+                isConnectedLocally = false // Keep as false since we're not actually connecting to L2CAP
+            } else {
+                connectToSocket(device!!)
+                connectAudio(this, device)
+                isConnectedLocally = true
+            }
         }
 
         showIsland(this, batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT}?.level!!.coerceAtMost(batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT}?.level!!),
             IslandType.TAKING_OVER)
 
-        isConnectedLocally = true
         CrossDevice.isAvailable = false
     }
 
@@ -1878,6 +2118,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                             Intent(AirPodsNotifications.AIRPODS_CONNECTED)
                                 .putExtra("device", device)
                         )
+
+                        setupStemActions()
 
                         while (socket.isConnected == true) {
                             socket.let {

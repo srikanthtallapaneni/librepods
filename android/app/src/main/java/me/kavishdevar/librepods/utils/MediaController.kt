@@ -101,6 +101,51 @@ object MediaController {
     }
 
     @Synchronized
+    fun sendPlayPause() {
+        if (audioManager.isMusicActive) {
+            Log.d("MediaController", "Sending pause because music is active")
+            sendPause()
+        } else {
+            Log.d("MediaController", "Sending play because music is not active")
+            sendPlay()
+        }
+    }
+
+    @Synchronized
+    fun sendPreviousTrack() {
+        Log.d("MediaController", "Sending previous track")
+        audioManager.dispatchMediaKeyEvent(
+            KeyEvent(
+                KeyEvent.ACTION_DOWN,
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            )
+        )
+        audioManager.dispatchMediaKeyEvent(
+            KeyEvent(
+                KeyEvent.ACTION_UP,
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            )
+        )
+    }
+
+    @Synchronized
+    fun sendNextTrack() {
+        Log.d("MediaController", "Sending next track")
+        audioManager.dispatchMediaKeyEvent(
+            KeyEvent(
+                KeyEvent.ACTION_DOWN,
+                KeyEvent.KEYCODE_MEDIA_NEXT
+            )
+        )
+        audioManager.dispatchMediaKeyEvent(
+            KeyEvent(
+                KeyEvent.ACTION_UP,
+                KeyEvent.KEYCODE_MEDIA_NEXT
+            )
+        )
+    }
+
+    @Synchronized
     fun sendPause(force: Boolean = false) {
         Log.d("MediaController", "Sending pause with iPausedTheMedia: $iPausedTheMedia, userPlayedTheMedia: $userPlayedTheMedia, isMusicActive: ${audioManager.isMusicActive}, force: $force")
         if ((audioManager.isMusicActive) && (!userPlayedTheMedia || force)) {

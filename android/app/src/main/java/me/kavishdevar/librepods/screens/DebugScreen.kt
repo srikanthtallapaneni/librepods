@@ -100,9 +100,9 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.BatteryStatus
+import me.kavishdevar.librepods.constants.isHeadTrackingData
 import me.kavishdevar.librepods.services.ServiceManager
-import me.kavishdevar.librepods.utils.BatteryStatus
-import me.kavishdevar.librepods.utils.isHeadTrackingData
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 data class PacketInfo(

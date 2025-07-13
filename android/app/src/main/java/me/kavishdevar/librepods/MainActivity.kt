@@ -104,6 +104,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import me.kavishdevar.librepods.constants.AirPodsNotifications
 import me.kavishdevar.librepods.screens.AirPodsSettingsScreen
 import me.kavishdevar.librepods.screens.AppSettingsScreen
 import me.kavishdevar.librepods.screens.DebugScreen
@@ -114,11 +115,10 @@ import me.kavishdevar.librepods.screens.RenameScreen
 import me.kavishdevar.librepods.screens.TroubleshootingScreen
 import me.kavishdevar.librepods.services.AirPodsService
 import me.kavishdevar.librepods.ui.theme.LibrePodsTheme
-import me.kavishdevar.librepods.utils.AirPodsNotifications
 import me.kavishdevar.librepods.utils.CrossDevice
 import me.kavishdevar.librepods.utils.RadareOffsetFinder
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 lateinit var serviceConnection: ServiceConnection
 lateinit var connectionStatusReceiver: BroadcastReceiver
@@ -187,7 +187,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIncomingIntent(intent: Intent) {
         val data: Uri? = intent.data
-        
+
         if (data != null && data.scheme == "librepods") {
             when (data.host) {
                 "add-magic-keys" -> {
@@ -198,34 +198,34 @@ class MainActivity : ComponentActivity() {
                         // Handle your parameters here
                         Log.d("LibrePods", "Parameter: $param = $value")
                     }
-                    
+
                     // Process the magic keys addition
                     handleAddMagicKeys(data)
                 }
             }
         }
     }
-    
+
     private fun handleAddMagicKeys(uri: Uri) {
         val context = this
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        
+
         val irkHex = uri.getQueryParameter("irk")
         val encKeyHex = uri.getQueryParameter("enc_key")
-        
+
         try {
             if (irkHex != null && validateHexInput(irkHex)) {
                 val irkBytes = hexStringToByteArray(irkHex)
                 val irkBase64 = Base64.encode(irkBytes)
                 sharedPreferences.edit().putString("IRK", irkBase64).apply()
             }
-            
+
             if (encKeyHex != null && validateHexInput(encKeyHex)) {
                 val encKeyBytes = hexStringToByteArray(encKeyHex)
                 val encKeyBase64 = Base64.encode(encKeyBytes)
                 sharedPreferences.edit().putString("ENC_KEY", encKeyBase64).apply()
             }
-            
+
             Toast.makeText(this, "Magic keys added successfully!", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Error processing magic keys: ${e.message}", Toast.LENGTH_LONG).show()

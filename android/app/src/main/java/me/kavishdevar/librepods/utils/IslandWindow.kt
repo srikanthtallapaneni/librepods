@@ -58,6 +58,10 @@ import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.AirPodsNotifications
+import me.kavishdevar.librepods.constants.Battery
+import me.kavishdevar.librepods.constants.BatteryComponent
+import me.kavishdevar.librepods.constants.BatteryStatus
 import me.kavishdevar.librepods.services.ServiceManager
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.abs
@@ -118,6 +122,7 @@ class IslandWindow(private val context: Context) {
     val isVisible: Boolean
         get() = containerView.parent != null && containerView.visibility == View.VISIBLE
 
+    @SuppressLint("SetTextI18n")
     private fun updateBatteryDisplay(batteryList: ArrayList<Battery>?) {
         if (batteryList == null || batteryList.isEmpty()) return
 
@@ -150,7 +155,7 @@ class IslandWindow(private val context: Context) {
         }
     }
 
-    @SuppressLint("SetTextI18s", "ClickableViewAccessibility")
+    @SuppressLint("SetTextI18s", "ClickableViewAccessibility", "UnspecifiedRegisterReceiverFlag")
     fun show(name: String, batteryPercentage: Int, context: Context, type: IslandType = IslandType.CONNECTED) {
         if (ServiceManager.getService()?.islandOpen == true) return
         else ServiceManager.getService()?.islandOpen = true
@@ -162,13 +167,13 @@ class IslandWindow(private val context: Context) {
         val batteryList = ServiceManager.getService()?.getBattery()
         val batteryText = islandView.findViewById<TextView>(R.id.island_battery_text)
         val batteryProgressBar = islandView.findViewById<ProgressBar>(R.id.island_battery_progress)
-        
+
         val displayBatteryLevel = if (batteryList != null) {
             val leftBattery = batteryList.find { it.component == BatteryComponent.LEFT }
             val rightBattery = batteryList.find { it.component == BatteryComponent.RIGHT }
-            
+
             when {
-                leftBattery?.level ?: 0 > 0 && rightBattery?.level ?: 0 > 0 -> 
+                leftBattery?.level ?: 0 > 0 && rightBattery?.level ?: 0 > 0 ->
                     minOf(leftBattery!!.level, rightBattery!!.level)
                 leftBattery?.level ?: 0 > 0 -> leftBattery!!.level
                 rightBattery?.level ?: 0 > 0 -> rightBattery!!.level
@@ -180,7 +185,7 @@ class IslandWindow(private val context: Context) {
         } else {
             null
         }
-        
+
         if (displayBatteryLevel != null) {
             batteryText.text = "$displayBatteryLevel%"
             batteryProgressBar.progress = displayBatteryLevel
@@ -188,7 +193,7 @@ class IslandWindow(private val context: Context) {
             batteryText.text = "?"
             batteryProgressBar.progress = 0
         }
-        
+
         batteryProgressBar.isIndeterminate = false
         islandView.findViewById<TextView>(R.id.island_device_name).text = name
 
@@ -403,11 +408,11 @@ class IslandWindow(private val context: Context) {
 
             if (params != null) {
                 params!!.height = screenHeight
-                
+
                 val containerParams = containerView.layoutParams
                 containerParams.height = screenHeight
                 containerView.layoutParams = containerParams
-                
+
                 try {
                     windowManager.updateViewLayout(containerView, params)
                 } catch (e: Exception) {
@@ -552,7 +557,7 @@ class IslandWindow(private val context: Context) {
         normalizeAnimator.addUpdateListener { animation ->
             val progress = animation.animatedValue as Float
             containerView.alpha = progress
-            
+
             if (progress < 0.7f) {
                 islandView.findViewById<VideoView>(R.id.island_video_view).visibility = View.GONE
             }
@@ -620,7 +625,7 @@ class IslandWindow(private val context: Context) {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            
+
             val scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, containerView.scaleX, 0.5f)
             val scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, containerView.scaleY, 0.5f)
             val translationY = PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, containerView.translationY, -200f)
@@ -640,7 +645,7 @@ class IslandWindow(private val context: Context) {
             cleanupAndRemoveView()
         }
     }
-    
+
     private fun cleanupAndRemoveView() {
         containerView.visibility = View.GONE
         try {
@@ -655,25 +660,25 @@ class IslandWindow(private val context: Context) {
         springAnimation.cancel()
         flingAnimator.cancel()
     }
-    
+
     fun forceClose() {
         try {
             if (isClosing) return
             isClosing = true
-            
+
             try {
                 context.unregisterReceiver(batteryReceiver)
             } catch (e: Exception) {
                 // Silent catch - receiver might already be unregistered
             }
-            
+
             ServiceManager.getService()?.islandOpen = false
             autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
-            
+
             // Cancel all ongoing animations
             springAnimation.cancel()
             flingAnimator.cancel()
-            
+
             // Immediately remove the view without animations
             cleanupAndRemoveView()
         } catch (e: Exception) {

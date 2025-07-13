@@ -73,10 +73,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.AirPodsNotifications
+import me.kavishdevar.librepods.constants.NoiseControlMode
 import me.kavishdevar.librepods.services.AirPodsService
 import me.kavishdevar.librepods.utils.AACPManager
-import me.kavishdevar.librepods.utils.AirPodsNotifications
-import me.kavishdevar.librepods.utils.NoiseControlMode
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.roundToInt
 

@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.kavishdevar.librepods.R
-import me.kavishdevar.librepods.utils.NoiseControlMode
+import me.kavishdevar.librepods.constants.NoiseControlMode
 
 private val ContainerColor = Color(0x593C3C3E)
 private val SelectedIndicatorColorGray = Color(0xFF6C6C6E)

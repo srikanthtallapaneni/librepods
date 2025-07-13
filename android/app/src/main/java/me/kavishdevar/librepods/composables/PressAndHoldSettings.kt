@@ -18,6 +18,7 @@
 
 package me.kavishdevar.librepods.composables
 
+import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.StemAction
 
 @Composable
 fun PressAndHoldSettings(navController: NavController) {
@@ -69,6 +71,24 @@ fun PressAndHoldSettings(navController: NavController) {
     val animationSpec = tween<Color>(durationMillis = 500)
     val animatedLeftBackgroundColor by animateColorAsState(targetValue = leftBackgroundColor, animationSpec = animationSpec)
     val animatedRightBackgroundColor by animateColorAsState(targetValue = rightBackgroundColor, animationSpec = animationSpec)
+
+    val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    val leftAction = sharedPreferences.getString("left_long_press_action", StemAction.CYCLE_NOISE_CONTROL_MODES.name)
+    val rightAction = sharedPreferences.getString("right_long_press_action", StemAction.CYCLE_NOISE_CONTROL_MODES.name)
+
+    val leftActionText = when (StemAction.valueOf(leftAction ?: StemAction.CYCLE_NOISE_CONTROL_MODES.name)) {
+        StemAction.CYCLE_NOISE_CONTROL_MODES -> stringResource(R.string.noise_control)
+        StemAction.DIGITAL_ASSISTANT -> "Digital Assistant"
+        else -> "INVALID!!"
+    }
+
+    val rightActionText = when (StemAction.valueOf(rightAction ?: StemAction.CYCLE_NOISE_CONTROL_MODES.name)) {
+        StemAction.CYCLE_NOISE_CONTROL_MODES -> stringResource(R.string.noise_control)
+        StemAction.DIGITAL_ASSISTANT -> "Digital Assistant"
+        else -> "INVALID!!"
+    }
 
     Text(
         text = stringResource(R.string.press_and_hold_airpods).uppercase(),
@@ -122,7 +142,7 @@ fun PressAndHoldSettings(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = stringResource(R.string.noise_control),
+                    text = leftActionText,
                     style = TextStyle(
                         fontSize = 18.sp,
                         color = textColor.copy(alpha = 0.6f),
@@ -182,7 +202,7 @@ fun PressAndHoldSettings(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = stringResource(R.string.noise_control),
+                    text = rightActionText,
                     style = TextStyle(
                         fontSize = 18.sp,
                         color = textColor.copy(alpha = 0.6f),

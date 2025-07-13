@@ -45,6 +45,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.VideoView
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.constants.AirPodsNotifications
+import me.kavishdevar.librepods.constants.Battery
+import me.kavishdevar.librepods.constants.BatteryComponent
+import me.kavishdevar.librepods.constants.BatteryStatus
+import kotlin.collections.find
 
 @SuppressLint("InflateParams", "ClickableViewAccessibility")
 class PopupWindow(
@@ -124,9 +129,9 @@ class PopupWindow(
         try {
             if (mView.windowToken == null && mView.parent == null && !isClosing) {
                 mView.findViewById<TextView>(R.id.name).text = name
-                
+
                 updateBatteryStatus(batteryNotification)
-                
+
                 val vid = mView.findViewById<VideoView>(R.id.video)
                 vid.setVideoPath("android.resource://me.kavishdevar.librepods/" + R.raw.connected)
                 vid.resolveAdjustedSize(vid.width, vid.height)
@@ -134,7 +139,7 @@ class PopupWindow(
                 vid.setOnCompletionListener {
                     vid.start()
                 }
-                
+
                 mWindowManager.addView(mView, mParams)
 
                 val displayMetrics = mView.context.resources.displayMetrics
@@ -144,13 +149,13 @@ class PopupWindow(
                 mView.alpha = 1f
 
                 val translationY = PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, screenHeight.toFloat(), 0f)
-                
+
                 ObjectAnimator.ofPropertyValuesHolder(mView, translationY).apply {
                     duration = 500
                     interpolator = DecelerateInterpolator()
                     start()
                 }
-                
+
                 registerBatteryUpdateReceiver()
 
                 autoCloseRunnable = Runnable { close() }
@@ -162,6 +167,7 @@ class PopupWindow(
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerBatteryUpdateReceiver() {
         batteryUpdateReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -173,7 +179,7 @@ class PopupWindow(
                 }
             }
         }
-        
+
         val filter = IntentFilter(AirPodsNotifications.BATTERY_DATA)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(batteryUpdateReceiver, filter, Context.RECEIVER_EXPORTED)
@@ -192,7 +198,7 @@ class PopupWindow(
             }
         }
     }
-    
+
     private fun updateBatteryStatusFromList(batteryList: List<Battery>) {
         val batteryLeftText = mView.findViewById<TextView>(R.id.left_battery)
         val batteryRightText = mView.findViewById<TextView>(R.id.right_battery)
@@ -205,7 +211,7 @@ class PopupWindow(
                 ""
             }
         } ?: ""
-        
+
         batteryRightText.text = batteryList.find { it.component == BatteryComponent.RIGHT }?.let {
             if (it.status != BatteryStatus.DISCONNECTED) {
                 "\uDBC3\uDC8D    ${it.level}%"
@@ -213,7 +219,7 @@ class PopupWindow(
                 ""
             }
         } ?: ""
-        
+
         batteryCaseText.text = batteryList.find { it.component == BatteryComponent.CASE }?.let {
             if (it.status != BatteryStatus.DISCONNECTED) {
                 "\uDBC3\uDE6C    ${it.level}%"
@@ -233,13 +239,13 @@ class PopupWindow(
         try {
             if (isClosing) return
             isClosing = true
-            
+
             autoCloseRunnable?.let { autoCloseHandler.removeCallbacks(it) }
             unregisterBatteryUpdateReceiver()
-            
+
             val vid = mView.findViewById<VideoView>(R.id.video)
             vid.stopPlayback()
-            
+
             ObjectAnimator.ofFloat(mView, "translationY", mView.height.toFloat()).apply {
                 duration = 500
                 interpolator = AccelerateInterpolator()

@@ -15,18 +15,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+
 @file:OptIn(ExperimentalEncodingApi::class)
 
 package me.kavishdevar.librepods.utils
 
 import android.util.Log
 import me.kavishdevar.librepods.utils.AACPManager.Companion.ControlCommandIdentifiers.entries
+import me.kavishdevar.librepods.utils.AACPManager.Companion.StemPressBudType.entries
+import me.kavishdevar.librepods.utils.AACPManager.Companion.StemPressType.entries
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Manager class for Apple Accessory Communication Protocol (AACP)
  * This class is responsible for handling the L2CAP socket management,
- * constructing and parsing packets for communication with Apple accessories.
+ * constructing and parsing packets for communication with AirPods.
  */
 class AACPManager {
     companion object {
@@ -44,6 +47,7 @@ class AACPManager {
             const val HEADTRACKING: Byte = 0x17
             const val PROXIMITY_KEYS_REQ: Byte = 0x30
             const val PROXIMITY_KEYS_RSP: Byte = 0x31
+            const val STEM_PRESS: Byte = 0x19
         }
 
         private val HEADER_BYTES = byteArrayOf(0x04, 0x00, 0x04, 0x00)
@@ -101,8 +105,8 @@ class AACPManager {
             IN_CASE_TONE_CONFIG(0x31),
             SIRI_MULTITONE_CONFIG(0x32),
             HEARING_ASSIST_CONFIG(0x33),
-            ALLOW_OFF_OPTION(0x34);
-
+            ALLOW_OFF_OPTION(0x34),
+            STEM_CONFIG(0x39);
             companion object {
                 fun fromByte(byte: Byte): ControlCommandIdentifiers? =
                     entries.find { it.value == byte }
@@ -116,6 +120,28 @@ class AACPManager {
             companion object {
                 fun fromByte(byte: Byte): ProximityKeyType =
                     ProximityKeyType.entries.find { it.value == byte }?: throw IllegalArgumentException("Unknown ProximityKeyType: $byte")
+            }
+        }
+
+        enum class StemPressType(val value: Byte) {
+            SINGLE_PRESS(0x05),
+            DOUBLE_PRESS(0x06),
+            TRIPLE_PRESS(0x07),
+            LONG_PRESS(0x08);
+
+            companion object {
+                fun fromByte(byte: Byte): StemPressType? =
+                    entries.find { it.value == byte }
+            }
+        }
+
+        enum class StemPressBudType(val value: Byte) {
+            LEFT(0x01),
+            RIGHT(0x02);
+
+            companion object {
+                fun fromByte(byte: Byte): StemPressBudType? =
+                    entries.find { it.value == byte }
             }
         }
     }
@@ -149,6 +175,20 @@ class AACPManager {
         fun onHeadTrackingReceived(headTracking: ByteArray)
         fun onUnknownPacketReceived(packet: ByteArray)
         fun onProximityKeysReceived(proximityKeys: ByteArray)
+        fun onStemPressReceived(stemPress: ByteArray)
+    }
+
+    fun parseStemPressResponse(data: ByteArray): Pair<StemPressType, StemPressBudType> {
+        Log.d(TAG, "Parsing Stem Press Response: ${data.joinToString(" ") { "%02X".format(it) }}")
+        if (data.size != 8) {
+            throw IllegalArgumentException("Data array too short to parse Stem Press Response")
+        }
+        if (data[4] != Opcodes.STEM_PRESS) {
+            throw IllegalArgumentException("Data array does not start with STEM_PRESS opcode")
+        }
+        val type = StemPressType.fromByte(data[6]) ?: throw IllegalArgumentException("Unknown Stem Press Type: ${data[5]}")
+        val bud = StemPressBudType.fromByte(data[7]) ?: throw IllegalArgumentException("Unknown Stem Press Bud Type: ${data[6]}")
+        return Pair(type, bud)
     }
 
     interface ControlCommandListener {
@@ -195,6 +235,7 @@ class AACPManager {
         return sendDataPacket(controlPacket)
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     fun sendControlCommand(identifier: Byte, value: Byte): Boolean {
         val controlPacket = createControlCommandPacket(identifier, byteArrayOf(value))
         setControlCommandStatusValue(
@@ -322,6 +363,9 @@ class AACPManager {
             }
             Opcodes.PROXIMITY_KEYS_RSP -> {
                 callback?.onProximityKeysReceived(packet)
+            }
+            Opcodes.STEM_PRESS -> {
+                callback?.onStemPressReceived(packet)
             }
             else -> {
                 callback?.onUnknownPacketReceived(packet)
@@ -456,11 +500,27 @@ class AACPManager {
                 val value = ByteArray(4)
                 System.arraycopy(data, 3, value, 0, 4)
 
-                // drop trailing zeroes in the array, and return the bytearray of the reduced array
                 val trimmedValue = value.takeWhile { it != 0x00.toByte() }.toByteArray()
                 return ControlCommand(identifier, trimmedValue)
             }
         }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    fun sendStemConfigPacket(
+        singlePressCustomized: Boolean = false,
+        doublePressCustomized: Boolean = false,
+        triplePressCustomized: Boolean = false,
+        longPressCustomized: Boolean = false
+    ): Boolean {
+        val value = ((if (singlePressCustomized) 0x01 else 0) or
+            (if (doublePressCustomized) 0x02 else 0) or
+            (if (triplePressCustomized) 0x04 else 0) or
+            (if (longPressCustomized) 0x08 else 0)).toByte()
+        Log.d(TAG, "Sending Stem Config Packet with value: ${value.toHexString()}")
+        return sendControlCommand(
+            ControlCommandIdentifiers.STEM_CONFIG.value, value
+        )
     }
 
    @OptIn(ExperimentalStdlibApi::class)
