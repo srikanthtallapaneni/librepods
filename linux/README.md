@@ -33,7 +33,7 @@ A native Linux application to control your AirPods, with support for:
     sudo pacman -S openssl
     
     # For Debian / Ubuntu
-    sudo apt-get install libssl-devel
+    sudo apt-get install libssl-dev
     
     # For Fedora
     sudo dnf install openssl-devel
