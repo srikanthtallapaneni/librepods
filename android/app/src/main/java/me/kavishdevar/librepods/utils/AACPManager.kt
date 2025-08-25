@@ -389,7 +389,7 @@ class AACPManager {
 
     fun createSetFeatureFlagsPacket(): ByteArray {
         val opcode = byteArrayOf(Opcodes.SET_FEATURE_FLAGS, 0x00)
-        val data = byteArrayOf(0xFF.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        val data = byteArrayOf(0xD7.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
         return opcode + data
     }
 
