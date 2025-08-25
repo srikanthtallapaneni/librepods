@@ -109,67 +109,6 @@ class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModul
                 Log.e(TAG, "Failed to hook Bluetooth icon handler: ${e.message}", e)
             }
         }
-
-        if (param.packageName == "com.android.systemui") {
-            Log.i(TAG, "SystemUI detected, hooking volume panel")
-            try {
-                val volumePanelViewClass = param.classLoader.loadClass("com.android.systemui.volume.VolumeDialogImpl")
-
-                try {
-                    val initDialogMethod = volumePanelViewClass.getDeclaredMethod("initDialog", Int::class.java)
-                    hook(initDialogMethod, VolumeDialogInitHooker::class.java)
-                    Log.i(TAG, "Hooked initDialog method successfully")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to hook initDialog method: ${e.message}")
-                }
-
-                try {
-                    val showHMethod = volumePanelViewClass.getDeclaredMethod("showH", Int::class.java, Boolean::class.java, Int::class.java)
-                    hook(showHMethod, VolumeDialogShowHooker::class.java)
-                    Log.i(TAG, "Hooked showH method successfully")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to hook showH method: ${e.message}")
-                }
-
-                Log.i(TAG, "Volume panel hook setup attempted on multiple methods")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to hook volume panel: ${e.message}", e)
-            }
-        }
-    }
-
-    @XposedHooker
-    class VolumeDialogInitHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            @AfterInvocation
-            fun afterInitDialog(callback: AfterHookCallback) {
-                try {
-                    val volumeDialog = callback.thisObject
-                    Log.i(TAG, "Volume dialog initialized, adding AirPods controls")
-                    addAirPodsControlsToDialog(volumeDialog!!)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in initDialog hook: ${e.message}", e)
-                }
-            }
-        }
-    }
-
-    @XposedHooker
-    class VolumeDialogShowHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            @AfterInvocation
-            fun afterShowH(callback: AfterHookCallback) {
-                try {
-                    val volumeDialog = callback.thisObject
-                    Log.i(TAG, "Volume dialog shown, ensuring AirPods controls are added")
-                    addAirPodsControlsToDialog(volumeDialog!!)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in showH hook: ${e.message}", e)
-                }
-            }
-        }
     }
 
     @XposedHooker
