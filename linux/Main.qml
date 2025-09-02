@@ -154,27 +154,7 @@ ApplicationWindow {
                     visible: airPodsTrayApp.airpodsConnected
                     text: "Conversational Awareness"
                     checked: airPodsTrayApp.deviceInfo.conversationalAwareness
-                    // Disable when no phone MAC set or using default placeholder
-                    enabled: !(PHONE_MAC_ADDRESS === "" || PHONE_MAC_ADDRESS === "00:00:00:00:00:00")
                     onCheckedChanged: airPodsTrayApp.setConversationalAwareness(checked)
-                }
-
-                // Instruction when Conversational Awareness is disabled due to missing phone MAC
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 8
-                    visible: airPodsTrayApp.airpodsConnected && (PHONE_MAC_ADDRESS === "" || PHONE_MAC_ADDRESS === "00:00:00:00:00:00")
-
-                    Label {
-                        text: "Set your phone's MAC in Settings to use this feature"
-                        font.pixelSize: 12
-                        color: "gray"
-                    }
-
-                    Button {
-                        text: "Open Settings"
-                        onClicked: stackView.push(settingsPage)
-                    }
                 }
             }
 
@@ -184,7 +164,7 @@ ApplicationWindow {
                 anchors.margins: 10
                 font.family: iconFont.name
                 font.pixelSize: 18
-                text: "\uf958" // U+F958
+                text: "\uf958"
                 onClicked: stackView.push(settingsPage)
             }
         }
