@@ -29,7 +29,7 @@
 
 using namespace AirpodsTrayApp::Enums;
 
-Q_LOGGING_CATEGORY(Librepods, "Librepods")
+Q_LOGGING_CATEGORY(librepods, "librepods")
 
 class AirPodsTrayApp : public QObject {
     Q_OBJECT
@@ -50,8 +50,8 @@ public:
         , m_deviceInfo(new DeviceInfo(this)), m_bleManager(new BleManager(this))
         , m_systemSleepMonitor(new SystemSleepMonitor(this))
     {
-        QLoggingCategory::setFilterRules(QString("Librepods.debug=%1").arg(debugMode ? "true" : "false"));
-        LOG_INFO("Initializing AirPodsTrayApp");
+        QLoggingCategory::setFilterRules(QString("librepods.debug=%1").arg(debugMode ? "true" : "false"));
+        LOG_INFO("Initializing LibrePods");
 
         // Initialize tray icon and connect signals
         trayManager = new TrayIconManager(this);
