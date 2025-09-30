@@ -96,6 +96,15 @@ public:
             QBluetoothDeviceInfo device(address, "", 0);
             if (isAirPodsDevice(device)) {
                 connectToDevice(device);
+
+                // On startup after reboot, activate A2DP profile for already connected AirPods
+                QTimer::singleShot(2000, this, [this, address]()
+                {
+                    QString formattedAddress = address.toString().replace(":", "_");
+                    mediaController->setConnectedDeviceMacAddress(formattedAddress);
+                    mediaController->activateA2dpProfile();
+                    LOG_INFO("A2DP profile activation attempted for AirPods found on startup");
+                });
                 return;
             }
         }
@@ -397,6 +406,23 @@ public slots:
     {
         LOG_INFO("System is waking up, starting ble scan");
         m_bleManager->startScan();
+
+        // Check if AirPods are already connected and activate A2DP profile
+        if (areAirpodsConnected() && m_deviceInfo && !m_deviceInfo->bluetoothAddress().isEmpty())
+        {
+            LOG_INFO("AirPods already connected after wake-up, re-activating A2DP profile");
+            mediaController->setConnectedDeviceMacAddress(m_deviceInfo->bluetoothAddress().replace(":", "_"));
+
+            // Always activate A2DP profile after system wake since the profile might have been lost
+            QTimer::singleShot(1000, this, [this]()
+            {
+                mediaController->activateA2dpProfile();
+                LOG_INFO("A2DP profile activation attempted after system wake-up");
+            });
+        }
+
+        // Also check for already connected devices via BlueZ
+        monitor->checkAlreadyConnectedDevices();
     }
 
 private slots:
@@ -445,6 +471,20 @@ private slots:
     {
         QBluetoothDeviceInfo device(QBluetoothAddress(address), name, 0);
         connectToDevice(device);
+
+        // After system reboot, AirPods might be connected but A2DP profile not active
+        // Attempt to activate A2DP profile after a delay to ensure connection is established
+        QTimer::singleShot(2000, this, [this, address]()
+        {
+            if (!address.isEmpty())
+            {
+                QString formattedAddress = address;
+                formattedAddress = formattedAddress.replace(":", "_");
+                mediaController->setConnectedDeviceMacAddress(formattedAddress);
+                mediaController->activateA2dpProfile();
+                LOG_INFO("A2DP profile activation attempted for newly connected device");
+            }
+        });
     }
 
     void onDeviceDisconnected(const QBluetoothAddress &address)
