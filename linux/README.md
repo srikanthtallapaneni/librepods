@@ -40,13 +40,7 @@ A native Linux application to control your AirPods, with support for:
     ```
 ## Setup
 
-1. Set the `PHONE_MAC_ADDRESS` environment variable to your phone's Bluetooth MAC address by running the following:
-
-   ```bash
-   export PHONE_MAC_ADDRESS="XX:XX:XX:XX:XX:XX"  # Replace with your phone's MAC
-   ```
-
-2. Build the application:
+1. Build the application:
 
    ```bash
    mkdir build
@@ -55,7 +49,7 @@ A native Linux application to control your AirPods, with support for:
    make -j $(nproc)
    ```
 
-3. Run the application:
+2. Run the application:
 
    ```bash
    ./librepods
