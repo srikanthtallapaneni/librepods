@@ -133,10 +133,67 @@ void MediaController::handleConversationalAwareness(const QByteArray &data) {
   }
 }
 
+bool MediaController::isA2dpProfileAvailable() {
+  if (m_deviceOutputName.isEmpty()) {
+    return false;
+  }
+
+  QProcess process;
+  process.start("pactl", QStringList() << "list" << "cards");
+  if (!process.waitForFinished(3000)) {
+    LOG_ERROR("pactl command timed out while checking A2DP availability");
+    return false;
+  }
+
+  QString output = process.readAllStandardOutput();
+
+  // Check if the card section contains our device
+  int cardStart = output.indexOf(m_deviceOutputName);
+  if (cardStart == -1) {
+    return false;
+  }
+
+  // Look for a2dp-sink profile in the card's section
+  int nextCard = output.indexOf("Name: ", cardStart + m_deviceOutputName.length());
+  QString cardSection = (nextCard == -1) ? output.mid(cardStart) : output.mid(cardStart, nextCard - cardStart);
+
+  return cardSection.contains("a2dp-sink");
+}
+
+bool MediaController::restartWirePlumber() {
+  LOG_INFO("Restarting WirePlumber to rediscover A2DP profiles");
+  int result = QProcess::execute("systemctl", QStringList() << "--user" << "restart" << "wireplumber");
+  if (result == 0) {
+    LOG_INFO("WirePlumber restarted successfully");
+    // Wait a bit for WirePlumber to rediscover profiles
+    QProcess::execute("sleep", QStringList() << "2");
+    return true;
+  } else {
+    LOG_ERROR("Failed to restart WirePlumber");
+    return false;
+  }
+}
+
 void MediaController::activateA2dpProfile() {
   if (connectedDeviceMacAddress.isEmpty() || m_deviceOutputName.isEmpty()) {
     LOG_WARN("Connected device MAC address or output name is empty, cannot activate A2DP profile");
     return;
+  }
+
+  // Check if A2DP profile is available
+  if (!isA2dpProfileAvailable()) {
+    LOG_WARN("A2DP profile not available, attempting to restart WirePlumber");
+    if (restartWirePlumber()) {
+      // Update device output name after restart
+      m_deviceOutputName = getAudioDeviceName();
+      if (!isA2dpProfileAvailable()) {
+        LOG_ERROR("A2DP profile still not available after WirePlumber restart");
+        return;
+      }
+    } else {
+      LOG_ERROR("Could not restart WirePlumber, A2DP profile unavailable");
+      return;
+    }
   }
 
   LOG_INFO("Activating A2DP profile for AirPods");

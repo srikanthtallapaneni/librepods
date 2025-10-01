@@ -37,6 +37,8 @@ public:
   void activateA2dpProfile();
   void removeAudioOutputDevice();
   void setConnectedDeviceMacAddress(const QString &macAddress);
+  bool isA2dpProfileAvailable();
+  bool restartWirePlumber();
 
   void setEarDetectionBehavior(EarDetectionBehavior behavior);
   inline EarDetectionBehavior getEarDetectionBehavior() const { return earDetectionBehavior; }
