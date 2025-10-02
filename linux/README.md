@@ -55,6 +55,40 @@ A native Linux application to control your AirPods, with support for:
    ./librepods
    ```
 
+## Troubleshooting
+
+### Media Controls (Play/Pause/Skip) Not Working
+
+If tap gestures on your AirPods aren't working for media control, you need to enable AVRCP support. The solution depends on your audio stack:
+
+#### PipeWire/WirePlumber (Recommended)
+
+Create `~/.config/wireplumber/wireplumber.conf.d/51-bluez-avrcp.conf`:
+
+```conf
+monitor.bluez.properties = {
+  # Enable dummy AVRCP player for proper media control support
+  # This is required for AirPods and other devices to send play/pause/skip commands
+  bluez5.dummy-avrcp-player = true
+}
+```
+
+Then restart WirePlumber:
+
+```bash
+systemctl --user restart wireplumber
+```
+
+**Note:** Do NOT run `mpris-proxy` with WirePlumber - it will conflict and break media controls.
+
+#### PulseAudio
+
+If you're using PulseAudio instead of PipeWire, enable and start `mpris-proxy`:
+
+```bash
+systemctl --user enable --now mpris-proxy
+```
+
 ## Usage
 
 - Left-click the tray icon to view battery status
