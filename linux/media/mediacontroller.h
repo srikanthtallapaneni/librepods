@@ -39,7 +39,7 @@ public:
   void removeAudioOutputDevice();
   void setConnectedDeviceMacAddress(const QString &macAddress);
   bool isA2dpProfileAvailable();
-  QString getBestA2dpProfile();
+  QString getPreferredA2dpProfile();
   bool restartWirePlumber();
 
   void setEarDetectionBehavior(EarDetectionBehavior behavior);
