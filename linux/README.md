@@ -6,7 +6,10 @@ A native Linux application to control your AirPods, with support for:
 - Conversational Awareness
 - Battery monitoring
 - Auto play/pause on ear detection
-- Seamless handoff between phone and PC
+- Hearing Aid features
+   - Supports adjusting hearing aid- amplification, balance, tone, ambient noise reduction, own voice amplification, and conversation boost
+   - Supports setting the values for left and right hearing aids (this is not a hearing test! you need to have an audiogram to set the values)
+- Seamless handoff between Android and Linux
 
 ## Prerequisites
 
@@ -97,3 +100,35 @@ systemctl --user enable --now mpris-proxy
   - Switch between noise control modes
   - View battery levels
   - Control playback
+
+## Hearing Aid
+
+To use hearing aid features, you need to have an audiogram. To enable/disable hearing aid, you can use the toggle in the main app. But, to adjust the settings and set the audiogram, you need to use a different script which is located in this folder as `hearing_aid.py`. You can run it with:
+
+```bash
+python3 hearing_aid.py
+```
+
+The script will load the current settings from the AirPods and allow you to adjust them. You can set the audiogram by providing the values for 8 frequencies (250Hz, 500Hz, 1kHz, 2kHz, 3kHz, 4kHz, 6kHz, 8kHz) for both left and right ears. There are also options to adjust amplification, balance, tone, ambient noise reduction, own voice amplification, and conversation boost.
+
+AirPods check for the DeviceID characteristic to see if the connected device is an Apple device and only then allow hearing aid features. To set the DeviceID characteristic, you need to add this line to your bluetooth configuration file (usually located at `/etc/bluetooth/main.conf`):
+
+```
+DeviceID = bluetooth:004C:0000:0000
+```
+
+Then, restart the bluetooth service:
+
+```bash
+sudo systemctl restart bluetooth
+```
+
+Here, you might need to re-pair your AirPods because they seem to cache this info.
+
+### Troubleshooting
+
+It is possible that the AirPods disconnect after a short period of time and play the disconnect sound. This is likely due to the AirPods expecting some information from an Apple device. Since I have not implemented everything that an Apple device does, the AirPods may disconnect. You don't need to reconnect them manually; the script will handle reconnection automatically for hearing aid features. So, once you are done setting the hearing aid features, change back the `DeviceID` to whatever it was before.
+
+### Why a separate script?
+
+Because I discovered that QBluetooth doesn't support connecting to a socket with its PSM, only a UUID can be used. I could add a dependency on BlueZ, but then having two bluetooth interfaces seems unnecessary. So, I decided to use a separate script for hearing aid features. In the future, QBluetooth will be replaced with BlueZ native calls, and then everything will be in one application.
