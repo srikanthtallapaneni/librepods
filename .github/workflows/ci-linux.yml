@@ -1,9 +1,10 @@
 name: Build LibrePods Linux
 
 on:
-  push:
-    branches:
-      - '*'
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - '*'
 
 jobs:
   build-linux:
