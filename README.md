@@ -108,6 +108,8 @@ To enable these features, enable App Settings -> `act as Apple Device`.
 
 - When renaming your AirPods through the app, you'll need to re-pair them with your phone for the name change to take effect. This is a limitation of how Bluetooth device naming works on Android.
 
+- If you want the AirPods icon and battery status to show in Android Settings app, install the app as a system app by using the root module.
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=kavishdevar/librepods&type=Date)](https://star-history.com/#kavishdevar/librepods&Date)
