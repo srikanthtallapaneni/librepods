@@ -15,7 +15,9 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
+@file:Suppress("unused")
+
 package me.kavishdevar.librepods.composables
 
 import androidx.compose.animation.animateColorAsState

@@ -2,19 +2,20 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.aboutLibraries)
     id("kotlin-parcelize")
 }
 
 android {
     namespace = "me.kavishdevar.librepods"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "me.kavishdevar.librepods"
         minSdk = 28
-        targetSdk = 35
-        versionCode = 7
-        versionName = "0.1.0-rc.4"
+        targetSdk = 36
+        versionCode = 8
+        versionName = "0.2.0-beta.1"
     }
 
     buildTypes {
@@ -43,6 +44,11 @@ android {
             version = "3.22.1"
         }
     }
+    sourceSets {
+        getByName("main") {
+            res.srcDirs("src/main/res", "src/main/res-apple")
+        }
+    }
 }
 
 dependencies {
@@ -62,5 +68,22 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.haze.materials)
     implementation(libs.androidx.dynamicanimation)
-    compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    implementation(libs.androidx.compose.ui)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.aboutlibraries)
+    implementation(libs.aboutlibraries.compose.m3)
+    // compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    // implementation(fileTree(mapOf("dir" to "lib", "include" to listOf("*.aar"))))
+    compileOnly(files("libs/libxposed-api-100.aar"))
+    debugImplementation(files("libs/backdrop-debug.aar"))
+    releaseImplementation(files("libs/backdrop-release.aar"))
+}
+
+aboutLibraries {
+    export{
+        prettyPrint = true
+        excludeFields = listOf("generated")
+        outputFile = file("src/main/res/raw/aboutlibraries.json")
+    }
 }

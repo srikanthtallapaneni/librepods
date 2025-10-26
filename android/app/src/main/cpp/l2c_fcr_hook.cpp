@@ -24,6 +24,8 @@
 #include <string>
 #include <sys/system_properties.h>
 #include "l2c_fcr_hook.h"
+#include <cerrno>
+#include <cstdlib>
 
 #define LOG_TAG "AirPodsHook"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -126,6 +128,9 @@ static void (*original_l2cu_process_our_cfg_req)(tL2C_CCB* p_ccb, tL2CAP_CFG_INF
 static void (*original_l2c_csm_config)(tL2C_CCB* p_ccb, uint8_t event, void* p_data) = nullptr;
 static void (*original_l2cu_send_peer_info_req)(tL2C_LCB* p_lcb, uint16_t info_type) = nullptr;
 
+// Add original pointer for BTA_DmSetLocalDiRecord
+static tBTA_STATUS (*original_BTA_DmSetLocalDiRecord)(tSDP_DI_RECORD* p_device_info, uint32_t* p_handle) = nullptr;
+
 uint8_t fake_l2c_fcr_chk_chan_modes(void* p_ccb) {
     LOGI("l2c_fcr_chk_chan_modes hooked, returning true.");
     return 1;
@@ -154,6 +159,53 @@ void fake_l2cu_send_peer_info_req(tL2C_LCB* p_lcb, uint16_t info_type) {
     LOGI("Intercepted l2cu_send_peer_info_req for info_type 0x%04x - doing nothing", info_type);
     // Just return without doing anything
     return;
+}
+
+// New loader for SDP hook offset (persist.librepods.sdp_offset)
+uintptr_t loadSdpOffset() {
+    const char* property_name = "persist.librepods.sdp_offset";
+    char value[PROP_VALUE_MAX] = {0};
+
+    int len = __system_property_get(property_name, value);
+    if (len > 0) {
+        LOGI("Read sdp offset from property: %s", value);
+        uintptr_t offset;
+        char* endptr = nullptr;
+
+        const char* parse_start = value;
+        if (value[0] == '0' && (value[1] == 'x' || value[1] == 'X')) {
+            parse_start = value + 2;
+        }
+
+        errno = 0;
+        offset = strtoul(parse_start, &endptr, 16);
+
+        if (errno == 0 && endptr != parse_start && *endptr == '\0' && offset > 0) {
+            LOGI("Parsed sdp offset: 0x%x", offset);
+            return offset;
+        }
+
+        LOGE("Failed to parse sdp offset from property value: %s", value);
+    }
+
+    LOGI("No sdp offset property present - skipping SDP hook");
+    return 0;
+}
+
+// Fake BTA_DmSetLocalDiRecord: set vendor/vendor_id_source then call original
+tBTA_STATUS fake_BTA_DmSetLocalDiRecord(tSDP_DI_RECORD* p_device_info, uint32_t* p_handle) {
+    LOGI("BTA_DmSetLocalDiRecord hooked - forcing vendor fields");
+    if (p_device_info) {
+        p_device_info->vendor = 0x004C;
+        p_device_info->vendor_id_source = 0x0001;
+    }
+    LOGI("Set vendor=0x%04x, vendor_id_source=0x%04x", p_device_info->vendor, p_device_info->vendor_id_source);
+    if (original_BTA_DmSetLocalDiRecord) {
+        return original_BTA_DmSetLocalDiRecord(p_device_info, p_handle);
+    }
+
+    LOGE("Original BTA_DmSetLocalDiRecord not available");
+    return BTA_FAILURE;
 }
 
 uintptr_t loadHookOffset([[maybe_unused]] const char* package_name) {
@@ -320,6 +372,7 @@ bool findAndHookFunction(const char *library_name) {
     uintptr_t l2cu_process_our_cfg_req_offset = loadL2cuProcessCfgReqOffset();
     uintptr_t l2c_csm_config_offset = loadL2cCsmConfigOffset();
     uintptr_t l2cu_send_peer_info_req_offset = loadL2cuSendPeerInfoReqOffset();
+    uintptr_t sdp_offset = loadSdpOffset();
 
     bool success = false;
 
@@ -390,6 +443,21 @@ bool findAndHookFunction(const char *library_name) {
         }
     } else {
         LOGI("Skipping l2cu_send_peer_info_req hook as offset is not available");
+    }
+
+    if (sdp_offset > 0) {
+        void* target = reinterpret_cast<void*>(base_addr + sdp_offset);
+        LOGI("Hooking BTA_DmSetLocalDiRecord at offset: 0x%x, base: %p, target: %p",
+             sdp_offset, (void*)base_addr, target);
+
+        int result = hook_func(target, (void*)fake_BTA_DmSetLocalDiRecord, (void**)&original_BTA_DmSetLocalDiRecord);
+        if (result != 0) {
+            LOGE("Failed to hook BTA_DmSetLocalDiRecord, error: %d", result);
+        } else {
+            LOGI("Successfully hooked BTA_DmSetLocalDiRecord (SDP)");
+        }
+    } else {
+        LOGI("Skipping BTA_DmSetLocalDiRecord hook as sdp offset is not available");
     }
 
     return success;

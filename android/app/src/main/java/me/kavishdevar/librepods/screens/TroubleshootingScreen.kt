@@ -1,5 +1,5 @@
 /*
- * LibrePods - AirPods liberated from Apple's ecosystem
+ * LibrePods - AirPods liberated from Apple’s ecosystem
  *
  * Copyright (C) 2025 LibrePods contributors
  *
@@ -23,11 +23,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -46,39 +43,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,14 +72,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -102,23 +80,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
-import dev.chrisbanes.haze.HazeEffectScope
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.CupertinoMaterials
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.composables.StyledScaffold
 import me.kavishdevar.librepods.utils.LogCollector
 import java.io.File
 import java.text.SimpleDateFormat
@@ -145,8 +121,6 @@ fun CustomIconButton(
 fun TroubleshootingScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val hazeState = remember { HazeState() }
     val coroutineScope = rememberCoroutineScope()
 
     val logCollector = remember { LogCollector(context) }
@@ -172,35 +146,13 @@ fun TroubleshootingScreen(navController: NavController) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var showBottomSheet by remember { mutableStateOf(false) }
 
-    val sheetProgress by remember {
-        derivedStateOf {
-            if (!showBottomSheet) 0f else sheetState.targetValue.ordinal.toFloat() / 2f
-        }
-    }
-
-    val contentScaleFactor by remember {
-        derivedStateOf {
-            1.0f - (0.12f * sheetProgress)
-        }
-    }
-
-    val contentScale by animateFloatAsState(
-        targetValue = contentScaleFactor,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "contentScale"
-    )
-
     val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
     val textColor = if (isSystemInDarkTheme()) Color.White else Color.Black
     val accentColor = if (isSystemInDarkTheme()) Color(0xFF007AFF) else Color(0xFF3C6DF5)
     val buttonBgColor = if (isSystemInDarkTheme()) Color(0xFF333333) else Color(0xFFDDDDDD)
 
     var instructionText by remember { mutableStateOf("") }
-    var isDarkTheme = isSystemInDarkTheme()
-    var mDensity by remember { mutableFloatStateOf(0f) }
+    val isDarkTheme = isSystemInDarkTheme()
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -241,7 +193,7 @@ fun TroubleshootingScreen(navController: NavController) {
     LaunchedEffect(currentStep) {
         instructionText = when (currentStep) {
             0 -> "First, let's ensure Xposed module is properly configured. Tap the button below to check Xposed scope settings."
-            1 -> "Please put your AirPods in the case and close it, so they disconnect completely."
+            1 -> "Please put your AirPods in the case and close it, so they disconnectForCD completely."
             2 -> "Preparing to collect logs... Please wait."
             3 -> "Now, open the AirPods case and connect your AirPods. Logs are being collected. Connection will be detected automatically, or you can manually stop logging when you're done."
             4 -> "Log collection complete! You can now save or share the logs."
@@ -257,88 +209,33 @@ fun TroubleshootingScreen(navController: NavController) {
         showBottomSheet = true
     }
 
+    val backdrop = rememberLayerBackdrop()
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = contentScale
-                    scaleY = contentScale
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.3f)
-                },
-            topBar = {
-                CenterAlignedTopAppBar(
-                    modifier = Modifier.hazeEffect(
-                        state = hazeState,
-                        style = CupertinoMaterials.thick(),
-                        block = fun HazeEffectScope.() {
-                            alpha = if (scrollState.value > 60.dp.value * mDensity) 1f else 0f
-                        })
-                        .drawBehind {
-                            mDensity = density
-                            val strokeWidth = 0.7.dp.value * density
-                            val y = size.height - strokeWidth / 2
-                            if (scrollState.value > 60.dp.value * density) {
-                                drawLine(
-                                    if (isDarkTheme) Color.DarkGray else Color.LightGray,
-                                    Offset(0f, y),
-                                    Offset(size.width, y),
-                                    strokeWidth
-                                )
-                            }
-                        },
-                    title = {
-                        Text(
-                            text = stringResource(R.string.troubleshooting),
-                            fontFamily = FontFamily(Font(R.font.sf_pro)),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    navigationIcon = {
-                        TextButton(
-                            onClick = {
-                                navController.popBackStack()
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                contentDescription = "Back",
-                                tint = accentColor,
-                                modifier = Modifier.scale(1.5f)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.Transparent
-                    ),
-                    scrollBehavior = scrollBehavior
-                )
-            },
-            containerColor = if (isSystemInDarkTheme()) Color(0xFF000000) else Color(0xFFF2F2F7),
-        ) { paddingValues ->
+        StyledScaffold(
+            title = stringResource(R.string.troubleshooting)
+        ){ spacerHeight, hazeState ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(scrollState)
+                    .layerBackdrop(backdrop)
                     .hazeSource(state = hazeState)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp)
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(spacerHeight))
 
                 Text(
-                    text = stringResource(R.string.saved_logs).uppercase(),
+                    text = stringResource(R.string.saved_logs),
                     style = TextStyle(
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Light,
+                        fontWeight = FontWeight.Bold,
                         color = textColor.copy(alpha = 0.6f),
                         fontFamily = FontFamily(Font(R.font.sf_pro))
                     ),
-                    modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 8.dp)
+                    modifier = Modifier.padding(16.dp, bottom = 4.dp, top = 8.dp)
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -349,7 +246,7 @@ fun TroubleshootingScreen(navController: NavController) {
                             .fillMaxWidth()
                             .background(
                                 backgroundColor,
-                                RoundedCornerShape(14.dp)
+                                RoundedCornerShape(28.dp)
                             )
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -366,7 +263,7 @@ fun TroubleshootingScreen(navController: NavController) {
                             .fillMaxWidth()
                             .background(
                                 backgroundColor,
-                                RoundedCornerShape(14.dp)
+                                RoundedCornerShape(28.dp)
                             )
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
@@ -472,14 +369,14 @@ fun TroubleshootingScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "TROUBLESHOOTING STEPS".uppercase(),
+                            text = stringResource(R.string.troubleshooting_steps),
                             style = TextStyle(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Light,
                                 color = textColor.copy(alpha = 0.6f),
                                 fontFamily = FontFamily(Font(R.font.sf_pro))
                             ),
-                            modifier = Modifier.padding(8.dp, bottom = 2.dp, top = 8.dp)
+                            modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 8.dp)
                         )
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -489,7 +386,7 @@ fun TroubleshootingScreen(navController: NavController) {
                                 .fillMaxWidth()
                                 .background(
                                     backgroundColor,
-                                    RoundedCornerShape(14.dp)
+                                    RoundedCornerShape(28.dp)
                                 )
                                 .padding(16.dp)
                         ) {
@@ -717,7 +614,9 @@ fun TroubleshootingScreen(navController: NavController) {
                                         Button(
                                             onClick = {
                                                 selectedLogFile?.let { file ->
-                                                    saveLauncher.launch("airpods_log_${System.currentTimeMillis()}.txt")
+                                                    saveLauncher.launch(
+                                                        file.absolutePath
+                                                    )
                                                 }
                                             },
                                             shape = RoundedCornerShape(10.dp),
@@ -988,7 +887,7 @@ fun TroubleshootingScreen(navController: NavController) {
                         Button(
                             onClick = {
                                 selectedLogFile?.let { file ->
-                                    saveLauncher.launch("airpods_log_${System.currentTimeMillis()}.txt")
+                                    saveLauncher.launch(file.absolutePath)
                                 }
                             },
                             shape = RoundedCornerShape(10.dp),

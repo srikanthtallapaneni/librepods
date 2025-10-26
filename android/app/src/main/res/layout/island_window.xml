@@ -12,7 +12,9 @@
     android:orientation="horizontal"
     android:outlineAmbientShadowColor="#4EFFFFFF"
     android:outlineSpotShadowColor="#4EFFFFFF"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:clipToPadding="false"
+    android:clipChildren="false">
 
     <VideoView
         android:id="@+id/island_video_view"
@@ -66,9 +68,11 @@
         android:id="@+id/island_battery_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center">
+        android:gravity="center"
+        android:clipChildren="false">
 
         <ProgressBar
+            android:id="@+id/island_battery_bg"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
             android:layout_width="84dp"
             android:layout_height="84dp"
@@ -101,5 +105,20 @@
             android:textSize="16sp"
             android:textStyle="bold"
             tools:ignore="HardcodedText" />
+
+        <ImageButton
+            android:id="@+id/island_action_button"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:translationX="-12dp"
+            android:background="@drawable/ic_undo_button_bg"
+            android:contentDescription="@string/undo"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_undo"
+            android:tint="@android:color/white"
+            android:elevation="8dp"
+            android:translationZ="8dp"
+            android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

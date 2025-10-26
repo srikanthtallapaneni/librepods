@@ -1,5 +1,6 @@
 package me.kavishdevar.librepods.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -17,6 +18,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import androidx.core.net.toUri
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.AfterHookCallback
 import io.github.libxposed.api.XposedModule
@@ -27,7 +29,7 @@ import io.github.libxposed.api.annotations.XposedHooker
 
 private const val TAG = "AirPodsHook"
 private lateinit var module: KotlinModule
-
+@SuppressLint("DiscouragedApi", "PrivateApi")
 class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModule(base, param) {
     init {
         Log.i(TAG, "AirPodsHook module initialized at :: ${param.processName}")
@@ -60,7 +62,7 @@ class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModul
 
                 val updateIconMethod = headerControllerClass.getDeclaredMethod(
                     "updateIcon",
-                    android.widget.ImageView::class.java,
+                    ImageView::class.java,
                     String::class.java)
 
                 hook(updateIconMethod, BluetoothIconHooker::class.java)
@@ -89,7 +91,7 @@ class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModul
 
                 val updateIconMethod = headerControllerClass.getDeclaredMethod(
                     "updateIcon",
-                    android.widget.ImageView::class.java,
+                    ImageView::class.java,
                     String::class.java)
 
                 hook(updateIconMethod, BluetoothIconHooker::class.java)
@@ -209,7 +211,7 @@ class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModul
                     val imageView = callback.args[0] as ImageView
                     val iconUri = callback.args[1] as String
 
-                    val uri = android.net.Uri.parse(iconUri)
+                    val uri = iconUri.toUri()
                     if (uri.toString().startsWith("android.resource://me.kavishdevar.librepods")) {
                         Log.i(TAG, "Handling AirPods icon URI: $uri")
 
@@ -571,10 +573,10 @@ class KotlinModule(base: XposedInterface, param: ModuleLoadedParam): XposedModul
 
                 addView(icon)
 
-                if (isSelected) {
-                    background = createSelectedBackground(context)
+                background = if (isSelected) {
+                    createSelectedBackground(context)
                 } else {
-                    background = null
+                    null
                 }
 
                 setOnClickListener {

@@ -4,12 +4,14 @@
     android:id="@+id/noise_control_widget"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:theme="@style/Theme.LibrePods.AppWidgetContainer">
+    android:theme="@style/Theme.LibrePods.AppWidgetContainer"
+    tools:ignore="ContentDescription,NestedWeights">
 
     <LinearLayout
         android:id="@android:id/background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:baselineAligned="false"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -70,7 +72,8 @@
                 android:shadowRadius="12"
                 android:text="@string/transparency"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                tools:ignore="NestedWeights" />
         </LinearLayout>
 
         <LinearLayout
@@ -102,7 +105,8 @@
                 android:shadowRadius="12"
                 android:text="@string/adaptive"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                tools:ignore="NestedWeights" />
         </LinearLayout>
 
         <LinearLayout

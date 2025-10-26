@@ -27,7 +27,6 @@ import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -38,6 +37,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -45,6 +45,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
@@ -89,6 +91,8 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -97,6 +101,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -104,18 +110,31 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import me.kavishdevar.librepods.composables.StyledIconButton
 import me.kavishdevar.librepods.constants.AirPodsNotifications
+import me.kavishdevar.librepods.screens.AccessibilitySettingsScreen
+import me.kavishdevar.librepods.screens.AdaptiveStrengthScreen
 import me.kavishdevar.librepods.screens.AirPodsSettingsScreen
 import me.kavishdevar.librepods.screens.AppSettingsScreen
+import me.kavishdevar.librepods.screens.CameraControlScreen
 import me.kavishdevar.librepods.screens.DebugScreen
 import me.kavishdevar.librepods.screens.HeadTrackingScreen
+import me.kavishdevar.librepods.screens.HearingAidAdjustmentsScreen
+import me.kavishdevar.librepods.screens.HearingAidScreen
+import me.kavishdevar.librepods.screens.HearingProtectionScreen
 import me.kavishdevar.librepods.screens.LongPress
 import me.kavishdevar.librepods.screens.Onboarding
+import me.kavishdevar.librepods.screens.OpenSourceLicensesScreen
 import me.kavishdevar.librepods.screens.RenameScreen
+import me.kavishdevar.librepods.screens.TransparencySettingsScreen
 import me.kavishdevar.librepods.screens.TroubleshootingScreen
+import me.kavishdevar.librepods.screens.UpdateHearingTestScreen
+import me.kavishdevar.librepods.screens.VersionScreen
 import me.kavishdevar.librepods.services.AirPodsService
 import me.kavishdevar.librepods.ui.theme.LibrePodsTheme
-import me.kavishdevar.librepods.utils.CrossDevice
 import me.kavishdevar.librepods.utils.RadareOffsetFinder
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -137,8 +156,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             LibrePodsTheme {
-                getSharedPreferences("settings", MODE_PRIVATE).edit().putLong("textColor",
-                    MaterialTheme.colorScheme.onSurface.toArgb().toLong()).apply()
+                getSharedPreferences("settings", MODE_PRIVATE).edit {
+                    putLong(
+                        "textColor",
+                        MaterialTheme.colorScheme.onSurface.toArgb().toLong())}
                 Main()
             }
         }
@@ -191,15 +212,12 @@ class MainActivity : ComponentActivity() {
         if (data != null && data.scheme == "librepods") {
             when (data.host) {
                 "add-magic-keys" -> {
-                    // Extract query parameters
                     val queryParams = data.queryParameterNames
                     queryParams.forEach { param ->
                         val value = data.getQueryParameter(param)
-                        // Handle your parameters here
                         Log.d("LibrePods", "Parameter: $param = $value")
                     }
 
-                    // Process the magic keys addition
                     handleAddMagicKeys(data)
                 }
             }
@@ -207,8 +225,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleAddMagicKeys(uri: Uri) {
-        val context = this
-        val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("settings", MODE_PRIVATE)
 
         val irkHex = uri.getQueryParameter("irk")
         val encKeyHex = uri.getQueryParameter("enc_key")
@@ -217,13 +234,13 @@ class MainActivity : ComponentActivity() {
             if (irkHex != null && validateHexInput(irkHex)) {
                 val irkBytes = hexStringToByteArray(irkHex)
                 val irkBase64 = Base64.encode(irkBytes)
-                sharedPreferences.edit().putString("IRK", irkBase64).apply()
+                sharedPreferences.edit {putString("IRK", irkBase64)}
             }
 
             if (encKeyHex != null && validateHexInput(encKeyHex)) {
                 val encKeyBytes = hexStringToByteArray(encKeyHex)
                 val encKeyBase64 = Base64.encode(encKeyBytes)
-                sharedPreferences.edit().putString("ENC_KEY", encKeyBase64).apply()
+                sharedPreferences.edit { putString("ENC_KEY", encKeyBase64)}
             }
 
             Toast.makeText(this, "Magic keys added successfully!", Toast.LENGTH_SHORT).show()
@@ -247,6 +264,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@ExperimentalHazeMaterialsApi
 @SuppressLint("MissingPermission", "InlinedApi", "UnspecifiedRegisterReceiverFlag")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -291,94 +309,146 @@ fun Main() {
 
     if (permissionState.allPermissionsGranted && (canDrawOverlays || overlaySkipped.value)) {
         val context = LocalContext.current
-        context.startService(Intent(context, AirPodsService::class.java))
 
         val navController = rememberNavController()
 
-        val sharedPreferences = context.getSharedPreferences("settings", MODE_PRIVATE)
-        val isAvailableChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "CrossDeviceIsAvailable") {
-                Log.d("MainActivity", "CrossDeviceIsAvailable changed")
-                isRemotelyConnected.value = sharedPreferences.getBoolean("CrossDeviceIsAvailable", false)
-            }
-        }
-        sharedPreferences.registerOnSharedPreferenceChangeListener(isAvailableChangeListener)
-        Log.d("MainActivity", "CrossDeviceIsAvailable: ${sharedPreferences.getBoolean("CrossDeviceIsAvailable", false)} | isAvailable: ${CrossDevice.isAvailable}")
-        isRemotelyConnected.value = sharedPreferences.getBoolean("CrossDeviceIsAvailable", false) || CrossDevice.isAvailable
-        Log.d("MainActivity", "isRemotelyConnected: ${isRemotelyConnected.value}")
         Box (
             modifier = Modifier
-                .padding(0.dp)
                 .fillMaxSize()
-                .background(if (isSystemInDarkTheme()) Color.Black else Color(0xFFF2F2F7))
-        ) {
-            NavHost(
-                navController = navController,
-                startDestination = if (hookAvailable) "settings" else "onboarding",
-                enterTransition = {
-                    slideInHorizontally(
-                        initialOffsetX = { it },
-                        animationSpec = tween(durationMillis = 300)
-                    ) + fadeIn(animationSpec = tween(durationMillis = 300))
-                },
-                exitTransition = {
-                    slideOutHorizontally(
-                        targetOffsetX = { -it/4 },
-                        animationSpec = tween(durationMillis = 300)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 150))
-                },
-                popEnterTransition = {
-                    slideInHorizontally(
-                        initialOffsetX = { -it/4 },
-                        animationSpec = tween(durationMillis = 300)
-                    ) + fadeIn(animationSpec = tween(durationMillis = 300))
-                },
-                popExitTransition = {
-                    slideOutHorizontally(
-                        targetOffsetX = { it },
-                        animationSpec = tween(durationMillis = 300)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 150))
-                }
+        ){
+            val backButtonBackdrop = rememberLayerBackdrop()
+            Box (
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(if (isSystemInDarkTheme()) Color.Black else Color(0xFFF2F2F7))
+                    .layerBackdrop(backButtonBackdrop)
             ) {
-                composable("settings") {
-                    if (airPodsService.value != null) {
-                        AirPodsSettingsScreen(
-                            dev = airPodsService.value?.device,
-                            service = airPodsService.value!!,
+                NavHost(
+                    navController = navController,
+                    startDestination = if (hookAvailable) "settings" else "onboarding",
+                    enterTransition = {
+                        slideInHorizontally(
+                            initialOffsetX = { it },
+                            animationSpec = tween(durationMillis = 300)
+                        ) // + fadeIn(animationSpec = tween(durationMillis = 300))
+                    },
+                    exitTransition = {
+                        slideOutHorizontally(
+                            targetOffsetX = { -it/4 },
+                            animationSpec = tween(durationMillis = 300)
+                        ) // + fadeOut(animationSpec = tween(durationMillis = 150))
+                    },
+                    popEnterTransition = {
+                        slideInHorizontally(
+                            initialOffsetX = { -it/4 },
+                            animationSpec = tween(durationMillis = 300)
+                        ) // + fadeIn(animationSpec = tween(durationMillis = 300))
+                    },
+                    popExitTransition = {
+                        slideOutHorizontally(
+                            targetOffsetX = { it },
+                            animationSpec = tween(durationMillis = 300)
+                        ) // + fadeOut(animationSpec = tween(durationMillis = 150))
+                    }
+                ) {
+                    composable("settings") {
+                        if (airPodsService.value != null) {
+                            AirPodsSettingsScreen(
+                                dev = airPodsService.value?.device,
+                                service = airPodsService.value!!,
+                                navController = navController,
+                                isConnected = isConnected.value,
+                                isRemotelyConnected = isRemotelyConnected.value
+                            )
+                        }
+                    }
+                    composable("debug") {
+                        DebugScreen(navController = navController)
+                    }
+                    composable("long_press/{bud}") { navBackStackEntry ->
+                        LongPress(
                             navController = navController,
-                            isConnected = isConnected.value,
-                            isRemotelyConnected = isRemotelyConnected.value
+                            name = navBackStackEntry.arguments?.getString("bud")!!
                         )
                     }
+                    composable("rename") {
+                        RenameScreen(navController)
+                    }
+                    composable("app_settings") {
+                        AppSettingsScreen(navController)
+                    }
+                    composable("troubleshooting") {
+                        TroubleshootingScreen(navController)
+                    }
+                    composable("head_tracking") {
+                        HeadTrackingScreen(navController)
+                    }
+                    composable("onboarding") {
+                        Onboarding(navController, context)
+                    }
+                    composable("accessibility") {
+                        AccessibilitySettingsScreen(navController)
+                    }
+                    composable("transparency_customization") {
+                        TransparencySettingsScreen(navController)
+                    }
+                    composable("hearing_aid") {
+                        HearingAidScreen(navController)
+                    }
+                    composable("hearing_aid_adjustments") {
+                        HearingAidAdjustmentsScreen(navController)
+                    }
+                    composable("adaptive_strength") {
+                        AdaptiveStrengthScreen(navController)
+                    }
+                    composable("camera_control") {
+                        CameraControlScreen(navController)
+                    }
+                    composable("open_source_licenses") {
+                        OpenSourceLicensesScreen(navController)
+                    }
+                    composable("update_hearing_test") {
+                        UpdateHearingTestScreen(navController)
+                    }
+                    composable("version_info") {
+                        VersionScreen(navController)
+                    }
+                    composable("hearing_protection") {
+                        HearingProtectionScreen(navController)
+                    }
                 }
-                composable("debug") {
-                    DebugScreen(navController = navController)
+            }
+
+            val showBackButton = remember{ mutableStateOf(false) }
+
+            LaunchedEffect(navController) {
+                navController.addOnDestinationChangedListener { _, destination, _ ->
+                    showBackButton.value = destination.route != "settings" && destination.route != "onboarding"
+                    Log.d("MainActivity", "Navigated to ${destination.route}, showBackButton: ${showBackButton.value}")
                 }
-                composable("long_press/{bud}") { navBackStackEntry ->
-                    LongPress(
-                        navController = navController,
-                        name = navBackStackEntry.arguments?.getString("bud")!!
+            }
+
+            AnimatedVisibility(
+                visible = showBackButton.value,
+                enter = fadeIn(animationSpec = tween()) + scaleIn(initialScale = 0f, animationSpec = tween()),
+                exit = fadeOut(animationSpec = tween()) + scaleOut(targetScale = 0.5f, animationSpec = tween(100)),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = 8.dp,
+                        top = (LocalWindowInfo.current.containerSize.width * 0.05f).dp
                     )
-                }
-                composable("rename") { navBackStackEntry ->
-                    RenameScreen(navController)
-                }
-                composable("app_settings") {
-                    AppSettingsScreen(navController)
-                }
-                composable("troubleshooting") {
-                    TroubleshootingScreen(navController)
-                }
-                composable("head_tracking") {
-                    HeadTrackingScreen(navController)
-                }
-                composable("onboarding") {
-                    Onboarding(navController, context)
-                }
+            ) {
+                StyledIconButton(
+                        onClick = { navController.popBackStack() },
+                        icon = "􀯶",
+                        darkMode = isSystemInDarkTheme(),
+                        backdrop = backButtonBackdrop
+                    )
             }
         }
 
-         serviceConnection = remember {
+        serviceConnection = remember {
             object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                     val binder = service as AirPodsService.LocalBinder
@@ -499,7 +569,7 @@ fun PermissionsScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "The following permissions are required to use the app. Please grant them to continue.",
+            text = stringResource(R.string.permissions_required),
             style = TextStyle(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
@@ -587,7 +657,7 @@ fun PermissionsScreen(
             onClick = {
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${context.packageName}")
+                    "package:${context.packageName}".toUri()
                 )
                 context.startActivity(intent)
                 onOverlaySettingsReturn()
@@ -617,9 +687,9 @@ fun PermissionsScreen(
 
             Button(
                 onClick = {
-                    val editor = context.getSharedPreferences("settings", MODE_PRIVATE).edit()
-                    editor.putBoolean("overlay_permission_skipped", true)
-                    editor.apply()
+                    context.getSharedPreferences("settings", MODE_PRIVATE).edit {
+                        putBoolean("overlay_permission_skipped", true)
+                    }
 
                     val intent = Intent(context, MainActivity::class.java)
                     intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -676,7 +746,11 @@ fun PermissionCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (isGranted) accentColor.copy(alpha = 0.15f) else Color.Gray.copy(alpha = 0.15f)),
+                    .background(
+                        if (isGranted) accentColor.copy(alpha = 0.15f) else Color.Gray.copy(
+                            alpha = 0.15f
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

@@ -38,37 +38,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -81,28 +65,39 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import dev.chrisbanes.haze.HazeEffectScope
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.highlight.Highlight
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.CupertinoMaterials
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.R
-import me.kavishdevar.librepods.composables.AccessibilitySettings
+import me.kavishdevar.librepods.composables.AboutCard
 import me.kavishdevar.librepods.composables.AudioSettings
 import me.kavishdevar.librepods.composables.BatteryView
-import me.kavishdevar.librepods.composables.IndependentToggle
-import me.kavishdevar.librepods.composables.NameField
+import me.kavishdevar.librepods.composables.CallControlSettings
+import me.kavishdevar.librepods.composables.ConfirmationDialog
+import me.kavishdevar.librepods.composables.ConnectionSettings
+import me.kavishdevar.librepods.composables.HearingHealthSettings
+import me.kavishdevar.librepods.composables.MicrophoneSettings
 import me.kavishdevar.librepods.composables.NavigationButton
 import me.kavishdevar.librepods.composables.NoiseControlSettings
 import me.kavishdevar.librepods.composables.PressAndHoldSettings
+import me.kavishdevar.librepods.composables.StyledButton
+import me.kavishdevar.librepods.composables.StyledIconButton
+import me.kavishdevar.librepods.composables.StyledScaffold
+import me.kavishdevar.librepods.composables.StyledToggle
 import me.kavishdevar.librepods.constants.AirPodsNotifications
 import me.kavishdevar.librepods.services.AirPodsService
 import me.kavishdevar.librepods.ui.theme.LibrePodsTheme
 import me.kavishdevar.librepods.utils.AACPManager
+import me.kavishdevar.librepods.utils.Capability
+import me.kavishdevar.librepods.utils.RadareOffsetFinder
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
@@ -113,7 +108,6 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
     var isLocallyConnected by remember { mutableStateOf(isConnected) }
     var isRemotelyConnected by remember { mutableStateOf(isRemotelyConnected) }
     val sharedPreferences = LocalContext.current.getSharedPreferences("settings", MODE_PRIVATE)
-    val bleOnlyMode = sharedPreferences.getBoolean("ble_only_mode", false)
     var device by remember { mutableStateOf(dev) }
     var deviceName by remember {
         mutableStateOf(
@@ -142,19 +136,11 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
         }
     }
 
-    val verticalScrollState  = rememberScrollState()
-    val hazeState = remember { HazeState() }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     fun handleRemoteConnection(connected: Boolean) {
         isRemotelyConnected = connected
-    }
-
-    fun showSnackbar(message: String) {
-        coroutineScope.launch {
-            snackbarHostState.showSnackbar(message)
-        }
     }
 
     val context = LocalContext.current
@@ -218,212 +204,157 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
         }
     }
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-    Scaffold(
-        containerColor = if (isSystemInDarkTheme()) Color(
-            0xFF000000
-        ) else Color(
-            0xFFF2F2F7
-        ),
-        topBar = {
-            val darkMode = isSystemInDarkTheme()
-            val mDensity = remember { mutableFloatStateOf(1f) }
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = deviceName.text,
-                        style = TextStyle(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (darkMode) Color.White else Color.Black,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                },
-                modifier = Modifier
-                    .hazeEffect(
-                        state = hazeState,
-                        style = CupertinoMaterials.thick(),
-                        block = fun HazeEffectScope.() {
-                            alpha =
-                                if (verticalScrollState.value > 60.dp.value * mDensity.floatValue) 1f else 0f
-                        })
-                    .drawBehind {
-                        mDensity.floatValue = density
-                        val strokeWidth = 0.7.dp.value * density
-                        val y = size.height - strokeWidth / 2
-                        if (verticalScrollState.value > 60.dp.value * density) {
-                            drawLine(
-                                if (darkMode) Color.DarkGray else Color.LightGray,
-                                Offset(0f, y),
-                                Offset(size.width, y),
-                                strokeWidth
-                            )
-                        }
-                    },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
-                ),
-                actions = {
-                    if (isRemotelyConnected) {
-                        IconButton(
-                            onClick = {
-                                showSnackbar("Connected remotely to AirPods via Linux.")
-                            },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = Color.Transparent,
-                                contentColor = if (isSystemInDarkTheme()) Color.White else Color.Black
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = {
-                            navController.navigate("app_settings")
-                        },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = if (isSystemInDarkTheme()) Color.White else Color.Black
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                        )
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        if (isLocallyConnected || isRemotelyConnected) {
-            Column(
-                modifier = Modifier
-                    .hazeSource(hazeState)
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(
-                        state = verticalScrollState,
-                        enabled = true,
-                    )
-            ) {
-                Spacer(Modifier.height(75.dp))
-                LaunchedEffect(service) {
-                    service.let {
-                        it.sendBroadcast(Intent(AirPodsNotifications.Companion.BATTERY_DATA).apply {
-                            putParcelableArrayListExtra("data", ArrayList(it.getBattery()))
-                        })
-                        it.sendBroadcast(Intent(AirPodsNotifications.Companion.ANC_DATA).apply {
-                            putExtra("data", it.getANC())
-                        })
-                    }
-                }
-                val sharedPreferences = LocalContext.current.getSharedPreferences("settings", MODE_PRIVATE)
+    LaunchedEffect(service) {
+        service.let {
+            it.sendBroadcast(Intent(AirPodsNotifications.BATTERY_DATA).apply {
+                putParcelableArrayListExtra("data", ArrayList(it.getBattery()))
+            })
+            it.sendBroadcast(Intent(AirPodsNotifications.ANC_DATA).apply {
+                putExtra("data", it.getANC())
+            })
+        }
+    }
 
-                Spacer(modifier = Modifier.height(64.dp))
+    val darkMode = isSystemInDarkTheme()
+    val hazeStateS = remember { mutableStateOf(HazeState()) }
 
-                BatteryView(service = service)
+    val showDialog = remember { mutableStateOf(!sharedPreferences.getBoolean("donationDialogShown", false)) }
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Show BLE-only mode indicator
-                if (bleOnlyMode) {
-                    Text(
-                        text = "BLE-only mode - advanced features disabled",
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = (if (isSystemInDarkTheme()) Color.White else Color.Black).copy(alpha = 0.6f),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        ),
-                        modifier = Modifier.padding(8.dp, bottom = 16.dp)
-                    )
-                }
-
-                // Only show name field when not in BLE-only mode
-                if (!bleOnlyMode) {
-                    NameField(
-                        name = stringResource(R.string.name),
-                        value = deviceName.text,
-                        navController = navController
-                    )
-                }
-
-                // Only show L2CAP-dependent features when not in BLE-only mode
-                if (!bleOnlyMode) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    NoiseControlSettings(service = service)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.head_gestures).uppercase(),
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Light,
-                            color = (if (isSystemInDarkTheme()) Color.White else Color.Black).copy(alpha = 0.6f),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        ),
-                        modifier = Modifier.padding(8.dp, bottom = 2.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-                    NavigationButton(to = "head_tracking", "Head Tracking", navController)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    PressAndHoldSettings(navController = navController)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    AudioSettings()
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    IndependentToggle(
-                        name = "Off Listening Mode",
-                        service = service,
-                        sharedPreferences = sharedPreferences,
-                        default = false,
-                        controlCommandIdentifier = AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    AccessibilitySettings()
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                IndependentToggle(
-                    name = "Automatic Ear Detection",
-                    service = service,
-                    functionName = "setEarDetection",
-                    sharedPreferences = sharedPreferences,
-                    default = true,
+    StyledScaffold(
+        title = deviceName.text,
+        actionButtons = listOf(
+            {scaffoldBackdrop ->
+                StyledIconButton(
+                    onClick = { navController.navigate("app_settings") },
+                    icon = "􀍟",
+                    darkMode = darkMode,
+                    backdrop = scaffoldBackdrop
                 )
+            }
+        ),
+        snackbarHostState = snackbarHostState
+    ) { spacerHeight, hazeState ->
+        hazeStateS.value = hazeState
+        if (isLocallyConnected || isRemotelyConnected) {
+            val instance = service.airpodsInstance
+            if (instance == null) {
+                Text("Error: AirPods instance is null")
+                return@StyledScaffold
+            }
+            val capabilities = instance.model.capabilities
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
+                    .padding(horizontal = 16.dp)
+            ) {
+                item(key = "spacer_top") { Spacer(modifier = Modifier.height(spacerHeight)) }
+                item(key = "battery") {
+                    BatteryView(service = service)
+                }
+                item(key = "spacer_battery") { Spacer(modifier = Modifier.height(32.dp)) }
 
-                // Only show debug when not in BLE-only mode
-                if (!bleOnlyMode) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    NavigationButton("debug", "Debug", navController)
+                item(key = "name") {
+                    NavigationButton(
+                        to = "rename",
+                        name = stringResource(R.string.name),
+                        currentState = deviceName.text,
+                        navController = navController,
+                        independent = true
+                    )
+                }
+                val actAsAppleDeviceHookEnabled = RadareOffsetFinder.isSdpOffsetAvailable()
+                if (actAsAppleDeviceHookEnabled) {
+                    item(key = "spacer_hearing_health") { Spacer(modifier = Modifier.height(32.dp)) }
+                    item(key = "hearing_health") {
+                        HearingHealthSettings(navController = navController)
+                    }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                if (capabilities.contains(Capability.LISTENING_MODE)) {
+                    item(key = "spacer_noise") { Spacer(modifier = Modifier.height(16.dp)) }
+                    item(key = "noise_control") { NoiseControlSettings(service = service) }
+                }
+
+                if (capabilities.contains(Capability.STEM_CONFIG)) {
+                    item(key = "spacer_press_hold") { Spacer(modifier = Modifier.height(16.dp)) }
+                    item(key = "press_hold") { PressAndHoldSettings(navController = navController) }
+                }
+
+                item(key = "spacer_call") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "call_control") { CallControlSettings(hazeState = hazeState) }
+
+                if (capabilities.contains(Capability.STEM_CONFIG)) {
+                    item(key = "spacer_camera") { Spacer(modifier = Modifier.height(16.dp)) }
+                    item(key = "camera_control") { NavigationButton(to = "camera_control", name = stringResource(R.string.camera_remote), description = stringResource(R.string.camera_control_description), title = stringResource(R.string.camera_control), navController = navController) }
+                }
+
+                item(key = "spacer_audio") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "audio") { AudioSettings(navController = navController) }
+
+                item(key = "spacer_connection") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "connection") { ConnectionSettings() }
+
+                item(key = "spacer_microphone") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "microphone") { MicrophoneSettings(hazeState) }
+
+                if (capabilities.contains(Capability.SLEEP_DETECTION)) {
+                    item(key = "spacer_sleep") { Spacer(modifier = Modifier.height(16.dp)) }
+                    item(key = "sleep_detection") {
+                        StyledToggle(
+                            label = stringResource(R.string.sleep_detection),
+                            controlCommandIdentifier = AACPManager.Companion.ControlCommandIdentifiers.SLEEP_DETECTION_CONFIG
+                        )
+                    }
+                }
+
+                if (capabilities.contains(Capability.HEAD_GESTURES)) {
+                    item(key = "spacer_head_tracking") { Spacer(modifier = Modifier.height(16.dp)) }
+                    item(key = "head_tracking") { NavigationButton(to = "head_tracking", name = stringResource(R.string.head_gestures), navController = navController, currentState = if (sharedPreferences.getBoolean("head_gestures", false)) stringResource(R.string.on) else stringResource(R.string.off)) }
+                }
+
+                item(key = "spacer_accessibility") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "accessibility") { NavigationButton(to = "accessibility", name = stringResource(R.string.accessibility), navController = navController) }
+
+                if (capabilities.contains(Capability.LOUD_SOUND_REDUCTION)){
+                    item(key = "spacer_off_listening") { Spacer(modifier = Modifier.height(16.dp)) }
+                    item(key = "off_listening") {
+                        StyledToggle(
+                            label = stringResource(R.string.off_listening_mode),
+                            controlCommandIdentifier = AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION,
+                            description = stringResource(R.string.off_listening_mode_description)
+                        )
+                    }
+                }
+
+                item(key = "spacer_about") { Spacer(modifier = Modifier.height(32.dp)) }
+                item(key = "about") { AboutCard(navController = navController) }
+
+                item(key = "spacer_debug") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "debug") { NavigationButton("debug", "Debug", navController) }
+                item(key = "spacer_bottom") { Spacer(Modifier.height(24.dp)) }
             }
         }
         else {
+            val backdrop = rememberLayerBackdrop()
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp)
-                    .verticalScroll(
-                        state = verticalScrollState,
-                        enabled = true,
-                    ),
+                    .drawBackdrop(
+                        backdrop = rememberLayerBackdrop(),
+                        exportedBackdrop = backdrop,
+                        shape = { RoundedCornerShape(0.dp) },
+                        highlight = {
+                            Highlight.Ambient.copy(alpha = 0f)
+                        }
+                    )
+                    .hazeSource(hazeState)
+                    .padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "AirPods not connected",
+                    text = stringResource(R.string.airpods_not_connected),
                     style = TextStyle(
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Medium,
@@ -435,7 +366,7 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
                 )
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    text = "Please connect your AirPods to access settings.",
+                    text = stringResource(R.string.airpods_not_connected_description),
                     style = TextStyle(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Light,
@@ -446,28 +377,64 @@ fun AirPodsSettingsScreen(dev: BluetoothDevice?, service: AirPodsService,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(32.dp))
-                Button(
+                StyledButton(
                     onClick = { navController.navigate("troubleshooting") },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSystemInDarkTheme()) Color(0xFF1C1C1E) else Color(0xFFF2F2F7),
-                        contentColor = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                    )
+                    backdrop = backdrop,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
                 ) {
                     Text(
                         text = "Troubleshoot Connection",
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
+                            fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                        )
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                StyledButton(
+                    onClick = {
+                        service.reconnectFromSavedMac()
+                    },
+                    backdrop = backdrop,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.reconnect_to_last_device),
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            color = if (isSystemInDarkTheme()) Color.White else Color.Black
                         )
                     )
                 }
             }
         }
     }
+    ConfirmationDialog(
+        showDialog = showDialog,
+        title = stringResource(R.string.support_librepods),
+        message = stringResource(R.string.support_dialog_description),
+        confirmText = stringResource(R.string.support_me) + " \uDBC0\uDEB5",
+        dismissText = stringResource(R.string.never_show_again),
+        onConfirm = {
+            val browserIntent = Intent(
+                Intent.ACTION_VIEW,
+                "https://github.com/sponsors/kavishdevar".toUri()
+            )
+            context.startActivity(browserIntent)
+            sharedPreferences.edit { putBoolean("donationDialogShown", true) }
+        },
+        onDismiss = {
+            sharedPreferences.edit { putBoolean("donationDialogShown", true) }
+        },
+        hazeState = hazeStateS.value,
+    )
 }
-
 
 @Preview
 @Composable

@@ -19,34 +19,22 @@
 package me.kavishdevar.librepods.composables
 
 import android.content.Context
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
+import android.content.res.Configuration
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -65,12 +53,6 @@ fun PressAndHoldSettings(navController: NavController) {
     val isDarkTheme = isSystemInDarkTheme()
     val textColor = if (isDarkTheme) Color.White else Color.Black
     val dividerColor = Color(0x40888888)
-    var leftBackgroundColor by remember { mutableStateOf(if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)) }
-    var rightBackgroundColor by remember { mutableStateOf(if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)) }
-
-    val animationSpec = tween<Color>(durationMillis = 500)
-    val animatedLeftBackgroundColor by animateColorAsState(targetValue = leftBackgroundColor, animationSpec = animationSpec)
-    val animatedRightBackgroundColor by animateColorAsState(targetValue = rightBackgroundColor, animationSpec = animationSpec)
 
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -89,143 +71,51 @@ fun PressAndHoldSettings(navController: NavController) {
         StemAction.DIGITAL_ASSISTANT -> "Digital Assistant"
         else -> "INVALID!!"
     }
-
-    Text(
-        text = stringResource(R.string.press_and_hold_airpods).uppercase(),
-        style = TextStyle(
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Light,
-            color = textColor.copy(alpha = 0.6f),
-            fontFamily = FontFamily(Font(R.font.sf_pro))
-        ),
-        modifier = Modifier.padding(8.dp, bottom = 2.dp)
-    )
-
-    Spacer(modifier = Modifier.height(1.dp))
-
+    Box(
+        modifier = Modifier
+            .background(if (isDarkTheme) Color(0xFF000000) else Color(0xFFF2F2F7))
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ){
+        Text(
+            text = stringResource(R.string.press_and_hold_airpods),
+            style = TextStyle(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor.copy(alpha = 0.6f),
+                fontFamily = FontFamily(Font(R.font.sf_pro))
+            )
+        )
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF), RoundedCornerShape(14.dp))
+            .background(if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF), RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(28.dp))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp)
-                .background(animatedLeftBackgroundColor, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            leftBackgroundColor = dividerColor
-                            tryAwaitRelease()
-                            leftBackgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
-                        },
-                        onTap = {
-                            navController.navigate("long_press/Left")
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(start = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.left),
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        color = textColor,
-                        fontFamily = FontFamily(Font(R.font.sf_pro))
-                    ),
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = leftActionText,
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        color = textColor.copy(alpha = 0.6f),
-                        fontFamily = FontFamily(Font(R.font.sf_pro))
-                    ),
-                )
-                IconButton(
-                    onClick = {
-                        navController.navigate("long_press/Left")
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "go",
-                        tint = textColor
-                    )
-                }
-            }
-        }
+        NavigationButton(
+            to = "long_press/Left",
+            name = stringResource(R.string.left),
+            navController = navController,
+            independent = false,
+            currentState = leftActionText,
+        )
         HorizontalDivider(
-            thickness = 1.5.dp,
+            thickness = 1.dp,
             color = dividerColor,
             modifier = Modifier
-                .padding(start = 16.dp)
+                .padding(horizontal = 16.dp)
         )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp)
-                .background(animatedRightBackgroundColor, RoundedCornerShape(bottomEnd = 14.dp, bottomStart = 14.dp))
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            rightBackgroundColor = dividerColor
-                            tryAwaitRelease()
-                            rightBackgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
-                        },
-                        onTap = {
-                            navController.navigate("long_press/Right")
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(start = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.right),
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        color = textColor,
-                        fontFamily = FontFamily(Font(R.font.sf_pro))
-                    ),
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = rightActionText,
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        color = textColor.copy(alpha = 0.6f),
-                        fontFamily = FontFamily(Font(R.font.sf_pro))
-                    ),
-                )
-                IconButton(
-                    onClick = {
-                        navController.navigate("long_press/Right")
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "go",
-                        tint = textColor
-                    )
-                }
-            }
-        }
+        NavigationButton(
+            to = "long_press/Right",
+            name = stringResource(R.string.right),
+            navController = navController,
+            independent = false,
+            currentState = rightActionText,
+        )
     }
 }
 
-@Preview
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun PressAndHoldSettingsPreview() {
     PressAndHoldSettings(navController = NavController(LocalContext.current))

@@ -49,7 +49,6 @@ import me.kavishdevar.librepods.constants.AirPodsNotifications
 import me.kavishdevar.librepods.constants.Battery
 import me.kavishdevar.librepods.constants.BatteryComponent
 import me.kavishdevar.librepods.constants.BatteryStatus
-import kotlin.collections.find
 
 @SuppressLint("InflateParams", "ClickableViewAccessibility")
 class PopupWindow(
@@ -172,7 +171,12 @@ class PopupWindow(
         batteryUpdateReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == AirPodsNotifications.BATTERY_DATA) {
-                    val batteryList = intent.getParcelableArrayListExtra<Battery>("data")
+                    val batteryList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableArrayListExtra("data", Battery::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableArrayListExtra("data")
+                    }
                     if (batteryList != null) {
                         updateBatteryStatusFromList(batteryList)
                     }
@@ -272,7 +276,4 @@ class PopupWindow(
             onCloseCallback()
         }
     }
-
-    val isShowing: Boolean
-        get() = mView.parent != null && !isClosing
 }

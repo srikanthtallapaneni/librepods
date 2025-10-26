@@ -34,6 +34,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -76,7 +77,7 @@ object CrossDevice {
         CoroutineScope(Dispatchers.IO).launch {
             Log.d("CrossDevice", "Initializing CrossDevice")
             sharedPreferences = context.getSharedPreferences("packet_logs", Context.MODE_PRIVATE)
-            sharedPreferences.edit().putBoolean("CrossDeviceIsAvailable", false).apply()
+            sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", false)}
             this@CrossDevice.bluetoothAdapter = context.getSystemService(BluetoothManager::class.java).adapter
             this@CrossDevice.bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
             // startAdvertising()
@@ -111,7 +112,7 @@ object CrossDevice {
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @SuppressLint("MissingPermission", "unused")
     private fun startAdvertising() {
         CoroutineScope(Dispatchers.IO).launch {
             val settings = AdvertiseSettings.Builder()
@@ -147,7 +148,7 @@ object CrossDevice {
     fun setAirPodsConnected(connected: Boolean) {
         if (connected) {
             isAvailable = false
-            sharedPreferences.edit().putBoolean("CrossDeviceIsAvailable", false).apply()
+            sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", false)}
             clientSocket?.outputStream?.write(CrossDevicePackets.AIRPODS_CONNECTED.packet)
         } else {
             clientSocket?.outputStream?.write(CrossDevicePackets.AIRPODS_DISCONNECTED.packet)
@@ -168,7 +169,7 @@ object CrossDevice {
         val logEntry = "$source: $packetHex"
         val logs = sharedPreferences.getStringSet(PACKET_LOG_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
         logs.add(logEntry)
-        sharedPreferences.edit().putStringSet(PACKET_LOG_KEY, logs).apply()
+        sharedPreferences.edit { putStringSet(PACKET_LOG_KEY, logs)}
     }
 
     @SuppressLint("MissingPermission")
@@ -199,7 +200,7 @@ object CrossDevice {
                 notifyAirPodsDisconnectedRemotely(ServiceManager.getService()?.applicationContext!!)
                 break
             } else if (packet.contentEquals(CrossDevicePackets.REQUEST_DISCONNECT.packet) || packet.contentEquals(CrossDevicePackets.REQUEST_DISCONNECT.packet + CrossDevicePackets.AIRPODS_DATA_HEADER.packet)) {
-                ServiceManager.getService()?.disconnect()
+                ServiceManager.getService()?.disconnectForCD()
                 disconnectionRequested = true
                 CoroutineScope(Dispatchers.IO).launch {
                     delay(1000)
@@ -207,10 +208,10 @@ object CrossDevice {
                 }
             } else if (packet.contentEquals(CrossDevicePackets.AIRPODS_CONNECTED.packet)) {
                 isAvailable = true
-                sharedPreferences.edit().putBoolean("CrossDeviceIsAvailable", true).apply()
+                sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", true)}
             } else if (packet.contentEquals(CrossDevicePackets.AIRPODS_DISCONNECTED.packet)) {
                 isAvailable = false
-                sharedPreferences.edit().putBoolean("CrossDeviceIsAvailable", false).apply()
+                sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", false)}
             } else if (packet.contentEquals(CrossDevicePackets.REQUEST_BATTERY_BYTES.packet)) {
                 Log.d("CrossDevice", "Received battery request, battery data: ${batteryBytes.joinToString("") { "%02x".format(it) }}")
                 sendRemotePacket(batteryBytes)
@@ -223,7 +224,7 @@ object CrossDevice {
             } else {
                 if (packet.sliceArray(0..3).contentEquals(CrossDevicePackets.AIRPODS_DATA_HEADER.packet)) {
                     isAvailable = true
-                    sharedPreferences.edit().putBoolean("CrossDeviceIsAvailable", true).apply()
+                    sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", true) }
                     if (packet.size % 2 == 0) {
                         val half = packet.size / 2
                         if (packet.sliceArray(0 until half).contentEquals(packet.sliceArray(half until packet.size))) {

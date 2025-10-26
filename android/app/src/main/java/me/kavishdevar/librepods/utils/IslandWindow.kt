@@ -33,7 +33,6 @@ import android.content.IntentFilter
 import android.content.res.Resources
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -49,11 +48,12 @@ import android.view.animation.AnticipateOvershootInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.VideoView
-import androidx.core.content.ContextCompat.getString
+import androidx.core.net.toUri
 import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
@@ -70,6 +70,7 @@ enum class IslandType {
     CONNECTED,
     TAKING_OVER,
     MOVED_TO_REMOTE,
+    MOVED_TO_OTHER_DEVICE,
 }
 
 class IslandWindow(private val context: Context) {
@@ -107,7 +108,12 @@ class IslandWindow(private val context: Context) {
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AirPodsNotifications.BATTERY_DATA) {
-                val batteryList = intent.getParcelableArrayListExtra<Battery>("data")
+                val batteryList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra("data", Battery::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra("data")
+                }
                 updateBatteryDisplay(batteryList)
             } else if (intent?.action == AirPodsNotifications.DISCONNECT_RECEIVERS) {
                 try {
@@ -131,8 +137,8 @@ class IslandWindow(private val context: Context) {
 
         val leftLevel = leftBattery?.level ?: 0
         val rightLevel = rightBattery?.level ?: 0
-        val leftStatus = leftBattery?.status ?: BatteryStatus.DISCONNECTED
-        val rightStatus = rightBattery?.status ?: BatteryStatus.DISCONNECTED
+        leftBattery?.status ?: BatteryStatus.DISCONNECTED
+        rightBattery?.status ?: BatteryStatus.DISCONNECTED
 
         val batteryText = islandView.findViewById<TextView>(R.id.island_battery_text)
         val batteryProgressBar = islandView.findViewById<ProgressBar>(R.id.island_battery_progress)
@@ -155,8 +161,10 @@ class IslandWindow(private val context: Context) {
         }
     }
 
-    @SuppressLint("SetTextI18s", "ClickableViewAccessibility", "UnspecifiedRegisterReceiverFlag")
-    fun show(name: String, batteryPercentage: Int, context: Context, type: IslandType = IslandType.CONNECTED) {
+    @SuppressLint("SetTextI18s", "ClickableViewAccessibility", "UnspecifiedRegisterReceiverFlag",
+        "SetTextI18n"
+    )
+    fun show(name: String, batteryPercentage: Int, context: Context, type: IslandType = IslandType.CONNECTED, reversed: Boolean = false, otherDeviceName: String? = null) {
         if (ServiceManager.getService()?.islandOpen == true) return
         else ServiceManager.getService()?.islandOpen = true
 
@@ -173,10 +181,10 @@ class IslandWindow(private val context: Context) {
             val rightBattery = batteryList.find { it.component == BatteryComponent.RIGHT }
 
             when {
-                leftBattery?.level ?: 0 > 0 && rightBattery?.level ?: 0 > 0 ->
+                (leftBattery?.level ?: 0) > 0 && (rightBattery?.level ?: 0) > 0 ->
                     minOf(leftBattery!!.level, rightBattery!!.level)
-                leftBattery?.level ?: 0 > 0 -> leftBattery!!.level
-                rightBattery?.level ?: 0 > 0 -> rightBattery!!.level
+                (leftBattery?.level ?: 0) > 0 -> leftBattery!!.level
+                (rightBattery?.level ?: 0) > 0 -> rightBattery!!.level
                 batteryPercentage > 0 -> batteryPercentage
                 else -> null
             }
@@ -196,6 +204,26 @@ class IslandWindow(private val context: Context) {
 
         batteryProgressBar.isIndeterminate = false
         islandView.findViewById<TextView>(R.id.island_device_name).text = name
+
+        val actionButton = islandView.findViewById<ImageButton>(R.id.island_action_button)
+        val batteryBg = islandView.findViewById<ProgressBar>(R.id.island_battery_bg)
+        if (type == IslandType.MOVED_TO_OTHER_DEVICE && !reversed) {
+            actionButton.visibility = View.VISIBLE
+            actionButton.setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    ServiceManager.getService()?.takeOver("reverse")
+                }
+                close()
+            }
+            batteryText.visibility = View.GONE
+            batteryProgressBar.visibility = View.GONE
+            batteryBg.visibility = View.GONE
+        } else {
+            actionButton.visibility = View.GONE
+            batteryText.visibility = View.VISIBLE
+            batteryProgressBar.visibility = View.VISIBLE
+            batteryBg.visibility = View.VISIBLE
+        }
 
         val batteryIntentFilter = IntentFilter(AirPodsNotifications.BATTERY_DATA)
         batteryIntentFilter.addAction(AirPodsNotifications.DISCONNECT_RECEIVERS)
@@ -280,7 +308,7 @@ class IslandWindow(private val context: Context) {
 
                         if (isDraggingDown && deltaY > 0) {
                             val stretchAmount = (deltaY * 0.5f).coerceAtMost(200f)
-                            applyCustomStretchEffect(stretchAmount, deltaY)
+                            applyCustomStretchEffect(stretchAmount)
                         }
                     }
 
@@ -294,7 +322,7 @@ class IslandWindow(private val context: Context) {
 
                     if (isBeingDragged) {
                         val currentTranslationY = containerView.translationY
-                        val significantVelocity = abs(yVelocity) > 800
+                        abs(yVelocity) > 800
                         val significantDrag = abs(dragDistance) > 80
 
                         when {
@@ -323,18 +351,28 @@ class IslandWindow(private val context: Context) {
 
         when (type) {
             IslandType.CONNECTED -> {
-                islandView.findViewById<TextView>(R.id.island_connected_text).text = getString(context, R.string.island_connected_text)
+                islandView.findViewById<TextView>(R.id.island_connected_text).text = context.getString(R.string.island_connected_text)
             }
             IslandType.TAKING_OVER -> {
-                islandView.findViewById<TextView>(R.id.island_connected_text).text = getString(context, R.string.island_taking_over_text)
+                islandView.findViewById<TextView>(R.id.island_connected_text).text = context.getString(R.string.island_taking_over_text)
             }
             IslandType.MOVED_TO_REMOTE -> {
-                islandView.findViewById<TextView>(R.id.island_connected_text).text = getString(context, R.string.island_moved_to_remote_text)
+                islandView.findViewById<TextView>(R.id.island_connected_text).text = context.getString(R.string.island_moved_to_remote_text)
+            }
+            IslandType.MOVED_TO_OTHER_DEVICE -> {
+                if (otherDeviceName == null || otherDeviceName.isEmpty()) {
+                    e("IslandWindow", "Other device name is null or empty for MOVED_TO_OTHER_DEVICE type")
+                }
+                if (reversed) {
+                    islandView.findViewById<TextView>(R.id.island_connected_text).text = context.getString(R.string.island_moved_to_other_device_reversed_text)
+                } else {
+                    islandView.findViewById<TextView>(R.id.island_connected_text).text = context.getString(R.string.island_moved_to_other_device_text, otherDeviceName)
+                }
             }
         }
 
         val videoView = islandView.findViewById<VideoView>(R.id.island_video_view)
-        val videoUri = Uri.parse("android.resource://me.kavishdevar.librepods/${R.raw.island}")
+        val videoUri = "android.resource://me.kavishdevar.librepods/${R.raw.island}".toUri()
         videoView.setVideoURI(videoUri)
         videoView.setOnPreparedListener { mediaPlayer ->
             mediaPlayer.isLooping = true
@@ -382,13 +420,13 @@ class IslandWindow(private val context: Context) {
         }
     }
 
-    private fun applyCustomStretchEffect(stretchAmount: Float, dragY: Float) {
+    private fun applyCustomStretchEffect(stretchAmount: Float) {
         try {
             val mainLayout = islandView.findViewById<LinearLayout>(R.id.island_window_layout)
-            val connectedText = islandView.findViewById<TextView>(R.id.island_connected_text)
+            islandView.findViewById<TextView>(R.id.island_connected_text)
             val deviceText = islandView.findViewById<TextView>(R.id.island_device_name)
-            val batteryView = islandView.findViewById<FrameLayout>(R.id.island_battery_container)
-            val videoView = islandView.findViewById<VideoView>(R.id.island_video_view)
+            islandView.findViewById<FrameLayout>(R.id.island_battery_container)
+            islandView.findViewById<VideoView>(R.id.island_video_view)
 
             val stretchFactor = 1f + (stretchAmount / 300f).coerceAtMost(4.0f)
             val newMinHeight = (initialHeight * stretchFactor).toInt()
@@ -443,7 +481,7 @@ class IslandWindow(private val context: Context) {
             .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
             .setStiffness(dynamicStiffness)
 
-        resetStretchEffects(velocity)
+        resetStretchEffects()
 
         if (params != null) {
             params!!.height = WindowManager.LayoutParams.WRAP_CONTENT
@@ -457,7 +495,7 @@ class IslandWindow(private val context: Context) {
         springAnimation.start()
     }
 
-    private fun resetStretchEffects(velocity: Float) {
+    private fun resetStretchEffects() {
         try {
             val mainLayout = islandView.findViewById<LinearLayout>(R.id.island_window_layout)
             val deviceText = islandView.findViewById<TextView>(R.id.island_device_name)
@@ -547,7 +585,7 @@ class IslandWindow(private val context: Context) {
         stretchAnimator.interpolator = OvershootInterpolator(0.5f)
         stretchAnimator.addUpdateListener { animation ->
             val progress = animation.animatedValue as Float
-            animateCustomStretch(progress, expandDuration)
+            animateCustomStretch(progress)
         }
 
         val normalizeAnimator = ValueAnimator.ofFloat(1.0f, 0.0f)
@@ -574,7 +612,7 @@ class IslandWindow(private val context: Context) {
         normalizeAnimator.start()
     }
 
-    private fun animateCustomStretch(progress: Float, duration: Long) {
+    private fun animateCustomStretch(progress: Float) {
         try {
             val mainLayout = islandView.findViewById<LinearLayout>(R.id.island_window_layout)
             val connectedText = islandView.findViewById<TextView>(R.id.island_connected_text)
@@ -604,6 +642,10 @@ class IslandWindow(private val context: Context) {
     }
 
     fun close() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            Handler(Looper.getMainLooper()).post { close() }
+            return
+        }
         try {
             if (isClosing) return
             isClosing = true
@@ -611,13 +653,13 @@ class IslandWindow(private val context: Context) {
             try {
                 context.unregisterReceiver(batteryReceiver)
             } catch (e: Exception) {
-                e.printStackTrace()
+//                e.printStackTrace()
             }
 
             ServiceManager.getService()?.islandOpen = false
             autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
 
-            resetStretchEffects(0f)
+            resetStretchEffects()
 
             val videoView = islandView.findViewById<VideoView>(R.id.island_video_view)
             try {
@@ -647,7 +689,15 @@ class IslandWindow(private val context: Context) {
     }
 
     private fun cleanupAndRemoveView() {
-        containerView.visibility = View.GONE
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            Handler(Looper.getMainLooper()).post { cleanupAndRemoveView() }
+            return
+        }
+        try {
+            containerView.visibility = View.GONE
+        } catch (e: Exception) {
+            e("IslandWindow", "Error setting visibility: $e")
+        }
         try {
             if (containerView.parent != null) {
                 windowManager.removeView(containerView)
@@ -662,6 +712,10 @@ class IslandWindow(private val context: Context) {
     }
 
     fun forceClose() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            Handler(Looper.getMainLooper()).post { forceClose() }
+            return
+        }
         try {
             if (isClosing) return
             isClosing = true
@@ -669,7 +723,7 @@ class IslandWindow(private val context: Context) {
             try {
                 context.unregisterReceiver(batteryReceiver)
             } catch (e: Exception) {
-                // Silent catch - receiver might already be unregistered
+                e.printStackTrace()
             }
 
             ServiceManager.getService()?.islandOpen = false

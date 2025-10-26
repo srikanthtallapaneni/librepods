@@ -179,16 +179,21 @@ fun NoiseControlSettings(
     } else {
         context.registerReceiver(noiseControlReceiver, noiseControlIntentFilter)
     }
-
-    Text(
-        text = stringResource(R.string.noise_control).uppercase(),
-        style = TextStyle(
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Light,
-            color = textColor.copy(alpha = 0.6f),
-        ),
-        modifier = Modifier.padding(8.dp, bottom = 2.dp)
-    )
+    Box(
+        modifier = Modifier
+            .background(if (isDarkTheme) Color(0xFF000000) else Color(0xFFF2F2F7))
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ){
+        Text(
+            text = stringResource(R.string.noise_control),
+            style = TextStyle(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor.copy(alpha = 0.6f),
+            )
+        )
+    }
+    @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
@@ -240,7 +245,7 @@ fun NoiseControlSettings(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
-                    .background(backgroundColor, RoundedCornerShape(14.dp))
+                    .background(backgroundColor, RoundedCornerShape(28.dp))
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth()
@@ -333,7 +338,7 @@ fun NoiseControlSettings(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(3.dp)
-                            .background(selectedBackground, RoundedCornerShape(12.dp))
+                            .background(selectedBackground, RoundedCornerShape(26.dp))
                     )
                 }
 
@@ -399,7 +404,6 @@ fun NoiseControlSettings(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp)
                     .padding(top = 4.dp)
             ) {
                 if (offListeningMode.value) {
@@ -407,7 +411,6 @@ fun NoiseControlSettings(
                         text = stringResource(R.string.off),
                         style = TextStyle(fontSize = 12.sp, color = textColor),
                         textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -415,21 +418,18 @@ fun NoiseControlSettings(
                     text = stringResource(R.string.transparency),
                     style = TextStyle(fontSize = 12.sp, color = textColor),
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = stringResource(R.string.adaptive),
                     style = TextStyle(fontSize = 12.sp, color = textColor),
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = stringResource(R.string.noise_cancellation),
                     style = TextStyle(fontSize = 12.sp, color = textColor),
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -437,7 +437,7 @@ fun NoiseControlSettings(
     }
 }
 
-@Preview()
+@Preview
 @Composable
 fun NoiseControlSettingsPreview() {
     NoiseControlSettings(AirPodsService())

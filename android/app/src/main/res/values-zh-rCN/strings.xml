@@ -1,7 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">LibrePods</string>
     <string name="app_description" translatable="false">让你的 AirPods 摆脱苹果的生态系统。</string>
-    <string name="title_activity_custom_device" translatable="false">GATT 测试</string>
     <string name="app_widget_description">在主屏幕上即可查看 AirPods 的电池状态！</string>
     <string name="accessibility">辅助功能</string>
     <string name="tone_volume">提示音音量</string>
@@ -21,13 +19,10 @@
     <string name="head_gestures">头部手势</string>
     <string name="left">左耳</string>
     <string name="right">右耳</string>
-    <string name="adjusts_volume">根据环境调整媒体音量</string>
     <string name="conversational_awareness">对话感知</string>
     <string name="conversational_awareness_description">当你开始与他人交谈时，会降低媒体音量并减少背景噪音。</string>
     <string name="personalized_volume">个性化音量</string>
     <string name="personalized_volume_description">根据环境自动调整媒体音量。</string>
-    <string name="less_noise">减少噪音</string>
-    <string name="more_noise">增加噪音</string>
     <string name="noise_cancellation_single_airpod">单只 AirPod 主动降噪</string>
     <string name="noise_cancellation_single_airpod_description">仅佩戴一只 AirPod 时也能开启主动降噪。</string>
     <string name="volume_control">音量控制</string>

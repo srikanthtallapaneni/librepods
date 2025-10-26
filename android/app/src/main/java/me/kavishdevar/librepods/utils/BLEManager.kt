@@ -30,7 +30,6 @@ import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import me.kavishdevar.librepods.services.ServiceManager
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import kotlin.io.encoding.Base64
@@ -70,6 +69,7 @@ class BLEManager(private val context: Context) {
         fun onLidStateChanged(lidOpen: Boolean)
         fun onEarStateChanged(device: AirPodsStatus, leftInEar: Boolean, rightInEar: Boolean)
         fun onBatteryChanged(device: AirPodsStatus)
+        fun onDeviceDisappeared()
     }
 
     private var mBluetoothLeScanner: BluetoothLeScanner? = null
@@ -223,12 +223,13 @@ class BLEManager(private val context: Context) {
         }
     }
 
+    @SuppressLint("GetInstance")
     private fun decryptLastBytes(data: ByteArray, key: ByteArray): ByteArray? {
         return try {
             if (data.size < 16) {
                 return null
             }
-            
+
             val block = data.copyOfRange(data.size - 16, data.size)
             val cipher = Cipher.getInstance("AES/ECB/NoPadding")
             val secretKey = SecretKeySpec(key, "AES")
@@ -302,7 +303,7 @@ class BLEManager(private val context: Context) {
 
                         if (previousGlobalState != parsedStatus.lidOpen) {
                             listener.onLidStateChanged(parsedStatus.lidOpen)
-                            Log.d(TAG, "Lid state changed from ${previousGlobalState} to ${parsedStatus.lidOpen}")
+                            Log.d(TAG, "Lid state changed from $previousGlobalState to ${parsedStatus.lidOpen}")
                         }
                     }
 
@@ -335,7 +336,7 @@ class BLEManager(private val context: Context) {
         val model = modelNames[modelId] ?: "Unknown ($modelId)"
 
         val status = data[5].toInt() and 0xFF
-        val flagsCase = data[7].toInt() and 0xFF
+//        val flagsCase = data[7].toInt() and 0xFF
         val lid = data[8].toInt() and 0xFF
         val color = colorNames[data[9].toInt()] ?: "Unknown"
         val conn = connStates[data[10].toInt()] ?: "Unknown (${data[10].toInt()})"
@@ -348,13 +349,13 @@ class BLEManager(private val context: Context) {
         val isRightInEar = if (xorFactor) (status and 0x02) != 0 else (status and 0x08) != 0
 
         val isFlipped = !primaryLeft
-        
+
         val leftByteIndex = if (isFlipped) 2 else 1
         val rightByteIndex = if (isFlipped) 1 else 2
-        
+
         val (isLeftCharging, leftBattery) = formatBattery(decrypted[leftByteIndex].toInt() and 0xFF)
         val (isRightCharging, rightBattery) = formatBattery(decrypted[rightByteIndex].toInt() and 0xFF)
-        
+
         val rawCaseBatteryByte = decrypted[3].toInt() and 0xFF
         val (isCaseCharging, rawCaseBattery) = formatBattery(rawCaseBatteryByte)
 
@@ -389,12 +390,17 @@ class BLEManager(private val context: Context) {
     private fun cleanupStaleDevices() {
         val now = System.currentTimeMillis()
         val staleCutoff = now - STALE_DEVICE_TIMEOUT_MS
+        val hadDevices = deviceStatusMap.isNotEmpty()
 
         val staleDevices = deviceStatusMap.filter { it.value.lastSeen < staleCutoff }
 
         for (device in staleDevices) {
             deviceStatusMap.remove(device.key)
             Log.d(TAG, "Removed stale device from tracking: ${device.key}")
+        }
+
+        if (hadDevices && deviceStatusMap.isEmpty()) {
+            airPodsStatusListener?.onDeviceDisappeared()
         }
     }
 
@@ -442,10 +448,10 @@ class BLEManager(private val context: Context) {
         val isRightInEar = if (xorFactor) (status and 0x02) != 0 else (status and 0x08) != 0
 
         val isFlipped = !primaryLeft
-        
+
         val leftBatteryNibble = if (isFlipped) (podsBattery shr 4) and 0x0F else podsBattery and 0x0F
         val rightBatteryNibble = if (isFlipped) podsBattery and 0x0F else (podsBattery shr 4) and 0x0F
-        
+
         val caseBattery = flagsCase and 0x0F
         val flags = (flagsCase shr 4) and 0x0F
 
@@ -483,8 +489,8 @@ class BLEManager(private val context: Context) {
 
     companion object {
         private const val TAG = "AirPodsBLE"
-        private const val CLEANUP_INTERVAL_MS = 30000L
-        private const val STALE_DEVICE_TIMEOUT_MS = 60000L
-        private const val LID_CLOSE_TIMEOUT_MS = 2000L
+        private const val CLEANUP_INTERVAL_MS = 10000L
+        private const val STALE_DEVICE_TIMEOUT_MS = 15000L
+        private const val LID_CLOSE_TIMEOUT_MS = 2500L
     }
 }

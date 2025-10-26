@@ -1,5 +1,5 @@
 /*
- * LibrePods - AirPods liberated from Apple's ecosystem
+ * LibrePods - AirPods liberated from Apple’s ecosystem
  *
  * Copyright (C) 2025 LibrePods contributors
  *
@@ -19,8 +19,6 @@
 package me.kavishdevar.librepods.utils
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
@@ -30,7 +28,7 @@ import java.io.InputStreamReader
 class LogCollector(private val context: Context) {
     private var isCollecting = false
     private var logProcess: Process? = null
-    
+
     suspend fun openXposedSettings(context: Context) {
         withContext(Dispatchers.IO) {
             val command = if (android.os.Build.VERSION.SDK_INT >= 29) {
@@ -38,42 +36,50 @@ class LogCollector(private val context: Context) {
             } else {
                 "am broadcast -a android.provider.Telephony.SECRET_CODE -d android_secret_code://5776733 android"
             }
-            
+
             executeRootCommand(command)
         }
     }
-    
+
     suspend fun clearLogs() {
         withContext(Dispatchers.IO) {
             executeRootCommand("logcat -c")
         }
     }
-    
+
     suspend fun killBluetoothService() {
         withContext(Dispatchers.IO) {
             executeRootCommand("killall com.android.bluetooth")
         }
     }
-    
+
+    private suspend fun getBluetoothUID(): String? {
+        val pkgs = listOf("com.android.bluetooth", "com.google.android.bluetooth")
+        for (pkg in pkgs) {
+            val uid = executeRootCommand(
+                "dumpsys package $pkg | grep -m 1 \"uid=\" | sed -E 's/.*uid=([0-9]+).*/\\1/'"
+            ).trim()
+            if (uid.isNotEmpty()) return uid
+        }
+        return null
+    }
+
     private suspend fun getPackageUIDs(): Pair<String?, String?> {
         return withContext(Dispatchers.IO) {
-            val btUid = executeRootCommand("dumpsys package com.android.bluetooth | grep -m 1 \"uid=\" | sed -E 's/.*uid=([0-9]+).*/\\1/'")
-                .trim()
-                .takeIf { it.isNotEmpty() }
-            
+            val btUid = getBluetoothUID()
             val appUid = executeRootCommand("dumpsys package me.kavishdevar.librepods | grep -m 1 \"uid=\" | sed -E 's/.*uid=([0-9]+).*/\\1/'")
                 .trim()
                 .takeIf { it.isNotEmpty() }
-            
+
             Pair(btUid, appUid)
         }
     }
-    
+
     suspend fun startLogCollection(listener: (String) -> Unit, connectionDetectedCallback: () -> Unit): String {
         return withContext(Dispatchers.IO) {
             isCollecting = true
             val (btUid, appUid) = getPackageUIDs()
-            
+
             val uidFilter = buildString {
                 if (!btUid.isNullOrEmpty() && !appUid.isNullOrEmpty()) {
                     append("$btUid,$appUid")
@@ -83,33 +89,33 @@ class LogCollector(private val context: Context) {
                     append(appUid)
                 }
             }
-            
+
             val command = if (uidFilter.isNotEmpty()) {
                 "su -c logcat --uid=$uidFilter -v threadtime"
             } else {
                 "su -c logcat -v threadtime"
             }
-            
+
             val logs = StringBuilder()
             try {
                 logProcess = Runtime.getRuntime().exec(command)
                 val reader = BufferedReader(InputStreamReader(logProcess!!.inputStream))
                 var line: String? = null
                 var connectionDetected = false
-                
+
                 while (isCollecting && reader.readLine().also { line = it } != null) {
                     line?.let {
                         if (it.contains("<LogCollector:")) {
                             logs.append("\n=============\n")
                         }
-                        
+
                         logs.append(it).append("\n")
                         listener(it)
-                        
+
                         if (it.contains("<LogCollector:")) {
                             logs.append("=============\n\n")
                         }
-                        
+
                         if (!connectionDetected) {
                             if (it.contains("<LogCollector:Complete:Success>")) {
                                 connectionDetected = true
@@ -118,7 +124,7 @@ class LogCollector(private val context: Context) {
                                 connectionDetected = true
                                 connectionDetectedCallback()
                             } else if (it.contains("<LogCollector:Start>")) {
-                            } 
+                            }
                             else if (it.contains("AirPodsService") && it.contains("Connected to device")) {
                                 connectionDetected = true
                                 connectionDetectedCallback()
@@ -139,17 +145,17 @@ class LogCollector(private val context: Context) {
                 logs.append("Error collecting logs: ${e.message}").append("\n")
                 e.printStackTrace()
             }
-            
+
             logs.toString()
         }
     }
-    
+
     fun stopLogCollection() {
         isCollecting = false
         logProcess?.destroy()
         logProcess = null
     }
-    
+
     suspend fun saveLogToInternalStorage(fileName: String, content: String): File? {
         return withContext(Dispatchers.IO) {
             try {
@@ -157,7 +163,7 @@ class LogCollector(private val context: Context) {
                 if (!logsDir.exists()) {
                     logsDir.mkdir()
                 }
-                
+
                 val file = File(logsDir, fileName)
                 file.writeText(content)
                 return@withContext file
@@ -167,31 +173,31 @@ class LogCollector(private val context: Context) {
             }
         }
     }
-    
+
     suspend fun addLogMarker(markerType: LogMarkerType, details: String = "") {
         withContext(Dispatchers.IO) {
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.US)
                 .format(java.util.Date())
-            
+
             val marker = when (markerType) {
                 LogMarkerType.START -> "<LogCollector:Start> [$timestamp] Beginning connection test"
                 LogMarkerType.SUCCESS -> "<LogCollector:Complete:Success> [$timestamp] Connection test completed successfully"
                 LogMarkerType.FAILURE -> "<LogCollector:Complete:Failed> [$timestamp] Connection test failed"
                 LogMarkerType.CUSTOM -> "<LogCollector:Custom:$details> [$timestamp]"
             }
-            
+
             val command = "log -t AirPodsService \"$marker\""
             executeRootCommand(command)
         }
     }
-    
+
     enum class LogMarkerType {
         START,
         SUCCESS,
         FAILURE,
         CUSTOM
     }
-    
+
     private suspend fun executeRootCommand(command: String): String {
         return withContext(Dispatchers.IO) {
             try {
@@ -199,11 +205,11 @@ class LogCollector(private val context: Context) {
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val output = StringBuilder()
                 var line: String?
-                
+
                 while (reader.readLine().also { line = it } != null) {
                     output.append(line).append("\n")
                 }
-                
+
                 process.waitFor()
                 output.toString()
             } catch (e: Exception) {

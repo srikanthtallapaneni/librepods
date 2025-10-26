@@ -1,7 +1,7 @@
 /*
- * LibrePods - AirPods liberated from Apple's ecosystem
+ * LibrePods - AirPods liberated from Apple’s ecosystem
  *
- * Copyright (C) 2025 LibrePods Contributors
+ * Copyright (C) 2025 LibrePods contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@
 
 package me.kavishdevar.librepods.utils
 
+import android.annotation.SuppressLint
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
@@ -26,10 +27,10 @@ import javax.crypto.spec.SecretKeySpec
  * verifying Resolvable Private Addresses (RPA) used by AirPods.
  */
 object BluetoothCryptography {
-    
+
     /**
      * Verifies if the provided Bluetooth address is an RPA that matches the given Identity Resolving Key (IRK)
-     * 
+     *
      * @param addr The Bluetooth address to verify
      * @param irk The Identity Resolving Key to use for verification
      * @return true if the address is verified as an RPA matching the IRK
@@ -44,11 +45,12 @@ object BluetoothCryptography {
 
     /**
      * Performs E function (AES-128) as specified in Bluetooth Core Specification
-     * 
+     *
      * @param key The key for encryption
      * @param data The data to encrypt
      * @return The encrypted data
      */
+    @SuppressLint("GetInstance")
     fun e(key: ByteArray, data: ByteArray): ByteArray {
         val swappedKey = key.reversedArray()
         val swappedData = data.reversedArray()
@@ -60,7 +62,7 @@ object BluetoothCryptography {
 
     /**
      * Performs the ah function as specified in Bluetooth Core Specification
-     * 
+     *
      * @param k The IRK key
      * @param r The random part of the address
      * @return The hash part of the address

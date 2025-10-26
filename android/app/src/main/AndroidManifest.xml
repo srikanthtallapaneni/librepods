@@ -7,7 +7,8 @@
         android:required="false" />
 
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"
         tools:ignore="ProtectedPermissions" />
@@ -30,11 +31,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
-
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
-
-    <protected-broadcast android:name="batterywidget.impl.action.update_bluetooth_data" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" />
 
     <application
         android:allowBackup="true"
@@ -60,6 +60,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/noise_control_widget_info" />
         </receiver>
+
         <receiver
             android:name=".widgets.BatteryWidget"
             android:exported="false">
@@ -73,15 +74,6 @@
         </receiver>
 
         <activity
-            android:name=".CustomDevice"
-            android:exported="true"
-            android:label="@string/title_activity_custom_device"
-            android:theme="@style/Theme.LibrePods">
-            <intent-filter>
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.LibrePods">
@@ -90,13 +82,13 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter android:autoVerify="true">
+            <!-- <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="librepods" 
+                <data android:scheme="librepods"
                     android:host="add-magic-keys" />
-            </intent-filter>
+            </intent-filter> -->
         </activity>
 
         <activity
@@ -124,7 +116,17 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
-
+        <service
+            android:name=".services.AppListenerService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/app_listener_service_config" />
+        </service>
         <receiver
             android:name=".receivers.BootReceiver"
             android:enabled="true"

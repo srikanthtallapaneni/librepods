@@ -1,3 +1,4 @@
+crowdin.yml
 *.iml
 .gradle
 /local.properties

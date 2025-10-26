@@ -1,3 +1,21 @@
+/*
+ * LibrePods - AirPods liberated from Apple’s ecosystem
+ *
+ * Copyright (C) 2025 LibrePods contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 @file:Suppress("PrivatePropertyName")
 
 package me.kavishdevar.librepods.utils
@@ -12,8 +30,7 @@ import androidx.annotation.RequiresApi
 import me.kavishdevar.librepods.R
 import java.util.concurrent.atomic.AtomicBoolean
 
-@RequiresApi(Build.VERSION_CODES.Q)
-class GestureFeedback(private val context: Context) {
+class GestureFeedback(context: Context) {
 
     private val TAG = "GestureFeedback"
 
@@ -25,8 +42,7 @@ class GestureFeedback(private val context: Context) {
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setFlags(AudioAttributes.FLAG_LOW_LATENCY or
-                         AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
+                .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
                 .build()
         )
         .build()
