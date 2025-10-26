@@ -78,9 +78,11 @@ https://github.com/user-attachments/assets/43911243-0576-4093-8c55-89c1db5ea533
 #### Root Requirement
 
 > [!CAUTION]
-> **You must have a rooted device to use LibrePods on Android.** This is due to a [bug in the Android Bluetooth stack](https://issuetracker.google.com/issues/371713238). Please upvote the issue by clicking the '+1' icon on the IssueTracker page.
+> **You must have a rooted device with Xposed to use LibrePods on Android.** This is due to a [bug in the Android Bluetooth stack](https://issuetracker.google.com/issues/371713238). Please upvote the issue by clicking the '+1' icon on the IssueTracker page.
 > 
 > There are **no exceptions** to the root requirement until Google merges the fix.
+
+Until then, you must xposed. I used to provide a non-xposed method too, where the module used overlayfs to replace the bluetooth library with a locally patched one, but that was broken due to how various devices handled overlayfs and a patched library. With xposed, you can also enable the DID hook enabling a few extra features.
 
 ## Bluetooth DID (Device Identification) Hook
 
@@ -94,48 +96,13 @@ Upto two devices can be simultaneously connected to AirPods, for audio and contr
 
 Accessibility settings like customizing transparency mode (amplification, balance, tone, conversation boost, and ambient noise reduction), and loud sound reduction can be configured.
 
-The hearing aid feature can now also be used. Currently it can only be used to adjust the settings, not actually take a hearing test because it requires much more precision. It is much better to use an already available audiogram result.
+All hearing aid customizations can be done from Android, including setting the audiogram result. The app doesn't provide a way to take a hearing test because it requires much more precision. It is much better to use an already available audiogram result. 
 
->[!NOTE]
-> To enable these features, enable App Settings -> `act as Apple Device`.
-> This only works if you use the Xposed method or patch the library yourself. The root module method does not support this feature currently.
-
-#### Installation Methods
-
-##### Method 1: Xposed Module (Recommended)
-This method is less intrusive and should be tried first:
-
-1. Install LSPosed, or another Xposed provider on your rooted device
-2. Download the LibrePods app from the releases section, and install it.
-3. Enable the Xposed module for the bluetooth app in your Xposed manager.
-4. Disable unmount modules for the Bluetooth app if enabled. 
-5. Follow the instructions in the app to set up the module.
-6. Open the app and connect your AirPods
-
-##### Method 2: Root Module (Backup Option)
-If the Xposed method doesn't work for you:
-
-1. Download the `btl2capfix.zip` module from the releases section
-2. Install it using your preferred root manager (KernelSU, Apatch, or Magisk).
-3. Disable Unmount modules for the Bluetooth aop if enabled. 
-4. Reboot your device
-5. Connect your AirPods
-
-##### Method 3: Patching it yourself
-If you prefer to patch the Bluetooth stack yourself, follow these steps:
-
-1. Look for the library in use by running `lsof | grep libbluetooth`
-2. Find the library path (e.g., `/system/lib64/libbluetooth_jni.so`)
-3. Find the `l2c_fcr_chk_chan_modes` function in the library
-4. Patch the function to always return `1` (true)
-5. Repack the library and push it back to the device. You can do this by creating a root module yourself.
-6. Reboot your device
-
-If you're unfamiliar with these steps, search for tutorials online or ask in Android rooting communities.
+To enable these features, enable App Settings -> `act as Apple Device`.
 
 #### A few notes
 
-- Due to recent AirPods' firmware upgrades, you must enable `Off listening mode` to switch to `Off`. This is because in this mode, louds sounds are not reduced!
+- Due to recent AirPods' firmware upgrades, you must enable `Off listening mode` to switch to `Off`. This is because in this mode, louds sounds are not reduced.
 
 - If you have take both AirPods out, the app will automatically switch to the phone speaker. But, Android might keep on trying to connect to the AirPods because the phone is still connected to them, just the A2DP profile is not connected. The app tries to disconnect the A2DP profile as soon as it detects that Android has connected again if they're not in the ear.
 
