@@ -193,7 +193,7 @@ fun TroubleshootingScreen(navController: NavController) {
     LaunchedEffect(currentStep) {
         instructionText = when (currentStep) {
             0 -> "First, let's ensure Xposed module is properly configured. Tap the button below to check Xposed scope settings."
-            1 -> "Please put your AirPods in the case and close it, so they disconnectForCD completely."
+            1 -> "Please put your AirPods in the case and close it, so they disconnect completely."
             2 -> "Preparing to collect logs... Please wait."
             3 -> "Now, open the AirPods case and connect your AirPods. Logs are being collected. Connection will be detected automatically, or you can manually stop logging when you're done."
             4 -> "Log collection complete! You can now save or share the logs."
