@@ -110,11 +110,22 @@ namespace AirPodsPackets
     // Hearing Aid
     namespace HearingAid
     {
-        using Type = BasicControlCommand<0x2C>;
-        static const QByteArray ENABLED = Type::ENABLED;
-        static const QByteArray DISABLED = Type::DISABLED;
-        static const QByteArray HEADER = Type::HEADER;
-        inline std::optional<bool> parseState(const QByteArray &data) { return Type::parseState(data); }
+        static const QByteArray HEADER = ControlCommand::HEADER + static_cast<char>(0x2C);
+        static const QByteArray ENABLED = ControlCommand::createCommand(0x2C, 0x01, 0x01);
+        static const QByteArray DISABLED = ControlCommand::createCommand(0x2C, 0x02, 0x02);
+        
+        inline std::optional<bool> parseState(const QByteArray &data)
+        {
+            if (!data.startsWith(HEADER) || data.size() < HEADER.size() + 2)
+                return std::nullopt;
+            
+            QByteArray value = data.mid(HEADER.size(), 2);
+            if (value == QByteArray::fromHex("0101"))
+                return true;
+            if (value == QByteArray::fromHex("0202"))
+                return false;
+            return std::nullopt;
+        }
     }
 
     // Allow Off Option
