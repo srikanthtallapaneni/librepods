@@ -120,10 +120,17 @@ namespace AirPodsPackets
                 return std::nullopt;
             
             QByteArray value = data.mid(HEADER.size(), 2);
-            if (value == QByteArray::fromHex("0101"))
+            if (value.size() != 2)
+                return std::nullopt;
+            
+            char b1 = value.at(0);
+            char b2 = value.at(1);
+            
+            if (b1 == 0x01 && b2 == 0x01)
                 return true;
-            if (value == QByteArray::fromHex("0202"))
+            if (b1 == 0x02 || b2 == 0x02)
                 return false;
+            
             return std::nullopt;
         }
     }
