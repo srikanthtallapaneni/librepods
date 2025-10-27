@@ -1,0 +1,40 @@
+name: Build Linux App (Rust)
+
+on:
+  push:
+    branches:
+      - linux-rust
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config libpulse-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        working-directory: linux-rust
+        run: cargo build --release --verbose
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: librepods-rust
+          path: linux-rust/target/release/librepods-rust
