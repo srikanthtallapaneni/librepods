@@ -50,14 +50,19 @@ jobs:
           cp target/release/librepods-rust dist/librepods
           mv dist/LibrePods-x86_64.AppImage dist/librepods-x86_64.AppImage
 
-      - name: Upload build artifacts
+      - name: Upload AppImage artifact
         if: "!startsWith(github.ref, 'refs/tags/linux-v')"
         uses: actions/upload-artifact@v4
         with:
-          name: LibrePods-Build
-          path: |
-            linux-rust/dist/librepods
-            linux-rust/dist/librepods-x86_64.AppImage
+          name: librepods-x86_64.AppImage
+          path: linux-rust/dist/librepods-x86_64.AppImage
+
+      - name: Upload binary artifact
+        if: "!startsWith(github.ref, 'refs/tags/linux-v')"
+        uses: actions/upload-artifact@v4
+        with:
+        name: librepods
+        path: linux-rust/dist/librepods
 
       - name: Vendor and create tarball
         if: startsWith(github.ref, 'refs/tags/linux-v')
