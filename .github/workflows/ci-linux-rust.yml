@@ -1,9 +1,14 @@
-name: Build Linux App (Rust)
+name: Linux Build & Release
 
 on:
   push:
     branches:
-      - linux-rust
+      - linux/rust
+    tags:
+      - 'linux-v*'
+    paths:
+      - 'linux-rust/**'
+      - '.github/workflows/linux-build.yml'
   workflow_dispatch:
 
 jobs:
@@ -11,11 +16,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config libpulse-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libdbus-1-dev libpulse-dev appstream just
+
+      - name: Install AppImage tools
+        run: |
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O /usr/local/bin/linuxdeploy
+          chmod +x /usr/local/bin/{appimagetool,linuxdeploy}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -26,15 +38,58 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            linux-rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('linux-rust/Cargo.lock') }}
 
-      - name: Build release binary
+      - name: Build AppImage and Binary
         working-directory: linux-rust
-        run: cargo build --release --verbose
+        run: |
+          cargo build --release --verbose
+          just
+          mkdir -p dist
+          cp target/release/librepods-rust dist/librepods
+          mv dist/LibrePods-x86_64.AppImage dist/librepods-x86_64.AppImage
 
-      - name: Upload build artifact
+      - name: Upload build artifacts
+        if: "!startsWith(github.ref, 'refs/tags/linux-v')"
         uses: actions/upload-artifact@v4
         with:
-          name: librepods-rust
-          path: linux-rust/target/release/librepods-rust
+          name: LibrePods-Build
+          path: |
+            linux-rust/dist/librepods
+            linux-rust/dist/librepods-x86_64.AppImage
+
+      - name: Vendor and create tarball
+        if: startsWith(github.ref, 'refs/tags/linux-v')
+        working-directory: linux-rust
+        run: |
+          cargo vendor vendor
+          mkdir -p dist .cargo
+          cat > .cargo/config.toml <<'EOF'
+          [source.crates-io]
+          replace-with = "vendored-sources"
+          [source.vendored-sources]
+          directory = "vendor"
+          EOF
+
+          VERSION="${GITHUB_REF_NAME#linux-v}"
+          TAR="librepods-v${VERSION}-source.tar.gz"
+          tar -czf "dist/${TAR}" \
+            --transform "s,^,librepods-v${VERSION}/," \
+            Cargo.toml Cargo.lock src vendor .cargo assets flatpak
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "TAR_PATH=linux-rust/dist/${TAR}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release (AppImage + binary + source)
+        if: startsWith(github.ref, 'refs/tags/linux-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            linux-rust/dist/librepods-v${{ env.VERSION }}-source.tar.gz
+            linux-rust/dist/librepods-x86_64.AppImage
+            linux-rust/dist/librepods
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
