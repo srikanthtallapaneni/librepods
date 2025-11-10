@@ -47,7 +47,7 @@ jobs:
           cargo build --release --verbose
           just
           mkdir -p dist
-          cp target/release/librepods-rust dist/librepods
+          cp target/release/librepods dist/librepods
           mv dist/LibrePods-x86_64.AppImage dist/librepods-x86_64.AppImage
 
       - name: Upload AppImage artifact
@@ -64,27 +64,14 @@ jobs:
           name: librepods
           path: linux-rust/dist/librepods
 
-      - name: Vendor and create tarball
+      - name: Create tarball for Flatpak
         if: startsWith(github.ref, 'refs/tags/linux-v')
         working-directory: linux-rust
         run: |
-          cargo vendor vendor
-          mkdir -p dist .cargo
-          cat > .cargo/config.toml <<'EOF'
-          [source.crates-io]
-          replace-with = "vendored-sources"
-          [source.vendored-sources]
-          directory = "vendor"
-          EOF
-
           VERSION="${GITHUB_REF_NAME#linux-v}"
-          TAR="librepods-v${VERSION}-source.tar.gz"
-          tar -czf "dist/${TAR}" \
-            --transform "s,^,librepods-v${VERSION}/," \
-            Cargo.toml Cargo.lock src vendor .cargo assets flatpak
-
+          just tarball "${VERSION}"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "TAR_PATH=linux-rust/dist/${TAR}" >> $GITHUB_ENV
+          echo "TAR_PATH=linux-rust/dist/librepods-v${VERSION}-source.tar.gz" >> $GITHUB_ENV
 
       - name: Create GitHub Release (AppImage + binary + source)
         if: startsWith(github.ref, 'refs/tags/linux-v')
