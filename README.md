@@ -112,7 +112,13 @@ To enable these features, enable App Settings -> `act as Apple Device`.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=kavishdevar/librepods&type=Date)](https://star-history.com/#kavishdevar/librepods&Date)
+<a href="https://www.star-history.com/#kavishdevar/librepods&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kavishdevar/librepods&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kavishdevar/librepods&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kavishdevar/librepods&type=date&legend=top-left" />
+ </picture>
+</a>
 
 # License
 
