@@ -36,27 +36,21 @@ Most features should work with any AirPods. Currently, I've only got AirPods Pro
 - **Other customizations**:
   - Rename your AirPods
   - Customize long-press actions
-  - Few accessibility features
+  - All accessibility settings
   - And more!
 
-See our [pinned issue](https://github.com/kavishdevar/librepods/issues/20) for a complete feature list and roadmap.
+&ast; Features marked with an asterisk require the Bluetooth DID (Device Identification) hook to be enabled.
+
+See the [pinned issue](https://github.com/kavishdevar/librepods/issues/20) for a complete feature list and roadmap.
 
 ## Platform Support
 
 ### Linux
+for the old version see the [Linux README](/linux/README.md). (doesn't have many features, maintainer didn't have time to work on it)
 
-The Linux version runs as a system tray app. Connect your AirPods and enjoy:
+new version in development ([#241](https://github.com/kavishdevar/librepods/pulls/241))
 
-- Battery monitoring
-- Automatic Ear detection
-- Conversational Awareness
-- Switching Noise Control modes
-- Device renaming
-
-> [!NOTE]
-> Work in progress, but core functionality is stable and usable.
-
-For installation and detailed info, see the [Linux README](/linux/README.md).
+![new version](https://github.com/user-attachments/assets/86b3c871-89a8-4e49-861a-5119de1e1d28)
 
 ### Android
 
