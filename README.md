@@ -48,7 +48,7 @@ See the [pinned issue](https://github.com/kavishdevar/librepods/issues/20) for a
 ### Linux
 for the old version see the [Linux README](/linux/README.md). (doesn't have many features, maintainer didn't have time to work on it)
 
-new version in development ([#241](https://github.com/kavishdevar/librepods/pulls/241))
+new version in development ([#241](https://github.com/kavishdevar/librepods/pull/241))
 
 ![new version](https://github.com/user-attachments/assets/86b3c871-89a8-4e49-861a-5119de1e1d28)
 
