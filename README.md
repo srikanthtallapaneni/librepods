@@ -71,10 +71,12 @@ https://github.com/user-attachments/assets/43911243-0576-4093-8c55-89c1db5ea533
 
 #### Root Requirement
 
+If you are using ColorOS/OxygenOS 16, you don't need root for basic features! You will still not be able to customize transparency mode and setup hearing aid, and use Bluetooth Multipoint. For everyone else:
+
 > [!CAUTION]
 > **You must have a rooted device with Xposed to use LibrePods on Android.** This is due to a [bug in the Android Bluetooth stack](https://issuetracker.google.com/issues/371713238). Please upvote the issue by clicking the '+1' icon on the IssueTracker page.
 > 
-> There are **no exceptions** to the root requirement until Google merges the fix.
+> There are **no exceptions** to the root requirement until Google/your OEM figures out a fix.
 
 Until then, you must xposed. I used to provide a non-xposed method too, where the module used overlayfs to replace the bluetooth library with a locally patched one, but that was broken due to how various devices handled overlayfs and a patched library. With xposed, you can also enable the DID hook enabling a few extra features.
 
