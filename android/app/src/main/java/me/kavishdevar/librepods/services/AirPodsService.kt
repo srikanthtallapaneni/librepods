@@ -93,8 +93,8 @@ import me.kavishdevar.librepods.utils.AirPodsInstance
 import me.kavishdevar.librepods.utils.AirPodsModels
 import me.kavishdevar.librepods.utils.BLEManager
 import me.kavishdevar.librepods.utils.BluetoothConnectionManager
-import me.kavishdevar.librepods.utils.CrossDevice
-import me.kavishdevar.librepods.utils.CrossDevicePackets
+//import me.kavishdevar.librepods.utils.CrossDevice
+//import me.kavishdevar.librepods.utils.CrossDevicePackets
 import me.kavishdevar.librepods.utils.GestureDetector
 import me.kavishdevar.librepods.utils.HeadTracking
 import me.kavishdevar.librepods.utils.IslandType
@@ -193,7 +193,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         var leftLongPressAction: StemAction = StemAction.defaultActions[StemPressType.LONG_PRESS]!!,
         var rightLongPressAction: StemAction = StemAction.defaultActions[StemPressType.LONG_PRESS]!!,
 
-        var cameraAction: AACPManager.Companion.StemPressType? = null,
+        var cameraAction: StemPressType? = null,
 
         // AirPods device information
         var airpodsName: String = "",
@@ -207,6 +207,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         var airpodsVersion3: String = "",
         var airpodsHardwareRevision: String = "",
         var airpodsUpdaterIdentifier: String = "",
+
+        // phone's mac, needed for tipi
+        var selfMacAddress: String = ""
     )
 
     private lateinit var config: ServiceConfig
@@ -368,9 +371,29 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         sharedPreferences.registerOnSharedPreferenceChangeListener(this)
 
-        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "settings", "get", "secure", "bluetooth_address"))
-        val output = process.inputStream.bufferedReader().use { it.readLine() }
-        localMac = output.trim()
+        localMac = config.selfMacAddress
+        if (localMac.isEmpty()) {
+            localMac = try {
+                val process = Runtime.getRuntime().exec(
+                    arrayOf("su", "-c", "settings get secure bluetooth_address")
+                )
+
+                val exitCode = process.waitFor()
+
+                if (exitCode == 0) {
+                    process.inputStream.bufferedReader().use { it.readLine()?.trim().orEmpty() }
+                } else {
+                    ""
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error retrieving local MAC address: ${e.message}. We probably aren't rooted.")
+                ""
+            }
+            config.selfMacAddress = localMac
+            sharedPreferences.edit {
+                putString("self_mac_address", localMac)
+            }
+        }
 
         ServiceManager.setService(this)
         startForegroundNotification()
@@ -556,11 +579,11 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 MODE_PRIVATE
             )
         )
-        Log.d(TAG, "Initializing CrossDevice")
-        CoroutineScope(Dispatchers.IO).launch {
-            CrossDevice.init(this@AirPodsService)
-            Log.d(TAG, "CrossDevice initialized")
-        }
+//        Log.d(TAG, "Initializing CrossDevice")
+//        CoroutineScope(Dispatchers.IO).launch {
+//            CrossDevice.init(this@AirPodsService)
+//            Log.d(TAG, "CrossDevice initialized")
+//        }
 
         sharedPreferences = getSharedPreferences("settings", MODE_PRIVATE)
         macAddress = sharedPreferences.getString("mac_address", "") ?: ""
@@ -573,7 +596,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 when (state) {
                     TelephonyManager.CALL_STATE_RINGING -> {
                         val leAvailableForAudio = bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true
-                        if ((CrossDevice.isAvailable && !isConnectedLocally && earDetectionNotification.status.contains(0x00)) || leAvailableForAudio) CoroutineScope(Dispatchers.IO).launch {
+//                        if ((CrossDevice.isAvailable && !isConnectedLocally && earDetectionNotification.status.contains(0x00)) || leAvailableForAudio) CoroutineScope(Dispatchers.IO).launch {
+                        if (leAvailableForAudio) runBlocking {
                             takeOver("call")
                         }
                         if (config.headGestures) {
@@ -583,7 +607,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     }
                     TelephonyManager.CALL_STATE_OFFHOOK -> {
                         val leAvailableForAudio = bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true
-                        if ((CrossDevice.isAvailable && !isConnectedLocally && earDetectionNotification.status.contains(0x00)) || leAvailableForAudio) CoroutineScope(
+//                        if ((CrossDevice.isAvailable && !isConnectedLocally && earDetectionNotification.status.contains(0x00)) || leAvailableForAudio) CoroutineScope(
+                        if (leAvailableForAudio) CoroutineScope(
                             Dispatchers.IO).launch {
                                 takeOver("call")
                         }
@@ -641,8 +666,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         sharedPreferences.edit { putString("name", config.deviceName) }
                     }
 
-                    Log.d("AirPodsCrossDevice", CrossDevice.isAvailable.toString())
-                    if (!CrossDevice.isAvailable) {
+//                    Log.d("AirPodsCrossDevice", CrossDevice.isAvailable.toString())
+//                    if (!CrossDevice.isAvailable) {
                         Log.d(TAG, "${config.deviceName} connected")
                         CoroutineScope(Dispatchers.IO).launch {
                             connectToSocket(device!!)
@@ -654,7 +679,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         sharedPreferences.edit {
                             putString("mac_address", macAddress)
                         }
-                    }
+//                    }
+
                 } else if (intent?.action == AirPodsNotifications.AIRPODS_DISCONNECTED) {
                     device = null
                     isConnectedLocally = false
@@ -719,7 +745,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 if (profile == BluetoothProfile.A2DP) {
                                     val connectedDevices = proxy.connectedDevices
                                     if (connectedDevices.isNotEmpty()) {
-                                        if (!CrossDevice.isAvailable) {
+//                                        if (!CrossDevice.isAvailable) {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 connectToSocket(device)
                                             }
@@ -728,7 +754,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                             sharedPreferences.edit {
                                                 putString("mac_address", macAddress)
                                             }
-                                        }
+//                                        }
                                         this@AirPodsService.sendBroadcast(
                                             Intent(AirPodsNotifications.AIRPODS_CONNECTED)
                                         )
@@ -745,9 +771,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             }
         }
 
-        if (!isConnectedLocally && !CrossDevice.isAvailable) {
-            clearPacketLogs()
-        }
+//        if (!isConnectedLocally && !CrossDevice.isAvailable) {
+//            clearPacketLogs()
+//        }
 
         CoroutineScope(Dispatchers.IO).launch {
             bleManager.startScanning()
@@ -819,8 +845,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         .getString("name", device?.name),
                     batteryNotification.getBattery()
                 )
-                CrossDevice.sendRemotePacket(batteryInfo)
-                CrossDevice.batteryBytes = batteryInfo
+//                CrossDevice.sendRemotePacket(batteryInfo)
+//                CrossDevice.batteryBytes = batteryInfo
 
                 for (battery in batteryNotification.getBattery()) {
                     Log.d(
@@ -1229,7 +1255,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             leftLongPressAction = StemAction.fromString(sharedPreferences.getString("left_long_press_action", "CYCLE_NOISE_CONTROL_MODES") ?: "CYCLE_NOISE_CONTROL_MODES")!!,
             rightLongPressAction = StemAction.fromString(sharedPreferences.getString("right_long_press_action", "DIGITAL_ASSISTANT") ?: "DIGITAL_ASSISTANT")!!,
 
-            cameraAction = sharedPreferences.getString("camera_action", null)?.let { AACPManager.Companion.StemPressType.valueOf(it) },
+            cameraAction = sharedPreferences.getString("camera_action", null)?.let { StemPressType.valueOf(it) },
 
             // AirPods device information
             airpodsName = sharedPreferences.getString("airpods_name", "") ?: "",
@@ -1243,6 +1269,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             airpodsVersion3 = sharedPreferences.getString("airpods_version3", "") ?: "",
             airpodsHardwareRevision = sharedPreferences.getString("airpods_hardware_revision", "") ?: "",
             airpodsUpdaterIdentifier = sharedPreferences.getString("airpods_updater_identifier", "") ?: "",
+
+            selfMacAddress = sharedPreferences.getString("self_mac_address", "") ?: ""
         )
     }
 
@@ -1251,6 +1279,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         when(key) {
             "name" -> config.deviceName = preferences.getString(key, "AirPods") ?: "AirPods"
+            "mac_address" -> macAddress = preferences.getString(key, "") ?: ""
             "automatic_ear_detection" -> config.earDetectionEnabled = preferences.getBoolean(key, true)
             "conversational_awareness_pause_music" -> config.conversationalAwarenessPauseMusic = preferences.getBoolean(key, false)
             "show_phone_battery_in_widget" -> {
@@ -1323,7 +1352,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 )!!
                 setupStemActions()
             }
-            "camera_action" -> config.cameraAction = preferences.getString(key, null)?.let { AACPManager.Companion.StemPressType.valueOf(it) }
+            "camera_action" -> config.cameraAction = preferences.getString(key, null)?.let { StemPressType.valueOf(it) }
 
             // AirPods device information
             "airpods_name" -> config.airpodsName = preferences.getString(key, "") ?: ""
@@ -1337,10 +1366,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             "airpods_version3" -> config.airpodsVersion3 = preferences.getString(key, "") ?: ""
             "airpods_hardware_revision" -> config.airpodsHardwareRevision = preferences.getString(key, "") ?: ""
             "airpods_updater_identifier" -> config.airpodsUpdaterIdentifier = preferences.getString(key, "") ?: ""
-        }
 
-        if (key == "mac_address") {
-            macAddress = preferences.getString(key, "") ?: ""
+            "self_mac_address" -> config.selfMacAddress = preferences.getString(key, "") ?: ""
         }
     }
 
@@ -2096,7 +2123,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 SystemApisUtils.setMetadata(
                     device,
                     device.METADATA_COMPANION_APP,
-                    "me.kavisdevar.librepods".toByteArray()
+                    "me.kavishdevar.librepods".toByteArray()
                 ) &&
                 SystemApisUtils.setMetadata(
                     device,
@@ -2266,14 +2293,19 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             return
         }
 
-        if (CrossDevice.isAvailable) {
-            Log.d(TAG, "CrossDevice is available, continuing")
-        }
-        else if (bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true) {
-            Log.d(TAG, "At least one AirPod is in ear, continuing")
-        }
-        else {
-            Log.d(TAG, "CrossDevice not available and AirPods not in ear, skipping")
+//        if (CrossDevice.isAvailable) {
+//            Log.d(TAG, "CrossDevice is available, continuing")
+//        }
+//        else if (bleManager.getMostRecentStatus()?.isLeftInEar == true || bleManager.getMostRecentStatus()?.isRightInEar == true) {
+//            Log.d(TAG, "At least one AirPod is in ear, continuing")
+//        }
+//        else {
+//            Log.d(TAG, "CrossDevice not available and AirPods not in ear, skipping")
+//            return
+//        }
+
+        if (bleManager.getMostRecentStatus()?.isLeftInEar == false && bleManager.getMostRecentStatus()?.isRightInEar == false) {
+            Log.d(TAG, "Both AirPods are out of ear, not taking over audio")
             return
         }
 
@@ -2312,10 +2344,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
 
         Log.d(TAG, "Taking over audio")
-        CrossDevice.sendRemotePacket(CrossDevicePackets.REQUEST_DISCONNECT.packet)
+//        CrossDevice.sendRemotePacket(CrossDevicePackets.REQUEST_DISCONNECT.packet)
         Log.d(TAG, macAddress)
 
-        sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", false) }
+//        sharedPreferences.edit { putBoolean("CrossDeviceIsAvailable", false) }
         device = getSystemService(BluetoothManager::class.java).adapter.bondedDevices.find {
             it.address == macAddress
         }
@@ -2340,7 +2372,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         showIsland(this, batteryNotification.getBattery().find { it.component == BatteryComponent.LEFT}?.level!!.coerceAtMost(batteryNotification.getBattery().find { it.component == BatteryComponent.RIGHT}?.level!!),
             IslandType.TAKING_OVER)
 
-        CrossDevice.isAvailable = false
+//        CrossDevice.isAvailable = false
     }
 
     private fun createBluetoothSocket(device: BluetoothDevice, uuid: ParcelUuid): BluetoothSocket {
@@ -2385,7 +2417,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         Log.d(TAG, "<LogCollector:Start> Connecting to socket")
         HiddenApiBypass.addHiddenApiExemptions("Landroid/bluetooth/BluetoothSocket;")
         val uuid: ParcelUuid = ParcelUuid.fromString("74ec2172-0bad-4d01-8f77-997b2be0722a")
-        if (!isConnectedLocally && !CrossDevice.isAvailable) {
+        if (!isConnectedLocally) {
             socket = try {
                 createBluetoothSocket(device, uuid)
             } catch (e: Exception) {
@@ -2503,7 +2535,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                     })
                                     val bytes = buffer.copyOfRange(0, bytesRead)
                                     val formattedHex = bytes.joinToString(" ") { "%02X".format(it) }
-                                    CrossDevice.sendReceivedPacket(bytes)
+//                                    CrossDevice.sendReceivedPacket(bytes)
                                     updateNotificationContent(
                                         true,
                                         sharedPreferences.getString("name", device.name),
@@ -2541,6 +2573,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 this@AirPodsService.device = device
                 updateNotificationContent(false)
             }
+        } else {
+            Log.d(TAG, "Already connected locally, skipping socket connection (isConnectedLocally = $isConnectedLocally, socket.isConnected = ${this::socket.isInitialized && socket.isConnected})")
         }
     }
 
@@ -2566,7 +2600,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             override fun onServiceDisconnected(profile: Int) {}
         }, BluetoothProfile.A2DP)
         isConnectedLocally = false
-        CrossDevice.isAvailable = true
+//        CrossDevice.isAvailable = true
     }
 
     fun disconnectAirPods() {
@@ -2611,16 +2645,16 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     }
 
     fun getBattery(): List<Battery> {
-        if (!isConnectedLocally && CrossDevice.isAvailable) {
-            batteryNotification.setBattery(CrossDevice.batteryBytes)
-        }
+//        if (!isConnectedLocally && CrossDevice.isAvailable) {
+//            batteryNotification.setBattery(CrossDevice.batteryBytes)
+//        }
         return batteryNotification.getBattery()
     }
 
     fun getANC(): Int {
-        if (!isConnectedLocally && CrossDevice.isAvailable) {
-            ancNotification.setStatus(CrossDevice.ancBytes)
-        }
+//        if (!isConnectedLocally && CrossDevice.isAvailable) {
+//            ancNotification.setStatus(CrossDevice.ancBytes)
+//        }
         return ancNotification.status
     }
 
@@ -2761,7 +2795,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE)
         isConnectedLocally = false
-        CrossDevice.isAvailable = true
+//        CrossDevice.isAvailable = true
         super.onDestroy()
     }
 

@@ -472,7 +472,12 @@ fun StyledToggle(
     val attManager = ServiceManager.getService()?.attManager ?: return
     val isDarkTheme = isSystemInDarkTheme()
     val textColor = if (isDarkTheme) Color.White else Color.Black
-    val checkedValue = attManager.read(attHandle).getOrNull(0)?.toInt()
+    val checkedValue = try {
+        attManager.read(attHandle).getOrNull(0)?.toInt()
+    } catch (e: Exception) {
+        Log.w("StyledToggle", "Error reading initial value for $label: ${e.message}")
+        null
+    } ?: 0
     var checked by remember { mutableStateOf(checkedValue !=0) }
     var backgroundColor by remember { mutableStateOf(if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)) }
     val animatedBackgroundColor by animateColorAsState(targetValue = backgroundColor, animationSpec = tween(durationMillis = 500))

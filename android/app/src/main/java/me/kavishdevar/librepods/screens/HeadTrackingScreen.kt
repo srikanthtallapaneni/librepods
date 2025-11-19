@@ -16,6 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
+// this is absolutely unnecessary, why did I make this. a simple toggle would've sufficed
+
 @file:OptIn(ExperimentalEncodingApi::class)
 
 package me.kavishdevar.librepods.screens
@@ -83,7 +86,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
@@ -108,7 +110,7 @@ import kotlin.random.Random
 @RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun HeadTrackingScreen(navController: NavController) {
+fun HeadTrackingScreen() {
     DisposableEffect(Unit) {
         ServiceManager.getService()?.startHeadTracking()
         onDispose {
@@ -743,5 +745,5 @@ private fun AccelerationPlot() {
 @Preview
 @Composable
 fun HeadTrackingScreenPreview() {
-    HeadTrackingScreen(navController = NavController(LocalContext.current))
+    HeadTrackingScreen()
 }

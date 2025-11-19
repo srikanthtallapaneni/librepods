@@ -149,7 +149,8 @@ class AirPodsPro2Lightning: AirPodsBase(
         Capability.HEARING_AID,
         Capability.ADAPTIVE_AUDIO,
         Capability.ADAPTIVE_VOLUME,
-        Capability.SWIPE_FOR_VOLUME
+        Capability.SWIPE_FOR_VOLUME,
+        Capability.HEAD_GESTURES
     )
 )
 
@@ -171,7 +172,8 @@ class AirPodsPro2USBC: AirPodsBase(
         Capability.HEARING_AID,
         Capability.ADAPTIVE_AUDIO,
         Capability.ADAPTIVE_VOLUME,
-        Capability.SWIPE_FOR_VOLUME
+        Capability.SWIPE_FOR_VOLUME,
+        Capability.HEAD_GESTURES
     )
 )
 

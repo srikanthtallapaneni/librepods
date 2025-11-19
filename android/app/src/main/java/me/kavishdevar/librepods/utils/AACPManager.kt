@@ -596,7 +596,7 @@ class AACPManager {
                 eqData = FloatArray(8) { i -> eq1.get(i) }
                 Log.d(TAG, "EQ Data set to: ${eqData.toList()}, eqOnPhone: $eqOnPhone, eqOnMedia: $eqOnMedia")
             }
-            
+
             Opcodes.INFORMATION -> {
                 Log.e(TAG, "Parsing Information Packet")
                 val information = parseInformationPacket(packet)
@@ -1201,7 +1201,8 @@ class AACPManager {
         var offset = 9
         for (i in 0 until deviceCount) {
             if (offset + 8 > data.size) {
-                throw IllegalArgumentException("Data array too short to parse all connected devices")
+                Log.w(TAG, "Data array too short to parse all connected devices, returning what we have")
+                break
             }
             val macBytes = data.sliceArray(offset until offset + 6)
             val mac = macBytes.joinToString(":") { "%02X".format(it) }

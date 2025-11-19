@@ -115,6 +115,11 @@ class RadareOffsetFinder(context: Context) {
         }
 
         fun isSdpOffsetAvailable(): Boolean {
+            val sharedPreferences = ServiceManager.getService()?.applicationContext?.getSharedPreferences("settings", Context.MODE_PRIVATE) // ik not good practice- too lazy
+            if (sharedPreferences?.getBoolean("skip_setup", false) == true) {
+                Log.d(TAG, "Setup skipped, returning true for SDP offset.")
+                return true
+            }
             try {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", SDP_OFFSET_PROP))
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
@@ -462,7 +467,7 @@ class RadareOffsetFinder(context: Context) {
 //            findAndSaveL2cuProcessCfgReqOffset(libraryPath, envSetup)
 //            findAndSaveL2cCsmConfigOffset(libraryPath, envSetup)
 //            findAndSaveL2cuSendPeerInfoReqOffset(libraryPath, envSetup)
-            
+
             // findAndSaveSdpOffset(libraryPath, envSetup) Should not be run by default, only when user asks for it.
 
         } catch (e: Exception) {

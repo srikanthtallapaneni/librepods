@@ -381,7 +381,7 @@ fun Main() {
                         TroubleshootingScreen(navController)
                     }
                     composable("head_tracking") {
-                        HeadTrackingScreen(navController)
+                        HeadTrackingScreen()
                     }
                     composable("onboarding") {
                         Onboarding(navController, context)
