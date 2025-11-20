@@ -22,7 +22,7 @@ LibrePods unlocks Apple's exclusive AirPods features on non-Apple devices. Get a
 | ✅      | AirPods Max           | Fully supported (client shows unsupported features)        |
 | ⚠️      | Other AirPods models  | Basic features (battery status, ear detection) should work |
 
-Most features should work with any AirPods. Currently, I've only got AirPods Pro 2 to test with.
+Most features should work with any AirPods. Currently, I've only got AirPods Pro 2 to test with. But, I believe the protocol remains the same for all other AirPods (based on analysis of the bluetooth stack on macOS).
 
 ## Key Features
 
@@ -72,7 +72,7 @@ https://github.com/user-attachments/assets/43911243-0576-4093-8c55-89c1db5ea533
 
 #### Root Requirement
 
-If you are using ColorOS/OxygenOS 16, you don't need root for basic features! You will still not be able to customize transparency mode and setup hearing aid, and use Bluetooth Multipoint. For everyone else:
+If you are using ColorOS/OxygenOS 16, you don't need root except for customizing transparency mode, setting up hearing aid, and use Bluetooth Multipoint. Changing ANC, conversational awareness, ear detection, and other customizations will work without root. For everyone else:
 
 > [!CAUTION]
 > **You must have a rooted device with Xposed to use LibrePods on Android.** This is due to a [bug in the Android Bluetooth stack](https://issuetracker.google.com/issues/371713238). Please upvote the issue by clicking the '+1' icon on the IssueTracker page.
