@@ -1,5 +1,5 @@
 >[!IMPORTANT]
-Development paused due to lack of time until 17th May 2025 (JEE Advanced). PRs and issues might not be responded to until then.
+Development paused due to lack of time until 17th May 2026 (JEE Advanced). PRs and issues might not be responded to until then.
 
 ![LibrePods Banner](./imgs/banner.png)
 
