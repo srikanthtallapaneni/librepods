@@ -1,3 +1,15 @@
+<p align="center">
+  <img src="https://img.shields.io/github/stars/kavishdevar/librepods?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/github/license/kavishdevar/librepods?style=for-the-badge" />
+  <img src="https://img.shields.io/github/v/release/kavishdevar/librepods?style=for-the-badge&logoColor=white&label=Release" />
+  <img src="https://img.shields.io/github/downloads/kavishdevar/librepods/total?style=for-the-badge&label=Downloads" />
+  <img src="https://img.shields.io/github/issues/kavishdevar/librepods?style=for-the-badge" />
+  
+  <a href="https://discord.gg/HhG4ycVum4">
+    <img src="https://img.shields.io/discord/1441416992027574375?style=for-the-badge&logoColor=white&color=5865F2&label=Discord" />
+  </a>
+</p>
+
 >[!IMPORTANT]
 Development paused due to lack of time until 17th May 2026 (JEE Advanced). PRs and issues might not be responded to until then.
 
