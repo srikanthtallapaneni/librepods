@@ -367,10 +367,8 @@ fun AppSettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 val restartBluetoothText = stringResource(R.string.found_offset_restart_bluetooth)
                 StyledToggle(
-                    label = stringResource(R.string.act_as_an_apple_device),
-                    description = stringResource(R.string.act_as_an_apple_device_description) + "\n" + stringResource(
-                        R.string.requires_xposed
-                    ).replaceFirstChar { if (it.isLowerCase()) it.titlecase(getDefault()) else it.toString() },
+                    label = stringResource(R.string.act_as_an_apple_device) + " (${stringResource(R.string.requires_xposed)})",
+                    description = stringResource(R.string.act_as_an_apple_device_description),
                     checked = state.vendorIdHook,
                     onCheckedChange = { enabled ->
                         Toast.makeText(context, restartBluetoothText, Toast.LENGTH_SHORT).show()
