@@ -913,7 +913,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                 if (conversationAwarenessNotification.status == 1.toByte() || conversationAwarenessNotification.status == 2.toByte()) {
                     MediaController.startSpeaking()
-                } else if (conversationAwarenessNotification.status == 8.toByte() || conversationAwarenessNotification.status == 9.toByte()) {
+                } else if (conversationAwarenessNotification.status == 6.toByte() ||conversationAwarenessNotification.status == 8.toByte() || conversationAwarenessNotification.status == 9.toByte()) {
                     MediaController.stopSpeaking()
                 }
 
