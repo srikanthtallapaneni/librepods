@@ -69,7 +69,14 @@ import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat.START_STICKY
+import androidx.core.app.ServiceCompat.startForeground
+import androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+import androidx.core.content.ContextCompat.getSystemService
+import androidx.core.content.ContextCompat.registerReceiver
+import androidx.core.content.ContextCompat.startActivity
 import androidx.core.content.edit
+import com.google.android.datatransport.runtime.scheduling.persistence.EventStoreModule_PackageNameFactory.packageName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -128,6 +135,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.jvm.java
 
 private const val TAG = "AirPodsService"
 
@@ -2434,16 +2442,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             )
             otherDeviceTookOver = false
         }
+        val ownsConnection = aacpManager.getControlCommandStatus(AACPManager.Companion.ControlCommandIdentifiers.OWNS_CONNECTION)?.value?.get(0)?.toInt()
         Log.d(
-            TAG, "owns connection: ${
-                aacpManager.getControlCommandStatus(AACPManager.Companion.ControlCommandIdentifiers.OWNS_CONNECTION)?.value?.get(
-                    0
-                )?.toInt()
-            }"
+            TAG, "owns connection: $ownsConnection"
         )
         if (!::socket.isInitialized) return
         if (socket.isConnected) {
-            if (BuildConfig.FLAVOR != "xposed") {
+            if (!XposedRemotePrefProvider.create().getBoolean("vendor_id_hook", false) || ownsConnection == 0) {
                 Log.d(TAG, "not taking over, vendorid is probably not set to apple")
                 return
             }
