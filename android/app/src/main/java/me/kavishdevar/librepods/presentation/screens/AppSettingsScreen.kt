@@ -217,7 +217,7 @@ fun AppSettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            if (BuildConfig.FLAVOR == "xposed") {
+            if (!BuildConfig.PLAY_BUILD) {
                 StyledToggle(
                     title = stringResource(R.string.ear_detection),
                     label = stringResource(R.string.disconnect_when_not_wearing),
