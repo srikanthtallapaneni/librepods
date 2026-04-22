@@ -236,4 +236,8 @@
     <string name="yes">Yes</string>
     <string name="settings">Settings</string>
     <string name="requires_xposed">requires xposed</string>
+    <string name="bypass_compatibility_check">Bypass compatibility check</string>
+    <string name="bypass_compatiblity_check_confirmation">Are you sure your device is supported natively/you have Xposed module enabled?</string>
+    <string name="not_supported">Not supported</string>
+    <string name="check_the_repository_for_more_info">Check the repository for more info.</string>
 </resources>

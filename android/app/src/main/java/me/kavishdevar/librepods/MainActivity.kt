@@ -128,6 +128,7 @@ import me.kavishdevar.librepods.billing.BillingProviderFactory
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.presentation.components.ConfirmationDialog
+import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledIconButton
 import me.kavishdevar.librepods.presentation.screens.AccessibilitySettingsScreen
 import me.kavishdevar.librepods.presentation.screens.AdaptiveStrengthScreen
@@ -221,20 +222,11 @@ class MainActivity : ComponentActivity() {
 fun Main() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("settings", MODE_PRIVATE)
-    if (false) { // !isSupported(sharedPreferences) &&  BuildConfig.PLAY_BUILD == true) {
+    if (!isSupported(sharedPreferences)) {
         val showDialog = remember { mutableStateOf(false) }
-        val blockTouches = remember { mutableStateOf(false) }
-        val tapCount = remember { mutableIntStateOf(0) }
-        val lastTapTime = remember { mutableLongStateOf(0L) }
 
         val hazeState = rememberHazeState()
 
-        LaunchedEffect(blockTouches) {
-            if (blockTouches.value) {
-                delay(500)
-                blockTouches.value = false
-            }
-        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -245,26 +237,12 @@ fun Main() {
             Box (
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(
-                        if (blockTouches.value)
-                        {
-                            Modifier.pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                                        event.changes.forEach { it.consume() }
-                                    }
-                                }
-                            }
-                        }
-                        else Modifier
-                    )
             )
             Column (
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Not supported",
+                    text = stringResource(R.string.not_supported),
                     style = TextStyle(
                         fontFamily = FontFamily(Font(R.font.sf_pro)),
                         fontWeight = FontWeight.SemiBold,
@@ -275,25 +253,7 @@ fun Main() {
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row (
-                    modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                val now = System.currentTimeMillis()
-
-                                if (now - lastTapTime.longValue > 400) {
-                                    tapCount.intValue = 0
-                                }
-
-                                tapCount.intValue++
-                                lastTapTime.longValue = now
-
-                                if (tapCount.intValue >= 7) {
-                                    showDialog.value = true
-                                    blockTouches.value = true
-                                }
-                            }
-                        )
-                    },
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -323,7 +283,7 @@ fun Main() {
                     )
                 }
                 Text(
-                    text = "Check the repository for more info.",
+                    text = stringResource(R.string.check_the_repository_for_more_info),
                     style = TextStyle(
                         fontFamily = FontFamily(Font(R.font.sf_pro)),
                         fontWeight = FontWeight.Medium,
@@ -333,19 +293,35 @@ fun Main() {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
+                StyledButton(
+                    onClick = { showDialog.value = true },
+                    backdrop = rememberLayerBackdrop(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.bypass_compatibility_check),
+                        style = TextStyle(
+                            fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            fontWeight = FontWeight.Medium,
+                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                            fontSize = 16.sp
+                        ),
+                    )
+                }
             }
         }
 
         ConfirmationDialog(
             showDialog = showDialog,
-            title = "Confirm device check bypass?",
-            message = "Are you sure your device is supported with LibrePods?",
+            title = stringResource(R.string.bypass_compatibility_check),
+            message = stringResource(R.string.bypass_compatiblity_check_confirmation),
             confirmText = "Yes",
             dismissText = "No",
             onConfirm = {
                 showDialog.value = false
                 sharedPreferences.edit {
-                    tapCount.intValue = 0
                     putBoolean("bypass_device_check", true)
                     val intent = Intent(context, MainActivity::class.java)
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

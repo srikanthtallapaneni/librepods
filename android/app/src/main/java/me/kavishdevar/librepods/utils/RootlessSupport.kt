@@ -39,6 +39,5 @@ fun isSupported(sharedPreferences: SharedPreferences): Boolean {
     } else if (isOppoOrOnePlus) {
         return true
     }
-    return if (BuildConfig.FLAVOR == "xposed") true
-    else sharedPreferences.getBoolean("bypass_device_check", false)
+    return sharedPreferences.getBoolean("bypass_device_check", false)
 }

@@ -28,7 +28,7 @@ android {
         applicationId = "me.kavishdevar.librepods"
         minSdk = 33
         targetSdk = 37
-        versionCode = 28
+        versionCode = 30
         versionName = "0.2.0"
     }
     buildTypes {
