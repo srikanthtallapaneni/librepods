@@ -459,7 +459,7 @@ fun PurchaseScreen(
                     tint = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
                 ) {
                     Text(
-                        stringResource(R.string.buy),
+                        stringResource(R.string.buy_price, state.price),
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
