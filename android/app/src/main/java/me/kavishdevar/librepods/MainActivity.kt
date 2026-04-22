@@ -221,7 +221,7 @@ class MainActivity : ComponentActivity() {
 fun Main() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("settings", MODE_PRIVATE)
-    if (!isSupported(sharedPreferences)) {
+    if (false) { // !isSupported(sharedPreferences) &&  BuildConfig.PLAY_BUILD == true) {
         val showDialog = remember { mutableStateOf(false) }
         val blockTouches = remember { mutableStateOf(false) }
         val tapCount = remember { mutableIntStateOf(0) }
