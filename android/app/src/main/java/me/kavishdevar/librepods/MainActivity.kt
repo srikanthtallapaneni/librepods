@@ -499,10 +499,6 @@ fun Main() {
                 navController.addOnDestinationChangedListener { _, destination, _ ->
                     showBackButton.value =
                         destination.route != "settings" // && destination.route != "onboarding"
-                    Log.d(
-                        "MainActivity",
-                        "Navigated to ${destination.route}, showBackButton: ${showBackButton.value}"
-                    )
                 }
             }
 

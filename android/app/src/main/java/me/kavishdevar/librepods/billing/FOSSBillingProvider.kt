@@ -57,11 +57,9 @@ class FOSSBillingProvider(context: Context): BillingProvider {
         purchaseJob?.cancel()
 
         purchaseJob = scope.launch {
-            delay(2_000)
-            withContext(Dispatchers.Main) {
-                _isPremium.value = true
-                sharedPreferences.edit { putBoolean("foss_upgraded", true) }
-            }
+            delay(5_000)
+            _isPremium.value = true
+            sharedPreferences.edit { putBoolean("foss_upgraded", true) }
         }
     }
 

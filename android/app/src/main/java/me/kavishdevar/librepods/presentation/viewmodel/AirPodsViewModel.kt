@@ -23,7 +23,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -171,14 +170,11 @@ class AirPodsViewModel(
                     return@collect
                 }
                 if (!premium) {
-                    Log.d("AirPodsViewModel", "we are not premium")
                     setControlCommandBoolean(
                         ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG,
                         false
                     )
                     setHeadGesturesEnabled(false)
-                } else {
-                    Log.d("AirPodsViewModel", "we are premium")
                 }
                 _uiState.update { it.copy(isPremium = premium) }
             }
@@ -365,7 +361,6 @@ class AirPodsViewModel(
     fun setOffListeningMode(enabled: Boolean) {
         sharedPreferences.edit { putBoolean("off_listening_mode", enabled) }
         setControlCommandBoolean(ControlCommandIdentifiers.ALLOW_OFF_OPTION, enabled)
-        Log.d("AirPodsViewModel", "Hello???? $enabled")
         _uiState.update {
             it.copy(offListeningMode = enabled)
         }
