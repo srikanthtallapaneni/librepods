@@ -20,5 +20,4 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
+-keep class me.kavishdevar.librepods.utils.KotlinModule { *; }
