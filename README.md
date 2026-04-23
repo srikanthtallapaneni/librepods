@@ -84,7 +84,7 @@ Please do not comment in the thread. The issue has already been resolved and sho
 
 However, if you are using ColorOS/OxygenOS 16, Android 16 QPR3 on Pixel (ensure you're on the latest Play system update), you don't need root for most features.
 
-> [!IMPORTATN]
+> [!IMPORTANT]
 > This workaround with Xposed is not guaranteed to work on all devices.
 
 Features requiring the VendorID hook will still require root. These features include customizing transparency mode, setting up hearing aid, and use Bluetooth Multipoint.
