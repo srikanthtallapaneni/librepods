@@ -192,6 +192,65 @@ static uintptr_t getModuleBase(const char* name) {
     return base;
 }
 
+static uint64_t findSymbolOffsetDynsym(
+        const std::vector<uint8_t>& elf,
+        const char* symbol_substring) {
+
+    LOGI("findSymbolOffsetDynsym called with %s", symbol_substring);
+
+    auto* eh = reinterpret_cast<const Elf64_Ehdr*>(elf.data());
+    auto* shdr = reinterpret_cast<const Elf64_Shdr*>(
+            elf.data() + eh->e_shoff);
+
+    const char* shstr =
+            reinterpret_cast<const char*>(
+                    elf.data() + shdr[eh->e_shstrndx].sh_offset);
+
+    const Elf64_Shdr* dynsym = nullptr;
+    const Elf64_Shdr* dynstr = nullptr;
+
+    for (int i = 0; i < eh->e_shnum; ++i) {
+        const char* secname = shstr + shdr[i].sh_name;
+
+        if (!strcmp(secname, ".dynsym"))
+            dynsym = &shdr[i];
+        if (!strcmp(secname, ".dynstr"))
+            dynstr = &shdr[i];
+    }
+
+    if (!dynsym || !dynstr) {
+        LOGE("findSymbolOffsetDynsym: dynsym or dynstr not found");
+        return 0;
+    }
+
+    auto* symbols = reinterpret_cast<const Elf64_Sym*>(
+            elf.data() + dynsym->sh_offset);
+
+    const char* strings =
+            reinterpret_cast<const char*>(
+                    elf.data() + dynstr->sh_offset);
+
+    size_t count = dynsym->sh_size / sizeof(Elf64_Sym);
+
+    LOGI("findSymbolOffsetDynsym: scanning %zu symbols", count);
+
+    for (size_t i = 0; i < count; ++i) {
+        const char* name = strings + symbols[i].st_name;
+
+        if (strstr(name, symbol_substring) &&
+            ELF64_ST_TYPE(symbols[i].st_info) == STT_FUNC) {
+
+            LOGI("findSymbolOffsetDynsym: matched %s @ 0x%lx",
+                 name, (unsigned long)symbols[i].st_value);
+
+            return symbols[i].st_value;
+        }
+    }
+
+    LOGI("findSymbolOffsetDynsym: no match for %s", symbol_substring);
+    return 0;
+}
+
 static uint64_t findSymbolOffset(
         const std::vector<uint8_t>& elf,
         const char* symbol_substring) {
@@ -291,9 +350,10 @@ static bool hookLibrary(const char* libname) {
             reinterpret_cast<const char*>(
                     file.data() + shdr[eh->e_shstrndx].sh_offset);
 
-    LOGI("hookLibrary: parsing ELF header and sections");
-    for (int i = 0; i < eh->e_shnum; ++i) {
+    uint64_t chk_offset = 0;
+    uint64_t sdp_offset = 0;
 
+    for (int i = 0; i < eh->e_shnum; ++i) {
         if (!strcmp(shstr + shdr[i].sh_name, ".gnu_debugdata")) {
             LOGI("hookLibrary: found .gnu_debugdata section");
 
@@ -303,60 +363,59 @@ static bool hookLibrary(const char* libname) {
 
             std::vector<uint8_t> decompressed;
 
-            if (!decompressXZ(
+            if (decompressXZ(
                     compressed.data(),
                     compressed.size(),
                     decompressed)) {
-                LOGE("hookLibrary: decompressXZ failed");
-                return false;
-            }
-            LOGI("hookLibrary: decompressed debug data, size: %zu", decompressed.size());
 
-            uintptr_t base = getModuleBase(libname);
-            if (!base) {
-                LOGE("hookLibrary: getModuleBase failed");
-                return false;
-            }
-            LOGI("hookLibrary: module base: 0x%lx", base);
+                chk_offset = findSymbolOffset(decompressed,
+                                              "l2c_fcr_chk_chan_modes");
 
-            uint64_t chk_offset =
-                    findSymbolOffset(decompressed,
-                                     "l2c_fcr_chk_chan_modes");
-
-            uint64_t sdp_offset =
-                    findSymbolOffset(decompressed,
-                                     "BTA_DmSetLocalDiRecord");
-
-            LOGI("hookLibrary: chk_offset: 0x%lx, sdp_offset: 0x%lx", chk_offset, sdp_offset);
-
-            if (chk_offset) {
-                void* target =
-                        reinterpret_cast<void*>(base + chk_offset);
-
-                hook_func(target,
-                          (void*)fake_l2c_fcr_chk_chan_modes,
-                          (void**)&original_l2c_fcr_chk_chan_modes);
-
-                LOGI("hookLibrary: hooked l2c_fcr_chk_chan_modes");
+                sdp_offset = findSymbolOffset(decompressed,
+                                              "BTA_DmSetLocalDiRecord");
+            } else {
+                LOGE("debugdata decompress failed");
             }
 
-            if (sdp_offset) {
-                void* target =
-                        reinterpret_cast<void*>(base + sdp_offset);
-
-                hook_func(target,
-                          (void*)fake_BTA_DmSetLocalDiRecord,
-                          (void**)&original_BTA_DmSetLocalDiRecord);
-
-                LOGI("hookLibrary: hooked BTA_DmSetLocalDiRecord");
-            }
-
-            return true;
+            break;
         }
     }
 
-    LOGI("hookLibrary: failed for %s", libname);
-    return false;
+    if (!chk_offset) {
+        LOGI("fallback dynsym chk");
+        chk_offset = findSymbolOffsetDynsym(file,
+                                            "l2c_fcr_chk_chan_modes");
+    }
+
+    if (!sdp_offset) {
+        LOGI("fallback dynsym sdp");
+        sdp_offset = findSymbolOffsetDynsym(file,
+                                            "BTA_DmSetLocalDiRecord");
+    }
+
+    uintptr_t base = getModuleBase(libname);
+    if (!base) {
+        LOGE("hookLibrary: getModuleBase failed");
+        return false;
+    }
+
+    if (chk_offset) {
+        void* target = reinterpret_cast<void*>(base + chk_offset);
+        hook_func(target,
+                  (void*)fake_l2c_fcr_chk_chan_modes,
+                  (void**)&original_l2c_fcr_chk_chan_modes);
+        LOGI("hooked chk");
+    }
+
+    if (sdp_offset) {
+        void* target = reinterpret_cast<void*>(base + sdp_offset);
+        hook_func(target,
+                  (void*)fake_BTA_DmSetLocalDiRecord,
+                  (void**)&original_BTA_DmSetLocalDiRecord);
+        LOGI("hooked sdp");
+    }
+
+    return chk_offset || sdp_offset;
 }
 
 static void on_library_loaded(const char* name, void*) {
