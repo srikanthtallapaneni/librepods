@@ -225,6 +225,8 @@ fun Main() {
         val textColor = if (isDarkTheme) Color.White else Color.Black
         val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
 
+        val scrollState = rememberScrollState()
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -234,12 +236,14 @@ fun Main() {
             contentAlignment = Alignment.Center
         ) {
             Column (
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(scrollState),
                 verticalArrangement = Arrangement
                     .spacedBy(16.dp)
             ) {
                 val innerBackdrop = rememberLayerBackdrop()
-
+                Spacer(modifier = Modifier.height(48.dp))
                 Column(
                     modifier = Modifier.layerBackdrop(innerBackdrop),
                     verticalArrangement = Arrangement
@@ -295,6 +299,7 @@ fun Main() {
                         ),
                     )
                 }
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
 
