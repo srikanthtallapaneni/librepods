@@ -175,7 +175,7 @@ fun HeadTrackingScreen(viewModel: AirPodsViewModel, navController: NavController
                         backdrop = rememberLayerBackdrop(),
                         modifier = Modifier.fillMaxWidth(),
                         maxScale = 0.05f,
-                        tint = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
+                        surfaceColor = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
                     ) {
                         Text(
                             stringResource(R.string.unlock_advanced_features),

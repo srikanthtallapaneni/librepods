@@ -31,13 +31,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import me.kavishdevar.librepods.R
 
 class FOSSBillingProvider(context: Context): BillingProvider {
     private val _isPremium = MutableStateFlow(false)
     override val isPremium: StateFlow<Boolean> = _isPremium
 
-    private val _price = MutableStateFlow("Any")
+    private val _price = MutableStateFlow(context.getString(R.string.name_your_own_price))
     override val price: StateFlow<String> = _price
 
     private val sharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -68,5 +68,10 @@ class FOSSBillingProvider(context: Context): BillingProvider {
         if (stored != _isPremium.value) {
             _isPremium.value = stored
         }
+    }
+
+    override fun restorePurchases() {
+        _isPremium.value = true
+        sharedPreferences.edit { putBoolean("foss_upgraded", true) }
     }
 }

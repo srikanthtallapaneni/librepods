@@ -239,13 +239,11 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
 
                 item(key = "spacer_call") { Spacer(modifier = Modifier.height(16.dp)) }
                 item(key = "call_control") {
-                    val flipped =
-                        state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CALL_MANAGEMENT_CONFIG]?.take(
-                            2
-                        )?.equals(byteArrayOf(0x00.toByte(), 0x02.toByte()))
+                    val bytes = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CALL_MANAGEMENT_CONFIG]?.take(2)?.toByteArray() ?: byteArrayOf(0x00, 0x00)
+                    val flipped = bytes[1] == 0x02.toByte()
                     CallControlSettings(
                         hazeState = hazeState,
-                        flipped = flipped == true,
+                        flipped = flipped,
                         onCallControlValueChanged = {
                             viewModel.setControlCommandValue(
                                 AACPManager.Companion.ControlCommandIdentifiers.CALL_MANAGEMENT_CONFIG,
@@ -277,7 +275,7 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
                             backdrop = rememberLayerBackdrop(),
                             modifier = Modifier.fillMaxWidth(),
                             maxScale = 0.05f,
-                            tint = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(
+                            surfaceColor = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(
                                 0xFFE59900
                             )
                         ) {

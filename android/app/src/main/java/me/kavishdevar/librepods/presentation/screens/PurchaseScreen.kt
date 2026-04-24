@@ -99,7 +99,7 @@ fun PurchaseScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Free features",
+                        text = stringResource(R.string.free_features),
                         style = TextStyle(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
@@ -242,7 +242,7 @@ fun PurchaseScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Advanced features",
+                        text = stringResource(R.string.advanced_features),
                         style = TextStyle(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
@@ -275,6 +275,36 @@ fun PurchaseScreen(
                         )
                         Text(
                             text = stringResource(R.string.conversational_awareness_description),
+                            style = TextStyle(
+                                fontSize = 12.sp,
+                                color = textColor.copy(0.6f),
+                                fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            )
+                        )
+                    }
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = Color(0x40888888),
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.digital_assistant_on_long_press),
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = FontFamily(Font(R.font.sf_pro)),
+                                color = textColor
+                            )
+                        )
+                        Text(
+                            text = stringResource(R.string.digital_assistant_on_long_press_description),
                             style = TextStyle(
                                 fontSize = 12.sp,
                                 color = textColor.copy(0.6f),
@@ -456,7 +486,8 @@ fun PurchaseScreen(
                     backdrop = rememberLayerBackdrop(),
                     modifier = Modifier.fillMaxWidth(),
                     maxScale = 0.05f,
-                    tint = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
+                    surfaceColor = if (isSystemInDarkTheme()) Color(0xFF0091FF)
+                    else  Color(0xFF0088FF) // if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
                 ) {
                     Text(
                         stringResource(R.string.buy_price, state.price),
@@ -478,6 +509,7 @@ fun PurchaseScreen(
                     backdrop = rememberLayerBackdrop(),
                     modifier = Modifier.fillMaxWidth(),
                     maxScale = 0.05f,
+                    isInteractive = false
                 ) {
                     Text(
                         stringResource(R.string.restore_purchases),

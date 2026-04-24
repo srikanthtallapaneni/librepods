@@ -363,7 +363,13 @@ class AACPManager {
             }
             val key = ByteArray(keyLength)
             System.arraycopy(data, offset, key, 0, keyLength)
-            keys[ProximityKeyType.fromByte(keyType)] = key
+            try {
+                keys[ProximityKeyType.fromByte(keyType)] = key
+            } catch (e: Exception) {
+                Log.e(
+                    TAG, "incorrect key type received: $keyType, ${key.toHexString()}"
+                )
+            }
             offset += keyLength
             Log.d(
                 TAG, "Parsed Proximity Key: Type: ${keyType}, Length: $keyLength, Key: ${
@@ -908,7 +914,7 @@ class AACPManager {
         )
         buffer.put(byteArrayOf(0x01, 0xE5.toByte(), 0x4A)) // unknown, constant
         buffer.put("PlayingApp".toByteArray())
-        buffer.put(byteArrayOf(0x56)) // 'V', seems like a identifier or a separator
+        buffer.put(byteArrayOf(0x56)) // 'V', seems like an identifier or a separator
         buffer.put("com.google.ios.youtube".toByteArray()) // package name, hardcoding for now, aforementioned reason
         buffer.put(byteArrayOf(0x52)) // 'R'
         buffer.put("HostStreamingState".toByteArray())

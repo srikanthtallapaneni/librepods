@@ -26,4 +26,5 @@ interface BillingProvider {
     val price: StateFlow<String>
     fun purchase(activity: Activity)
     fun queryPurchases()
+    fun restorePurchases()
 }

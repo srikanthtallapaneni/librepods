@@ -77,8 +77,10 @@ fun StyledButton(
     tint: Color = Color.Unspecified,
     surfaceColor: Color = Color.Unspecified,
     maxScale: Float = 0.1f,
+    enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val isInteractive = enabled && isInteractive
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val progressAnimation = remember { Animatable(0f) }
@@ -125,8 +127,8 @@ half4 main(float2 coord) {
                             } else {
                                 drawRect(Color.White.copy(0.1f))
                             }
-                            if (surfaceColor.isSpecified) {
-                                val color = if (!isInteractive && isPressed) {
+                            if (surfaceColor.isSpecified && enabled) {
+                                val color = if (isPressed) {
                                     Color(
                                         red = surfaceColor.red * 0.5f,
                                         green = surfaceColor.green * 0.5f,
@@ -137,6 +139,11 @@ half4 main(float2 coord) {
                                     surfaceColor
                                 }
                                 drawRect(color)
+                            } else {
+                                if (isPressed) {
+                                    drawRect(Color.Black.copy(alpha = 0.4f))
+                                    drawRect(Color.White.copy(alpha = 0.2f))
+                                }
                             }
                         },
                         onDrawFront = null,
@@ -245,8 +252,10 @@ half4 main(float2 coord) {
                 indication = null,
                 role = Role.Button,
                 onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    onClick()
+                    if (enabled) {
+                        haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        onClick()
+                    }
                 }
             )
             .then(
@@ -302,8 +311,10 @@ half4 main(float2 coord) {
                                 isPressed = false
                             },
                             onTap = {
-                                haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onClick()
+                                if (enabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    onClick()
+                                }
                             }
                         )
                     }

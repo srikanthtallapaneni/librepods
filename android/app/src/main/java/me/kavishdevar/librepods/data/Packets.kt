@@ -72,6 +72,7 @@ enum class NoiseControlMode {
 class AirPodsNotifications {
     companion object {
         const val AIRPODS_CONNECTED = "me.kavishdevar.librepods.AIRPODS_CONNECTED"
+        const val AIRPODS_L2CAP_CONNECTED = "me.kavishdevar.librepods.AIRPODS_CONNECTED"
         const val AIRPODS_DATA = "me.kavishdevar.librepods.AIRPODS_DATA"
         const val EAR_DETECTION_DATA = "me.kavishdevar.librepods.EAR_DETECTION_DATA"
         const val ANC_DATA = "me.kavishdevar.librepods.ANC_DATA"

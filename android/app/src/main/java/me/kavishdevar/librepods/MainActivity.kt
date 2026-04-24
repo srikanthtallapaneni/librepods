@@ -52,7 +52,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,7 +63,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -81,8 +79,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -94,8 +90,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
@@ -122,12 +116,11 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
-import kotlinx.coroutines.delay
-import me.kavishdevar.librepods.billing.BillingManager
-import me.kavishdevar.librepods.billing.BillingProviderFactory
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.presentation.components.ConfirmationDialog
+import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
+import me.kavishdevar.librepods.presentation.components.PlayBypassSheet
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledIconButton
 import me.kavishdevar.librepods.presentation.screens.AccessibilitySettingsScreen
@@ -148,6 +141,7 @@ import me.kavishdevar.librepods.presentation.screens.TransparencySettingsScreen
 import me.kavishdevar.librepods.presentation.screens.TroubleshootingScreen
 import me.kavishdevar.librepods.presentation.screens.UpdateHearingTestScreen
 import me.kavishdevar.librepods.presentation.screens.VersionScreen
+import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.PurchaseViewModel
@@ -175,7 +169,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            _root_ide_package_.me.kavishdevar.librepods.presentation.theme.LibrePodsTheme {
+            LibrePodsTheme {
                 Main()
             }
         }
@@ -224,81 +218,72 @@ fun Main() {
     val sharedPreferences = context.getSharedPreferences("settings", MODE_PRIVATE)
     if (!isSupported(sharedPreferences)) {
         val showDialog = remember { mutableStateOf(false) }
-
+        val showPlayBypassVisible = remember { mutableStateOf(false) }
         val hazeState = rememberHazeState()
+        val backdrop = rememberLayerBackdrop()
+        val isDarkTheme = isSystemInDarkTheme()
+        val textColor = if (isDarkTheme) Color.White else Color.Black
+        val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(hazeState)
-                .background(if (isSystemInDarkTheme()) Color.Black else Color(0xFFF2F2F7)),
+                .layerBackdrop(backdrop)
+                .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7)),
             contentAlignment = Alignment.Center
         ) {
-            Box (
-                modifier = Modifier
-                    .fillMaxSize()
-            )
             Column (
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement
+                    .spacedBy(16.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.not_supported),
-                    style = TextStyle(
-                        fontFamily = FontFamily(Font(R.font.sf_pro)),
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        fontSize = 20.sp
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row (
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                val innerBackdrop = rememberLayerBackdrop()
+
+                Column(
+                    modifier = Modifier.layerBackdrop(innerBackdrop),
+                    verticalArrangement = Arrangement
+                        .spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Device Info:",
+                        text = stringResource(R.string.not_supported),
                         style = TextStyle(
                             fontFamily = FontFamily(Font(R.font.sf_pro)),
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                            fontSize = 16.sp
+                            fontWeight = FontWeight.SemiBold,
+                            color = textColor,
+                            fontSize = 20.sp,
+                            textAlign = TextAlign.Center
                         ),
-                        textAlign = TextAlign.End,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text =
-                            "MANUFACTURER=${Build.MANUFACTURER}\n" +
-                            "MODEL=${Build.MODEL}\n" +
-                            "BUILD_ID=${Build.ID}\n" +
-                            "SDK_INT_FULL= ${Build.VERSION.SDK_INT_FULL}\n",
-                        style = TextStyle(
-                            fontFamily = FontFamily(Font(R.font.hack)),
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                            fontSize = 16.sp
-                        ),
-                        textAlign = TextAlign.Start,
-                    )
+
+                    DeviceInfoCard()
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(backgroundColor, RoundedCornerShape(28.dp))
+                            .clip(RoundedCornerShape(28.dp))
+                    ) {
+                        Text(
+                            text = stringResource(R.string.check_the_repository_for_more_info),
+                            style = TextStyle(
+                                fontFamily = FontFamily(Font(R.font.sf_pro)),
+                                fontWeight = FontWeight.Medium,
+                                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                                fontSize = 16.sp
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 16.dp)
+                        )
+                    }
                 }
-                Text(
-                    text = stringResource(R.string.check_the_repository_for_more_info),
-                    style = TextStyle(
-                        fontFamily = FontFamily(Font(R.font.sf_pro)),
-                        fontWeight = FontWeight.Medium,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        fontSize = 18.sp
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
                 StyledButton(
                     onClick = { showDialog.value = true },
-                    backdrop = rememberLayerBackdrop(),
+                    backdrop = innerBackdrop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.bypass_compatibility_check),
@@ -317,15 +302,19 @@ fun Main() {
             showDialog = showDialog,
             title = stringResource(R.string.bypass_compatibility_check),
             message = stringResource(R.string.bypass_compatiblity_check_confirmation),
-            confirmText = "Yes",
-            dismissText = "No",
+            confirmText = stringResource(R.string.yes),
+            dismissText = stringResource(R.string.no),
             onConfirm = {
                 showDialog.value = false
-                sharedPreferences.edit {
-                    putBoolean("bypass_device_check", true)
-                    val intent = Intent(context, MainActivity::class.java)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    context.startActivity(intent)
+                if (BuildConfig.PLAY_BUILD) {
+                    showPlayBypassVisible.value = true
+                } else {
+                    sharedPreferences.edit {
+                        putBoolean("bypass_device_check", true)
+                        val intent = Intent(context, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        context.startActivity(intent)
+                    }
                 }
             },
             onDismiss = {
@@ -333,6 +322,26 @@ fun Main() {
             },
             hazeState = hazeState
         )
+
+        if (BuildConfig.PLAY_BUILD) {
+            PlayBypassSheet(
+                visible = showPlayBypassVisible.value,
+                onDismiss = {
+                    showPlayBypassVisible.value = false
+                    showDialog.value = true
+                },
+                onConfirm = {
+                    showPlayBypassVisible.value = false
+                    sharedPreferences.edit {
+                        putBoolean("bypass_device_check", true)
+                        val intent = Intent(context, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        context.startActivity(intent)
+                    }
+                },
+                backdrop = backdrop
+            )
+        }
 
         return
     }
@@ -346,8 +355,6 @@ fun Main() {
                 .getBoolean("overlay_permission_skipped", false)
         )
     }
-
-    BillingManager.provider = BillingProviderFactory.create(context)
 
     val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(
@@ -484,7 +491,7 @@ fun Main() {
                         if (airPodsViewModel != null) VersionScreen(airPodsViewModel)
                     }
                     composable("hearing_protection") {
-                        if (airPodsViewModel != null) HearingProtectionScreen(airPodsViewModel)
+                        if (airPodsViewModel != null) HearingProtectionScreen(airPodsViewModel, navController)
                     }
                     composable("purchase_screen") {
                         val purchaseViewModel: PurchaseViewModel = viewModel()

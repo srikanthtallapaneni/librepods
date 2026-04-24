@@ -1,6 +1,6 @@
 {
-  "version": "v0.1.0-rc.4",
-  "versionCode": 3,
-  "zipUrl": "https://github.com/kavishdevar/librepods/releases/download/v0.1.0-rc.4/LibrePods-v0.1.0-rc.4.zip",
+  "version": "v0.2.3",
+  "versionCode": 36,
+  "zipUrl": "https://github.com/kavishdevar/librepods/releases/download/v0.2.3/LibrePods-v0.2.3-release.zip",
   "changelog": "https://raw.githubusercontent.com/kavishdevar/librepods/main/CHANGELOG.md"
 }

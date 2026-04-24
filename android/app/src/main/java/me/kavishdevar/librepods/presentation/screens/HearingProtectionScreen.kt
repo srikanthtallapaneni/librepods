@@ -18,29 +18,39 @@
 
 package me.kavishdevar.librepods.presentation.screens
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
-import me.kavishdevar.librepods.presentation.components.StyledScaffold
-import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.bluetooth.ATTHandles
+import me.kavishdevar.librepods.presentation.components.StyledButton
+import me.kavishdevar.librepods.presentation.components.StyledScaffold
+import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 
 @Composable
-fun HearingProtectionScreen(viewModel: AirPodsViewModel) {
+fun HearingProtectionScreen(viewModel: AirPodsViewModel, navController: NavController) {
     val backdrop = rememberLayerBackdrop()
     val state by viewModel.uiState.collectAsState()
     StyledScaffold(
@@ -53,7 +63,27 @@ fun HearingProtectionScreen(viewModel: AirPodsViewModel) {
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(spacerHeight))
-
+            if (!state.isPremium) {
+                StyledButton(
+                    onClick = {
+                        navController.navigate("purchase_screen")
+                    },
+                    backdrop = rememberLayerBackdrop(),
+                    modifier = Modifier.fillMaxWidth(),
+                    maxScale = 0.05f,
+                    surfaceColor = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
+                ) {
+                    Text(
+                        stringResource(R.string.unlock_advanced_features),
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            color = Color.White
+                        ),
+                    )
+                }
+            }
             if (state.vendorIdHook) {
                 StyledToggle(
                     title = stringResource(R.string.environmental_noise),

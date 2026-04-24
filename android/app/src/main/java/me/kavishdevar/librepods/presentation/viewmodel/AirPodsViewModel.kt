@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.billing.BillingManager
 import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.bluetooth.AACPManager.Companion.ControlCommandIdentifiers
@@ -110,8 +109,6 @@ class AirPodsViewModel(
     private var isDemoMode = false
     val demoActivated = MutableSharedFlow<Unit>()
 
-    private var billingFirstCollectDone = false
-
     private val listeners =
         mutableMapOf<ControlCommandIdentifiers, AACPManager.ControlCommandListener>()
 
@@ -163,12 +160,12 @@ class AirPodsViewModel(
     private fun observeBilling() {
         if (isDemoMode) return
         viewModelScope.launch {
-            if (!BuildConfig.PLAY_BUILD) billingFirstCollectDone = true // FOSS doesn't send multiple events
+//            if (!BuildConfig.PLAY_BUILD) billingFirstCollectDone = true // FOSS doesn't send multiple events
             BillingManager.provider.isPremium.collect { premium ->
-                if (!billingFirstCollectDone) {
-                    billingFirstCollectDone = true
-                    return@collect
-                }
+//                if (!billingFirstCollectDone) {
+//                    billingFirstCollectDone = true
+//                    return@collect
+//                }
                 if (!premium) {
                     setControlCommandBoolean(
                         ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG,
@@ -184,8 +181,9 @@ class AirPodsViewModel(
     private fun observeBroadcasts() {
         broadcastReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (!isDemoMode) when (intent?.action) {
-                    AirPodsNotifications.AIRPODS_CONNECTED -> {
+                val action = intent?.action ?: return
+                if (!isDemoMode) when (action) {
+                    AirPodsNotifications.AIRPODS_L2CAP_CONNECTED -> {
                         _uiState.update {
                             it.copy(isLocallyConnected = true)
                         }
@@ -198,10 +196,8 @@ class AirPodsViewModel(
                     }
 
                     AirPodsNotifications.BATTERY_DATA -> {
-                        val data = intent.getParcelableArrayListExtra("data", Battery::class.java)
-                            ?.toList() ?: emptyList()
                         _uiState.update {
-                            it.copy(battery = data)
+                            it.copy(battery = service.getBattery())
                         }
                     }
 
@@ -276,7 +272,7 @@ class AirPodsViewModel(
             }
         }
 
-        listeners[identifier] = listener as AACPManager.ControlCommandListener
+        listeners[identifier] = listener
     }
 
     // I'm lazy, sorry.
@@ -435,7 +431,15 @@ class AirPodsViewModel(
             _uiState.update { it.copy(loudSoundReductionEnabled = value[0].toInt() == 0x01) }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            service.attManager?.write(handle, value)
+            try {
+                service.attManager?.connect()
+                while (service.attManager?.socket?.isConnected != true) {
+                    delay(250)
+                }
+                service.attManager?.write(handle, value)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -458,13 +462,16 @@ class AirPodsViewModel(
     fun observeATT() {
         viewModelScope.launch(Dispatchers.IO) {
             service.attManager?.connect()
+            while (service.attManager?.socket?.isConnected != true) {
+                delay(1000)
+            }
             service.attManager?.enableNotifications(ATTHandles.LOUD_SOUND_REDUCTION)
             service.attManager?.enableNotifications(ATTHandles.TRANSPARENCY)
             service.attManager?.enableNotifications(ATTHandles.HEARING_AID)
 
             while (true) {
                 refreshATT()
-                delay(10000)
+                delay(15000)
             }
         }
     }
@@ -488,10 +495,6 @@ class AirPodsViewModel(
             )
         }
     }
-
-//    fun purchase(context: Context) {
-//        BillingManager.provider.purchase(context as Activity)
-//    }
 
     fun activateDemoMode() {
         isDemoMode = true
@@ -525,8 +528,17 @@ class AirPodsViewModel(
                 modelName = fakeInstance.model.displayName,
                 actualModel = fakeInstance.actualModelNumber,
                 serialNumbers = listOf("DEMO", "DEMO", "DEMO"),
-                version3 = "Demo Firmware"
+                version3 = "Demo Firmware",
+//                isPremium = true
             )
         }
+    }
+
+    fun sendPhoneMediaEQ(eq: FloatArray, phoneByte: Byte, mediaByte: Byte) {
+        service.aacpManager.sendPhoneMediaEQ(eq, phoneByte, mediaByte)
+    }
+
+    fun disconnect() {
+        service.disconnectAirPods()
     }
 }

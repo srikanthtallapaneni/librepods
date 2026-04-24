@@ -239,5 +239,28 @@
     <string name="bypass_compatibility_check">Bypass compatibility check</string>
     <string name="bypass_compatiblity_check_confirmation">Are you sure your device is supported natively/you have Xposed module enabled?</string>
     <string name="not_supported">Not supported</string>
-    <string name="check_the_repository_for_more_info">Check the repository for more info.</string>
+    <string name="check_the_repository_for_more_info">
+        Many devices are not supported due to limitations in the Android Bluetooth stack.
+        \nOn these devices, root access with an Xposed framework is required for full functionality.
+        \n\nThis limitation has been addressed in newer Android versions. The following device configurations can run the app natively:
+        \n• Google Pixel® running Android 16 March update and later with the lateset Play system update
+        \n• Google Pixel® running 17 Beta 3 and above
+        \n• OnePlus devices running OxygenOS 16 or later
+        \n• Oppo devices running ColorOS 16 or later
+        \n\nFor details, see the project documentation.</string>
+    <string name="name_your_own_price">(Name your own price)</string>
+    <string name="compatibility_play_dialog_confirmation">
+        This device may not be supported due to platform limitations and requires an Xposed framework. Tick the checkbox below and type OK to continue.
+    </string>
+    <string name="type_ok_to_continue">Type "%s" to continue</string>
+    <string name="proceed">Proceed</string>
+    <string name="read_compatibility_requirements">I have read compatibility requirements.</string>
+    <string name="device_info">Device information</string>
+    <string name="build_id">Build ID</string>
+    <string name="manufacturer">Manufacturer</string>
+    <string name="free_features">Free features</string>
+    <string name="advanced_features">Advanced features</string>
+    <string name="digital_assistant_on_long_press">Digital Assistant on Long Press</string>
+    <string name="digital_assistant_on_long_press_description">Invoke Digital Assistant when long pressing the AirPods Pro stem.</string>
+    <string name="customizations_unavailable">Customizations unavailable. Connect your AirPods at least once to access.</string>
 </resources>

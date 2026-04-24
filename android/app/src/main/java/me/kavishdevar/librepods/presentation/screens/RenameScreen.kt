@@ -56,8 +56,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
@@ -79,15 +77,12 @@ fun RenameScreen(viewModel: AirPodsViewModel) {
         name.value = name.value.copy(selection = TextRange(name.value.text.length))
     }
 
-    val backdrop = rememberLayerBackdrop()
-
     StyledScaffold(
         title = stringResource(R.string.name),
     ) { spacerHeight ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(backdrop)
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(spacerHeight))

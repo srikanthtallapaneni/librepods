@@ -2,6 +2,7 @@ package me.kavishdevar.librepods.presentation.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,7 +33,8 @@ data class AppSettingsUiState(
     val cameraPackageValue: String = "",
     val cameraPackageError: String? = null,
     val vendorIdHook: Boolean = false,
-    val isPremium: Boolean = false
+    val isPremium: Boolean = false,
+    val connectionSuccessful: Boolean = false
 )
 
 class AppSettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -43,9 +45,22 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val xposedRemotePref = XposedRemotePrefProvider.create()
 
+    val sharedPrefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPref, key ->
+        if (key == "connection_successful") {
+            _uiState.update { it.copy(connectionSuccessful = sharedPref.getBoolean(key, false)) }
+        }
+    }
+
+
     init {
         loadSettings()
         observeBilling()
+        sharedPreferences.registerOnSharedPreferenceChangeListener(sharedPrefListener)
+    }
+
+    override fun onCleared() {
+        sharedPreferences.unregisterOnSharedPreferenceChangeListener(sharedPrefListener)
+        super.onCleared()
     }
 
     private fun observeBilling() {
@@ -72,7 +87,8 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 useAlternateHeadTrackingPackets = sharedPreferences.getBoolean("use_alternate_head_tracking_packets", true),
                 conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 43).toFloat(),
                 cameraPackageValue = sharedPreferences.getString("custom_camera_package", "") ?: "",
-                vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false)
+                vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false),
+                connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false)
             )
         }
         if (BuildConfig.FLAVOR == "xposed") {

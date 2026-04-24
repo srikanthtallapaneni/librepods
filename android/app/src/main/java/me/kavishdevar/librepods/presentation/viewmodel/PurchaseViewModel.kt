@@ -42,6 +42,6 @@ class PurchaseViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun restorePurchases() {
-        BillingManager.provider.queryPurchases()
+        BillingManager.provider.restorePurchases()
     }
 }

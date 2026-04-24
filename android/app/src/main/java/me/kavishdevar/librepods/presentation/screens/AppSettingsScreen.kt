@@ -19,6 +19,7 @@
 package me.kavishdevar.librepods.presentation.screens
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -71,13 +72,13 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
 import me.kavishdevar.librepods.presentation.components.NavigationButton
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.StyledSlider
 import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
-import java.util.Locale.getDefault
 
 @Composable
 fun AppSettingsScreen(
@@ -106,7 +107,7 @@ fun AppSettingsScreen(
             val backgroundColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
             val textColor = if (isDarkTheme) Color.White else Color.Black
 
-            if (!state.isPremium) {
+            if (!state.isPremium && state.connectionSuccessful) {
                 StyledButton(
                     onClick = {
                         navController.navigate("purchase_screen")
@@ -114,7 +115,7 @@ fun AppSettingsScreen(
                     backdrop = rememberLayerBackdrop(),
                     modifier = Modifier.fillMaxWidth(),
                     maxScale = 0.05f,
-                    tint = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
+                    surfaceColor = if (isSystemInDarkTheme()) Color(0xFF916100) else Color(0xFFE59900)
                 ) {
                     Text(
                         stringResource(R.string.unlock_advanced_features),
@@ -128,246 +129,270 @@ fun AppSettingsScreen(
                 }
             }
 
-            StyledToggle(
-                title = stringResource(R.string.widget),
-                label = stringResource(R.string.show_phone_battery_in_widget),
-                description = stringResource(R.string.show_phone_battery_in_widget_description),
-                checked = state.showPhoneBatteryInWidget,
-                onCheckedChange = viewModel::setShowPhoneBatteryInWidget,
-                enabled = state.isPremium
-            )
-
-            Text(
-                text = stringResource(R.string.conversational_awareness), style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        backgroundColor, RoundedCornerShape(28.dp)
-                    )
-                    .padding(vertical = 4.dp)
-            ) {
+            if (state.connectionSuccessful) {
                 StyledToggle(
-                    label = stringResource(R.string.conversational_awareness_pause_music),
-                    description = stringResource(R.string.conversational_awareness_pause_music_description),
-                    checked = state.conversationalAwarenessPauseMusicEnabled,
-                    onCheckedChange = viewModel::setConversationalAwarenessPauseMusicEnabled,
-                    independent = false,
+                    title = stringResource(R.string.widget),
+                    label = stringResource(R.string.show_phone_battery_in_widget),
+                    description = stringResource(R.string.show_phone_battery_in_widget_description),
+                    checked = state.showPhoneBatteryInWidget,
+                    onCheckedChange = viewModel::setShowPhoneBatteryInWidget,
                     enabled = state.isPremium
                 )
 
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                Text(
+                    text = stringResource(R.string.conversational_awareness), style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor.copy(alpha = 0.6f),
+                        fontFamily = FontFamily(Font(R.font.sf_pro))
+                    ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
                 )
 
-                StyledToggle(
-                    label = stringResource(R.string.relative_conversational_awareness_volume),
-                    description = stringResource(R.string.relative_conversational_awareness_volume_description),
-                    checked = state.relativeConversationalAwarenessVolumeEnabled,
-                    onCheckedChange = viewModel::setRelativeConversationalAwarenessVolumeEnabled,
-                    independent = false,
-                    enabled = state.isPremium,
-                )
-            }
+                Spacer(modifier = Modifier.height(2.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            backgroundColor, RoundedCornerShape(28.dp)
+                        )
+                        .padding(vertical = 4.dp)
+                ) {
+                    StyledToggle(
+                        label = stringResource(R.string.conversational_awareness_pause_music),
+                        description = stringResource(R.string.conversational_awareness_pause_music_description),
+                        checked = state.conversationalAwarenessPauseMusicEnabled,
+                        onCheckedChange = viewModel::setConversationalAwarenessPauseMusicEnabled,
+                        independent = false,
+                        enabled = state.isPremium
+                    )
 
-            val conversationalAwarenessVolume = state.conversationalAwarenessVolume
-            LaunchedEffect(conversationalAwarenessVolume) {
-                viewModel.setConversationalAwarenessVolume(conversationalAwarenessVolume)
-            }
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = Color(0x40888888),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
 
-            StyledSlider(
-                label = stringResource(R.string.conversational_awareness_volume),
-                value = conversationalAwarenessVolume,
-                valueRange = 10f..85f,
-                snapPoints = listOf(44f),
-                startLabel = "10%",
-                endLabel = "85%",
-                onValueChange = { newValue -> viewModel.setConversationalAwarenessVolume(newValue) },
-                independent = true,
-                enabled = state.isPremium
-            )
+                    StyledToggle(
+                        label = stringResource(R.string.relative_conversational_awareness_volume),
+                        description = stringResource(R.string.relative_conversational_awareness_volume_description),
+                        checked = state.relativeConversationalAwarenessVolumeEnabled,
+                        onCheckedChange = viewModel::setRelativeConversationalAwarenessVolumeEnabled,
+                        independent = false,
+                        enabled = state.isPremium,
+                    )
+                }
 
-            if (!BuildConfig.PLAY_BUILD) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                NavigationButton(
-                    to = "",
-                    title = stringResource(R.string.camera_control),
-                    name = stringResource(R.string.set_custom_camera_package),
-                    navController = navController,
-                    onClick = {
-                        if (state.isPremium) viewModel.setShowCameraDialog(true)
+                val conversationalAwarenessVolume = state.conversationalAwarenessVolume
+                LaunchedEffect(conversationalAwarenessVolume) {
+                    viewModel.setConversationalAwarenessVolume(conversationalAwarenessVolume)
+                }
+
+                StyledSlider(
+                    label = stringResource(R.string.conversational_awareness_volume),
+                    value = conversationalAwarenessVolume,
+                    valueRange = 10f..85f,
+                    snapPoints = listOf(44f),
+                    startLabel = "10%",
+                    endLabel = "85%",
+                    onValueChange = { newValue ->
+                        viewModel.setConversationalAwarenessVolume(
+                            newValue
+                        )
                     },
                     independent = true,
-                    description = stringResource(R.string.camera_control_app_description)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            if (!BuildConfig.PLAY_BUILD) {
-                StyledToggle(
-                    title = stringResource(R.string.ear_detection),
-                    label = stringResource(R.string.disconnect_when_not_wearing),
-                    description = stringResource(R.string.disconnect_when_not_wearing_description),
-                    checked = state.disconnectWhenNotWearing,
-                    onCheckedChange = viewModel::setDisconnectWhenNotWearing,
                     enabled = state.isPremium
                 )
-            }
 
-            Text(
-                text = stringResource(R.string.takeover_airpods_state), style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
-            )
+//            if (!BuildConfig.PLAY_BUILD) {
+//                Spacer(modifier = Modifier.height(16.dp))
+//
+//                NavigationButton(
+//                    to = "",
+//                    title = stringResource(R.string.camera_control),
+//                    name = stringResource(R.string.set_custom_camera_package),
+//                    navController = navController,
+//                    onClick = {
+//                        if (state.isPremium) viewModel.setShowCameraDialog(true)
+//                    },
+//                    independent = true,
+//                    description = stringResource(R.string.camera_control_app_description)
+//                )
+//            }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        backgroundColor, RoundedCornerShape(28.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+                if (context.checkSelfPermission("android.permission.BLUETOOTH_PRIVILEGED") == PackageManager.PERMISSION_GRANTED) {
+                    StyledToggle(
+                        title = stringResource(R.string.ear_detection),
+                        label = stringResource(R.string.disconnect_when_not_wearing),
+                        description = stringResource(R.string.disconnect_when_not_wearing_description),
+                        checked = state.disconnectWhenNotWearing,
+                        onCheckedChange = viewModel::setDisconnectWhenNotWearing,
+                        enabled = state.isPremium
                     )
-                    .padding(vertical = 4.dp)
-            ) {
-                StyledToggle(
-                    label = stringResource(R.string.takeover_disconnected),
-                    description = stringResource(R.string.takeover_disconnected_desc),
-                    checked = state.takeoverWhenDisconnected,
-                    onCheckedChange = viewModel::setTakeoverWhenDisconnected,
-                    independent = false,
-                    enabled = state.isPremium
-                )
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                }
+
+                Text(
+                    text = stringResource(R.string.takeover_airpods_state), style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor.copy(alpha = 0.6f),
+                        fontFamily = FontFamily(Font(R.font.sf_pro))
+                    ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
                 )
 
-                StyledToggle(
-                    label = stringResource(R.string.takeover_idle),
-                    description = stringResource(R.string.takeover_idle_desc),
-                    checked = state.takeoverWhenIdle,
-                    onCheckedChange = viewModel::setTakeoverWhenIdle,
-                    independent = false,
-                    enabled = state.isPremium
-                )
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
+                Spacer(modifier = Modifier.height(4.dp))
 
-                StyledToggle(
-                    label = stringResource(R.string.takeover_music),
-                    description = stringResource(R.string.takeover_music_desc),
-                    checked = state.takeoverWhenMusic,
-                    onCheckedChange = viewModel::setTakeoverWhenMusic,
-                    independent = false,
-                    enabled = state.isPremium
-                )
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-
-                StyledToggle(
-                    label = stringResource(R.string.takeover_call),
-                    description = stringResource(R.string.takeover_call_desc),
-                    checked = state.takeoverWhenCall,
-                    onCheckedChange = viewModel::setTakeoverWhenCall,
-                    independent = false,
-                    enabled = state.isPremium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = stringResource(R.string.takeover_phone_state), style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        backgroundColor, RoundedCornerShape(28.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            backgroundColor, RoundedCornerShape(28.dp)
+                        )
+                        .padding(vertical = 4.dp)
+                ) {
+                    StyledToggle(
+                        label = stringResource(R.string.takeover_disconnected),
+                        description = stringResource(R.string.takeover_disconnected_desc),
+                        checked = state.takeoverWhenDisconnected,
+                        onCheckedChange = viewModel::setTakeoverWhenDisconnected,
+                        independent = false,
+                        enabled = state.isPremium
                     )
-                    .padding(vertical = 4.dp)
-            ) {
-                StyledToggle(
-                    label = stringResource(R.string.takeover_ringing_call),
-                    description = stringResource(R.string.takeover_ringing_call_desc),
-                    checked = state.takeoverWhenRingingCall,
-                    onCheckedChange = viewModel::setTakeoverWhenRingingCall,
-                    independent = false,
-                    enabled = state.isPremium
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = Color(0x40888888),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    StyledToggle(
+                        label = stringResource(R.string.takeover_idle),
+                        description = stringResource(R.string.takeover_idle_desc),
+                        checked = state.takeoverWhenIdle,
+                        onCheckedChange = viewModel::setTakeoverWhenIdle,
+                        independent = false,
+                        enabled = state.isPremium
+                    )
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = Color(0x40888888),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    StyledToggle(
+                        label = stringResource(R.string.takeover_music),
+                        description = stringResource(R.string.takeover_music_desc),
+                        checked = state.takeoverWhenMusic,
+                        onCheckedChange = viewModel::setTakeoverWhenMusic,
+                        independent = false,
+                        enabled = state.isPremium
+                    )
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = Color(0x40888888),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    StyledToggle(
+                        label = stringResource(R.string.takeover_call),
+                        description = stringResource(R.string.takeover_call_desc),
+                        checked = state.takeoverWhenCall,
+                        onCheckedChange = viewModel::setTakeoverWhenCall,
+                        independent = false,
+                        enabled = state.isPremium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.takeover_phone_state), style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor.copy(alpha = 0.6f),
+                        fontFamily = FontFamily(Font(R.font.sf_pro))
+                    ), modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            backgroundColor, RoundedCornerShape(28.dp)
+                        )
+                        .padding(vertical = 4.dp)
+                ) {
+                    StyledToggle(
+                        label = stringResource(R.string.takeover_ringing_call),
+                        description = stringResource(R.string.takeover_ringing_call_desc),
+                        checked = state.takeoverWhenRingingCall,
+                        onCheckedChange = viewModel::setTakeoverWhenRingingCall,
+                        independent = false,
+                        enabled = state.isPremium
+                    )
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = Color(0x40888888),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    StyledToggle(
+                        label = stringResource(R.string.takeover_media_start),
+                        description = stringResource(R.string.takeover_media_start_desc),
+                        checked = state.takeoverWhenMediaStart,
+                        onCheckedChange = viewModel::setTakeoverWhenMediaStart,
+                        independent = false,
+                        enabled = state.isPremium
+                    )
+                }
+
+                Text(
+                    text = stringResource(R.string.advanced_options), style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor.copy(alpha = 0.6f),
+                        fontFamily = FontFamily(Font(R.font.sf_pro))
+                    ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
                 )
 
+                Spacer(modifier = Modifier.height(2.dp))
+
                 StyledToggle(
-                    label = stringResource(R.string.takeover_media_start),
-                    description = stringResource(R.string.takeover_media_start_desc),
-                    checked = state.takeoverWhenMediaStart,
-                    onCheckedChange = viewModel::setTakeoverWhenMediaStart,
-                    independent = false,
+                    label = stringResource(R.string.use_alternate_head_tracking_packets),
+                    description = stringResource(R.string.use_alternate_head_tracking_packets_description),
+                    checked = state.useAlternateHeadTrackingPackets,
+                    onCheckedChange = viewModel::setUseAlternateHeadTrackingPackets,
+                    independent = true,
                     enabled = state.isPremium
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.customizations_unavailable),
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = FontFamily(Font(R.font.sf_pro)),
+                        color = textColor.copy(alpha = 0.6f),
+                    ),
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 16.dp)
                 )
             }
-
-            Text(
-                text = stringResource(R.string.advanced_options), style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            StyledToggle(
-                label = stringResource(R.string.use_alternate_head_tracking_packets),
-                description = stringResource(R.string.use_alternate_head_tracking_packets_description),
-                checked = state.useAlternateHeadTrackingPackets,
-                onCheckedChange = viewModel::setUseAlternateHeadTrackingPackets,
-                independent = true,
-                enabled = state.isPremium
-            )
 
 
             if (BuildConfig.FLAVOR == "xposed") {
                 Spacer(modifier = Modifier.height(16.dp))
-                val restartBluetoothText = stringResource(R.string.found_offset_restart_bluetooth)
+                val restartBluetoothText =
+                    stringResource(R.string.found_offset_restart_bluetooth)
                 StyledToggle(
-                    label = stringResource(R.string.act_as_an_apple_device) + " (${stringResource(R.string.requires_xposed)})",
+                    label = stringResource(R.string.act_as_an_apple_device) + " (${
+                        stringResource(
+                            R.string.requires_xposed
+                        )
+                    })",
                     description = stringResource(R.string.act_as_an_apple_device_description),
                     checked = state.vendorIdHook,
                     onCheckedChange = { enabled ->
@@ -379,8 +404,8 @@ fun AppSettingsScreen(
                 )
             }
 
-
             if (!BuildConfig.PLAY_BUILD) {
+                Spacer(modifier = Modifier.height(16.dp))
                 NavigationButton(
                     to = "troubleshooting",
                     name = stringResource(R.string.troubleshooting),
@@ -418,15 +443,16 @@ fun AppSettingsScreen(
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                             data = "mailto:".toUri()
                             putExtra(Intent.EXTRA_EMAIL, arrayOf("contact@kavish.xyz"))
-                            putExtra(Intent.EXTRA_SUBJECT, "LibrePods: ")
+                            putExtra(Intent.EXTRA_SUBJECT, "LibrePods: <SUBJECT>")
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "\n\n\n----------" +
+                                "Describe your issue here:" +
+                                "\n\n\n\n----------" +
                                     "\nPhone details:" +
-                                    "\nDEVICE:  ${Build.DEVICE}" +
-                                    "\nMANUFACTURER: ${Build.MANUFACTURER} (${Build.BRAND})" +
+                                    "\nMANUFACTURER: ${Build.MANUFACTURER}" +
                                     "\nMODEL: ${Build.MODEL} (${Build.PRODUCT})" +
-                                    "\nVERSION: ${Build.DISPLAY} (${Build.VERSION.SDK_INT_FULL})" +
+                                    "\nDISPLAY_VERSION: ${Build.DISPLAY} (${Build.PRODUCT})" +
+                                    "\nID: ${Build.ID} (SDK ${Build.VERSION.SDK_INT_FULL})" +
                                     "\n\nApp details:" +
                                     "\nVERSION: ${BuildConfig.VERSION_NAME}" +
                                     "\nVERSION_CODE: ${BuildConfig.VERSION_CODE}" +
@@ -478,7 +504,8 @@ fun AppSettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+            DeviceInfoCard()
 
             Text(
                 text = stringResource(R.string.about), style = TextStyle(
@@ -486,7 +513,7 @@ fun AppSettingsScreen(
                     fontWeight = FontWeight.Bold,
                     color = textColor.copy(alpha = 0.6f),
                     fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
+                ), modifier = Modifier.padding(start = 16.dp, bottom = 2.dp, top = 24.dp)
             )
 
             val rowHeight = remember { mutableStateOf(0.dp) }

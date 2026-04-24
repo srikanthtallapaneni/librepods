@@ -162,20 +162,18 @@ class PlayBillingProvider(
                 it.purchaseState == Purchase.PurchaseState.PURCHASED
         }
 
-
-//        val navigateToPurchase = purchases.find {
+//        val purchase = purchases.find {
 //            it.products.contains(PREMIUM_PRODUCT_ID) && it.purchaseState == Purchase.PurchaseState.PURCHASED
 //        }
 //
-//        if (navigateToPurchase != null) {
+//        if (purchase != null) {
 //            val consumeParams = ConsumeParams.newBuilder()
-//                .setPurchaseToken(navigateToPurchase.purchaseToken)
+//                .setPurchaseToken(purchase.purchaseToken)
 //                .build()
 //            scope.launch {
 //                billingClient.consumeAsync(consumeParams) { _, _ ->}
 //            }
 //        }
-
 
         _isPremium.value = hasPremium
 
@@ -200,5 +198,9 @@ class PlayBillingProvider(
         scope.launch {
             queryExistingPurchases()
         }
+    }
+
+    override fun restorePurchases() {
+        queryPurchases()
     }
 }

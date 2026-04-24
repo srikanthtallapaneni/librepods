@@ -28,7 +28,7 @@ android {
         applicationId = "me.kavishdevar.librepods"
         minSdk = 33
         targetSdk = 37
-        versionCode = 34
+        versionCode = 36
         versionName = "0.2.3"
     }
     buildTypes {
@@ -50,14 +50,17 @@ android {
         debug {
             buildConfigField("Boolean", "PLAY_BUILD", "false")
             signingConfig = signingConfigs.getByName("release")
+            versionNameSuffix = "-debug"
         }
         create("playRelease") {
             initWith(getByName("release"))
             buildConfigField("Boolean", "PLAY_BUILD", "true")
+            versionNameSuffix = "-play"
         }
         create("playDebug") {
             initWith(getByName("debug"))
             buildConfigField("Boolean", "PLAY_BUILD", "true")
+            versionNameSuffix = "-youshouldnothavethis"
         }
     }
     compileOptions {
@@ -104,7 +107,6 @@ android {
                     arguments += "-DIS_XPOSED=ON"
                 }
             }
-            versionNameSuffix = "-xposed"
         }
     }
 }
@@ -113,6 +115,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.accompanist.permissions)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
