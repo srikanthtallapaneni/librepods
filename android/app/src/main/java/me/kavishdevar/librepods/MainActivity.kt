@@ -310,7 +310,7 @@ fun Main() {
                     showPlayBypassVisible.value = true
                 } else {
                     sharedPreferences.edit {
-                        putBoolean("bypass_device_check", true)
+                        putBoolean("bypass_device_check.v2", true)
                         val intent = Intent(context, MainActivity::class.java)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         context.startActivity(intent)
@@ -333,7 +333,7 @@ fun Main() {
                 onConfirm = {
                     showPlayBypassVisible.value = false
                     sharedPreferences.edit {
-                        putBoolean("bypass_device_check", true)
+                        putBoolean("bypass_device_check.v2", true)
                         val intent = Intent(context, MainActivity::class.java)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         context.startActivity(intent)

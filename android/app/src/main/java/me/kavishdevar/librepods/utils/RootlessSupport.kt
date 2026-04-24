@@ -38,5 +38,5 @@ fun isSupported(sharedPreferences: SharedPreferences): Boolean {
     } else if (isOppoOrOnePlus) {
         return Build.VERSION.SDK_INT >= 36
     }
-    return sharedPreferences.getBoolean("bypass_device_check", false)
+    return sharedPreferences.getBoolean("bypass_device_check.v2", false)
 }
