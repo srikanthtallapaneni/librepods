@@ -72,7 +72,11 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
     fun connect() {
         val uuid = ParcelUuid.fromString("00000000-0000-0000-0000-000000000000")
 
-        socket = createBluetoothSocket(adapter, device, uuid)
+        try {
+            socket = createBluetoothSocket(adapter, device, uuid)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to create socket")
+        }
         try {
             socket!!.connect()
         } catch (e: Exception) {
@@ -203,7 +207,7 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
     private fun createBluetoothSocket(adapter: BluetoothAdapter, device: BluetoothDevice, uuid: ParcelUuid): BluetoothSocket {
         val type = 3 // L2CAP
         val constructorSpecs = listOf(
-            arrayOf(adapter, device, type, true, 31, uuid),
+            arrayOf(adapter, device, type, true, true, 31, uuid),
             arrayOf(device, type, true, true, 31, uuid),
             arrayOf(device, type, 1, true, true, 31, uuid),
             arrayOf(type, 1, true, true, device, 31, uuid),
