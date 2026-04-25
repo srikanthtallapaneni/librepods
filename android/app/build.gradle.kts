@@ -1,6 +1,6 @@
 import java.util.Properties
 
-val versionName = "0.2.3"
+val appVersionName = "0.2.3"
 
 plugins {
     alias(libs.plugins.android.application)
@@ -31,7 +31,7 @@ android {
         minSdk = 33
         targetSdk = 37
         versionCode = 38
-        versionName = versionName
+        versionName = appVersionName
     }
     buildTypes {
         release {
@@ -177,7 +177,7 @@ fun registerRootModuleZipTask(
         rename { "LibrePods.apk" }
     }
 
-    archiveFileName.set("LibrePods-FOSS-v$versionName-$buildType.zip")
+    archiveFileName.set("LibrePods-FOSS-v$appVersionName-$buildType.zip")
     destinationDirectory.set(layout.buildDirectory.dir("outputs/rootModuleZips"))
 }
 
@@ -205,12 +205,12 @@ val collect = tasks.register<Copy>("collectReleaseArtifacts") {
 
     from(layout.buildDirectory.dir("outputs/apk/xposed/release")) {
         include("*.apk")
-        rename(".*", "LibrePods-FOSS-v$versionName-release.apk")
+        rename(".*", "LibrePods-FOSS-v$appVersionName-release.apk")
     }
 
     from(layout.buildDirectory.dir("outputs/apk/xposed/debug")) {
         include("*.apk")
-        rename(".*", "LibrePods-FOSS-v$versionName-debug.apk")
+        rename(".*", "LibrePods-FOSS-v$appVersionName-debug.apk")
     }
 
     from(layout.buildDirectory.dir("outputs/bundle/xposedPlayRelease")) {
