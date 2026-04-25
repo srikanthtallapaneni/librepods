@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.billing.BillingManager
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import me.kavishdevar.librepods.utils.NativeBridge
+import me.kavishdevar.librepods.utils.XposedState
 import kotlin.math.roundToInt
 
 data class AppSettingsUiState(
@@ -91,7 +91,7 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false)
             )
         }
-        if (BuildConfig.FLAVOR == "xposed") {
+        if (XposedState.isAvailable && XposedState.bluetoothScopeEnabled) {
             NativeBridge.setSdpHook(_uiState.value.vendorIdHook)
         }
     }

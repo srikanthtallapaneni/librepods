@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -86,11 +87,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -120,9 +123,12 @@ import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.presentation.components.ConfirmationDialog
 import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
-import me.kavishdevar.librepods.presentation.components.PlayBypassSheet
+import me.kavishdevar.librepods.presentation.components.SelectItem
+import me.kavishdevar.librepods.presentation.components.StyledBottomSheet
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledIconButton
+import me.kavishdevar.librepods.presentation.components.StyledInputField
+import me.kavishdevar.librepods.presentation.components.StyledSelectList
 import me.kavishdevar.librepods.presentation.screens.AccessibilitySettingsScreen
 import me.kavishdevar.librepods.presentation.screens.AdaptiveStrengthScreen
 import me.kavishdevar.librepods.presentation.screens.AirPodsSettingsScreen
@@ -146,6 +152,7 @@ import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.PurchaseViewModel
 import me.kavishdevar.librepods.services.AirPodsService
+import me.kavishdevar.librepods.utils.XposedState
 import me.kavishdevar.librepods.utils.isSupported
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -157,7 +164,7 @@ lateinit var connectionStatusReceiver: BroadcastReceiver
 class MainActivity : ComponentActivity() {
     companion object {
         init {
-            if (BuildConfig.FLAVOR == "xposed") {
+            if (XposedState.isAvailable && XposedState.bluetoothScopeEnabled) {
                 System.loadLibrary("l2c_fcr_hook")
             }
         }
@@ -329,23 +336,118 @@ fun Main() {
         )
 
         if (BuildConfig.PLAY_BUILD) {
-            PlayBypassSheet(
+            StyledBottomSheet(
                 visible = showPlayBypassVisible.value,
                 onDismiss = {
                     showPlayBypassVisible.value = false
                     showDialog.value = true
                 },
-                onConfirm = {
-                    showPlayBypassVisible.value = false
-                    sharedPreferences.edit {
-                        putBoolean("bypass_device_check.v2", true)
-                        val intent = Intent(context, MainActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        context.startActivity(intent)
-                    }
-                },
                 backdrop = backdrop
-            )
+            ) { innerBackdrop, _ ->
+                val contentColor = if (isDarkTheme) Color.White else Color.Black
+
+                var acknowledged by remember { mutableStateOf(false) }
+                val inputState = rememberTextFieldState("")
+
+                val isValid = acknowledged && inputState.text.trim() == "OK"
+
+                val sfPro = FontFamily(Font(R.font.sf_pro))
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.bypass_compatibility_check),
+                        style = TextStyle(
+                            fontFamily = sfPro,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp,
+                            color = contentColor
+                        ),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    Text(
+                        text = stringResource(R.string.compatibility_play_dialog_confirmation),
+                        style = TextStyle(
+                            fontFamily = sfPro,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            color = contentColor
+                        ),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    StyledSelectList(
+                        items = listOf(
+                            SelectItem(
+                                name = stringResource(R.string.read_compatibility_requirements),
+                                selected = acknowledged,
+                                onClick = { acknowledged = !acknowledged }
+                            )
+                        )
+                    )
+
+                    val focusRequester = remember { FocusRequester() }
+                    val keyboardController = LocalSoftwareKeyboardController.current
+
+                    LaunchedEffect(Unit) {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    }
+
+                    StyledInputField(
+                        inputState = inputState,
+                        focusRequester = focusRequester,
+                        placeholder = stringResource(R.string.type_ok_to_continue, "OK")
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        StyledButton(
+                            onClick = { showPlayBypassVisible.value = false },
+                            backdrop = innerBackdrop,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.no),
+                                style = TextStyle(
+                                    fontFamily = sfPro,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                    color = contentColor
+                                )
+                            )
+                        }
+                        StyledButton(
+                            onClick =  {
+                                showPlayBypassVisible.value = false
+                                sharedPreferences.edit {
+                                    putBoolean("bypass_device_check.v2", true)
+                                    val intent = Intent(context, MainActivity::class.java)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    context.startActivity(intent)
+                                }
+                            },
+                            backdrop = innerBackdrop,
+                            isInteractive = isValid,
+                            modifier = Modifier.weight(1f),
+                            enabled = isValid,
+                            surfaceColor = if (isDarkTheme) Color(0xFF0091FF) else Color(0xFF0088FF)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.proceed),
+                                style = TextStyle(
+                                    fontFamily = sfPro,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                    color = if (isValid) contentColor else contentColor.copy(alpha = 0.4f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         return

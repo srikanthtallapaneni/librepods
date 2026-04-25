@@ -402,7 +402,7 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navController: NavC
                 }
             }
 
-//            if (!hearingAidEnabled && BuildConfig.FLAVOR == "xposed") {
+//            if (!hearingAidEnabled && XposedState.isAvailable) {
 //                Text(
 //                    text = stringResource(R.string.apply_eq_to), style = TextStyle(
 //                        fontSize = 14.sp,

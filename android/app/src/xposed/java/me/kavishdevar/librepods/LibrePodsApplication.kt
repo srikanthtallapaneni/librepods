@@ -9,6 +9,7 @@ import io.github.libxposed.service.XposedServiceHelper
 import me.kavishdevar.librepods.billing.BillingManager
 import me.kavishdevar.librepods.billing.BillingProviderFactory
 import me.kavishdevar.librepods.utils.XposedServiceHolder
+import me.kavishdevar.librepods.utils.XposedState
 
 class LibrePodsApplication: Application(), XposedServiceHelper.OnServiceListener, DefaultLifecycleObserver {
     override fun onCreate() {
@@ -22,13 +23,18 @@ class LibrePodsApplication: Application(), XposedServiceHelper.OnServiceListener
 
     override fun onResume(owner: LifecycleOwner) {
         BillingManager.provider.queryPurchases()
+        XposedState.isAvailable = true
+        XposedState.bluetoothScopeEnabled = XposedServiceHolder.service?.scope?.contains("com.google.android.bluetooth") == true || XposedServiceHolder.service?.scope?.contains("com.android.bluetooth") == true
     }
 
-    override fun onServiceBind(p0: XposedService) {
-        XposedServiceHolder.service = p0
+    override fun onServiceBind(service: XposedService) {
+        XposedServiceHolder.service = service
+        XposedState.isAvailable = true
+        XposedState.bluetoothScopeEnabled = XposedServiceHolder.service?.scope?.contains("com.google.android.bluetooth") == true || XposedServiceHolder.service?.scope?.contains("com.android.bluetooth") == true
     }
 
     override fun onServiceDied(p0: XposedService) {
         XposedServiceHolder.service = null
+        XposedState.isAvailable = false
     }
 }

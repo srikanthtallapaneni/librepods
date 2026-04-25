@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,8 +36,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -49,8 +53,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -62,7 +68,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -74,12 +82,17 @@ import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
 import me.kavishdevar.librepods.presentation.components.NavigationButton
+import me.kavishdevar.librepods.presentation.components.StyledBottomSheet
 import me.kavishdevar.librepods.presentation.components.StyledButton
+import me.kavishdevar.librepods.presentation.components.StyledIconButton
+import me.kavishdevar.librepods.presentation.components.StyledInputField
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.StyledSlider
 import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
+import me.kavishdevar.librepods.utils.XposedState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsScreen(
     navController: NavController, viewModel: AppSettingsViewModel = viewModel()
@@ -89,6 +102,12 @@ fun AppSettingsScreen(
     val state by viewModel.uiState.collectAsState()
 
     val backdrop = rememberLayerBackdrop()
+
+    val contactBottomSheet = remember { mutableStateOf(false) }
+    val subjectState = remember { TextFieldState() }
+    val descriptionState = remember { TextFieldState() }
+    val subjectFocusRequester = remember { FocusRequester() }
+    val descriptionFocusRequester = remember { FocusRequester() }
 
     StyledScaffold(
         title = stringResource(R.string.settings)
@@ -367,24 +386,28 @@ fun AppSettingsScreen(
                     independent = true,
                     enabled = state.isPremium
                 )
+                Spacer(modifier = Modifier.height(16.dp))
             } else {
-                Text(
-                    text = stringResource(R.string.customizations_unavailable),
-                    style = TextStyle(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = FontFamily(Font(R.font.sf_pro)),
-                        color = textColor.copy(alpha = 0.6f),
-                    ),
+                Box(
                     modifier = Modifier
+                        .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7))
                         .padding(horizontal = 16.dp)
-                        .padding(top = 16.dp)
-                )
+                        .padding(top = 16.dp, bottom = 2.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.customizations_unavailable),
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            color = textColor.copy(alpha = 0.6f),
+                        ),
+                        modifier = Modifier
+                    )
+                }
             }
 
-
-            if (BuildConfig.FLAVOR == "xposed") {
-                Spacer(modifier = Modifier.height(16.dp))
+            if (XposedState.isAvailable && XposedState.bluetoothScopeEnabled) {
                 val restartBluetoothText =
                     stringResource(R.string.found_offset_restart_bluetooth)
                 StyledToggle(
@@ -417,14 +440,20 @@ fun AppSettingsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = stringResource(R.string.contact), style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(16.dp, bottom = 2.dp, top = 24.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7))
+                    .padding(start = 16.dp, bottom = 2.dp, top = 24.dp, end = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.contact), style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor.copy(alpha = 0.6f),
+                        fontFamily = FontFamily(Font(R.font.sf_pro))
+                    )
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
             Column(
@@ -439,29 +468,7 @@ fun AppSettingsScreen(
                     to = "",
                     name = stringResource(R.string.email),
                     navController = navController,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = "mailto:".toUri()
-                            putExtra(Intent.EXTRA_EMAIL, arrayOf("contact@kavish.xyz"))
-                            putExtra(Intent.EXTRA_SUBJECT, "LibrePods: <SUBJECT>")
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "Describe your issue here:" +
-                                "\n\n\n\n----------" +
-                                    "\nPhone details:" +
-                                    "\nMANUFACTURER: ${Build.MANUFACTURER}" +
-                                    "\nMODEL: ${Build.MODEL} (${Build.PRODUCT})" +
-                                    "\nDISPLAY_VERSION: ${Build.DISPLAY} (${Build.PRODUCT})" +
-                                    "\nID: ${Build.ID} (SDK ${Build.VERSION.SDK_INT_FULL})" +
-                                    "\n\nApp details:" +
-                                    "\nVERSION: ${BuildConfig.VERSION_NAME}" +
-                                    "\nVERSION_CODE: ${BuildConfig.VERSION_CODE}" +
-                                    "\nFLAVOR: ${BuildConfig.FLAVOR}" +
-                                    "\nBUILD_TYPE: ${BuildConfig.BUILD_TYPE}"
-                            )
-                        }
-                        context.startActivity(intent)
-                    },
+                    onClick = { contactBottomSheet.value = true },
                     independent = false
                 )
 
@@ -507,14 +514,20 @@ fun AppSettingsScreen(
             Spacer(modifier = Modifier.height(20.dp))
             DeviceInfoCard()
 
-            Text(
-                text = stringResource(R.string.about), style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontFamily = FontFamily(Font(R.font.sf_pro))
-                ), modifier = Modifier.padding(start = 16.dp, bottom = 2.dp, top = 24.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7))
+                    .padding(start = 16.dp, bottom = 2.dp, top = 24.dp, end = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.about), style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor.copy(alpha = 0.6f),
+                        fontFamily = FontFamily(Font(R.font.sf_pro))
+                    )
+                )
+            }
 
             val rowHeight = remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
@@ -717,6 +730,94 @@ fun AppSettingsScreen(
                         )
                     }
                 })
+            }
+        }
+        StyledBottomSheet(
+            visible = contactBottomSheet.value,
+            onDismiss = { contactBottomSheet.value = false },
+            backdrop = backdrop
+        ) { innerBackdrop, progress ->
+            val animatedPadding = lerp(16.dp, 2.dp, progress)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = animatedPadding)
+                    .padding(bottom = 16.dp),
+            ) {
+               Row(
+                   modifier = Modifier
+                       .fillMaxWidth()
+                       .padding(bottom = 16.dp),
+                   horizontalArrangement = Arrangement.SpaceBetween,
+                   verticalAlignment = Alignment.CenterVertically
+               ) {
+                   StyledIconButton(
+                       icon = "\uDBC0\uDD84",
+                       backdrop = innerBackdrop,
+                       onClick = { contactBottomSheet.value = false }
+                   )
+                   Text (
+                       text = stringResource(R.string.describe_your_issue),
+                       style = TextStyle(
+                           fontSize = 18.sp,
+                           fontFamily = FontFamily(Font(R.font.sf_pro)),
+                           fontWeight = FontWeight.Bold,
+                           textAlign = TextAlign.Center
+                       )
+                   )
+                   StyledIconButton(
+                       icon = "\uDBC0\uDE1F",
+                       backdrop = innerBackdrop,
+                       surfaceColor = if (isSystemInDarkTheme()) Color(0xFF0091FF) else Color(0xFF0088FF),
+                       iconTint = if (subjectState.text.isNotEmpty() && descriptionState.text.isNotEmpty()) Color.White else Color.Gray,
+                       enabled = subjectState.text.isNotEmpty() && descriptionState.text.isNotEmpty(),
+                       onClick = {
+                           contactBottomSheet.value = false
+                           val intent = Intent(Intent.ACTION_SENDTO).apply {
+                               data = "mailto:".toUri()
+                               putExtra(Intent.EXTRA_EMAIL, arrayOf("contact@kavish.xyz"))
+                               putExtra(Intent.EXTRA_SUBJECT, "LibrePods: ${subjectState.text}")
+                               putExtra(
+                                   Intent.EXTRA_TEXT,
+                                   "${descriptionState.text}" +
+                                       "\n\n----------" +
+                                       "\nPhone details:" +
+                                       "\nMANUFACTURER: ${Build.MANUFACTURER}" +
+                                       "\nMODEL: ${Build.MODEL} (${Build.PRODUCT})" +
+                                       "\nDISPLAY_VERSION: ${Build.DISPLAY}" +
+                                       "\nID: ${Build.ID} (SDK ${Build.VERSION.SDK_INT_FULL})" +
+                                       "\nXposed enabled/active: ${XposedState.isAvailable}/${XposedState.bluetoothScopeEnabled}" +
+                                       "\n\nApp details:" +
+                                       "\nVERSION: ${BuildConfig.VERSION_NAME}" +
+                                       "\nVERSION_CODE: ${BuildConfig.VERSION_CODE}" +
+                                       "\nFLAVOR: ${BuildConfig.FLAVOR}" +
+                                       "\nBUILD_TYPE: ${BuildConfig.BUILD_TYPE}"
+                               )
+                           }
+                           context.startActivity(intent)
+                           subjectState.clearText()
+                           descriptionState.clearText()
+                       }
+                   )
+               }
+
+               Spacer(modifier = Modifier.height(8.dp))
+
+               StyledInputField(
+                   inputState = subjectState,
+                   focusRequester = subjectFocusRequester,
+                   placeholder = stringResource(R.string.subject),
+               )
+
+               Spacer(modifier = Modifier.height(12.dp))
+
+               StyledInputField(
+                   inputState = descriptionState,
+                   focusRequester = descriptionFocusRequester,
+                   placeholder = stringResource(R.string.describe_your_issue),
+                   singleLine = false
+               )
             }
         }
     }

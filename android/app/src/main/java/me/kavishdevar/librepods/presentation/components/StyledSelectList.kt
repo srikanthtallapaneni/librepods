@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -98,7 +98,7 @@ fun StyledSelectList(
 
             Row(
                 modifier = Modifier
-                    .height(if (hasIcon) 72.dp else 55.dp)
+                    .heightIn(min = if (hasIcon) 72.dp else 55.dp)
                     .background(animatedBackgroundColor, shape)
                     .pointerInput(Unit) {
                         detectTapGestures(
@@ -128,7 +128,7 @@ fun StyledSelectList(
                         contentDescription = "Icon",
                         tint = Color(0xFF007AFF),
                         modifier = Modifier
-                            .height(48.dp)
+                            .heightIn(min = 48.dp)
                             .wrapContentWidth()
                     )
                 }

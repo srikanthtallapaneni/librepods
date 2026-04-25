@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -81,9 +82,11 @@ import kotlin.math.tanh
 fun StyledIconButton(
     modifier: Modifier = Modifier,
     icon: String,
-    tint: Color = Color.Unspecified,
+    iconTint: Color = Color.Unspecified,
+    surfaceColor: Color = Color.Unspecified,
     backdrop: LayerBackdrop = rememberLayerBackdrop(),
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     val haptics = LocalHapticFeedback.current
     val darkMode = isSystemInDarkTheme()
@@ -96,6 +99,7 @@ fun StyledIconButton(
     val innerShadowLayer = rememberGraphicsLayer().apply {
         compositingStrategy = CompositingStrategy.Offscreen
     }
+    val density = LocalDensity.current
 
     val interactiveHighlightShader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -120,8 +124,10 @@ half4 main(float2 coord) {
     val isDarkTheme = isSystemInDarkTheme()
     TextButton(
         onClick = {
-            scope.launch { haptics.performHapticFeedback(HapticFeedbackType.ContextClick) }
-            onClick()
+            if (enabled) {
+                scope.launch { haptics.performHapticFeedback(HapticFeedbackType.ContextClick) }
+                onClick()
+            }
         },
         shape = RoundedCornerShape(56.dp),
         modifier = modifier
@@ -137,6 +143,7 @@ half4 main(float2 coord) {
                     )
                 },
                 layerBlock = {
+                    if (!enabled) return@drawBackdrop
                     val width = size.width
                     val height = size.height
 
@@ -161,6 +168,12 @@ half4 main(float2 coord) {
                             (height / width).fastCoerceAtMost(1f)
                 },
                 onDrawSurface = {
+                    if (!enabled) {
+                        drawRect(
+                            (if (isDarkTheme) Color(0xFFAFAFAF) else Color.White).copy(0.5f)
+                        )
+                        return@drawBackdrop
+                    }
                     val progress = progressAnimation.value.coerceIn(0f, 1f)
 
                     val shape = RoundedCornerShape(56.dp)
@@ -187,6 +200,10 @@ half4 main(float2 coord) {
                     }
                     drawLayer(innerShadowLayer)
 
+                    if (surfaceColor.isSpecified) {
+                        drawRect(surfaceColor)
+                    }
+
                     drawRect(
                         (if (isDarkTheme) Color(0xFFAFAFAF) else Color.White).copy(
                             progress.coerceIn(
@@ -197,6 +214,7 @@ half4 main(float2 coord) {
                     )
                 },
                 onDrawFront = {
+                    if (!enabled) return@drawBackdrop
                     val progress = progressAnimation.value.fastCoerceIn(0f, 1f)
                     if (progress > 0f) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && interactiveHighlightShader != null) {
@@ -241,40 +259,46 @@ half4 main(float2 coord) {
             )
             .pointerInput(scope) {
                 val onDragStop: () -> Unit = {
-                    scope.launch {
-                        launch { haptics.performHapticFeedback(HapticFeedbackType.Reject) }
-                        launch { progressAnimation.animateTo(0f, progressAnimationSpec) }
-                        launch { offsetAnimation.animateTo(Offset.Zero, offsetAnimationSpec) }
+                    if (enabled) {
+                        scope.launch {
+                            launch { haptics.performHapticFeedback(HapticFeedbackType.Reject) }
+                            launch { progressAnimation.animateTo(0f, progressAnimationSpec) }
+                            launch { offsetAnimation.animateTo(Offset.Zero, offsetAnimationSpec) }
+                        }
                     }
                 }
                 inspectDragGestures(
                     onDragStart = { down ->
-                        pressStartPosition = down.position
-                        scope.launch {
-                            launch { haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick) }
-                            launch { progressAnimation.animateTo(1f, progressAnimationSpec) }
-                            launch { offsetAnimation.snapTo(Offset.Zero) }
+                        if (enabled) {
+                            pressStartPosition = down.position
+                            scope.launch {
+                                launch { haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick) }
+                                launch { progressAnimation.animateTo(1f, progressAnimationSpec) }
+                                launch { offsetAnimation.snapTo(Offset.Zero) }
+                            }
                         }
                     },
                     onDragEnd = { onDragStop() },
                     onDragCancel = onDragStop
                 ) { _, dragAmount ->
                     scope.launch {
-                        if (dragAmount.getDistanceSquared() > 350) haptics.performHapticFeedback(
-                            HapticFeedbackType.SegmentFrequentTick
-                        )
-                        offsetAnimation.snapTo(offsetAnimation.value + dragAmount)
+                        if (enabled) {
+                            if (dragAmount.getDistanceSquared() > 350) haptics.performHapticFeedback(
+                                HapticFeedbackType.SegmentFrequentTick
+                            )
+                            offsetAnimation.snapTo(offsetAnimation.value + dragAmount)
+                        }
                     }
                 }
             }
-            .size(48.dp),
+            .size(with(density) { 48.sp.toDp() }),
     ) {
         Text(
             text = icon,
             style = TextStyle(
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Normal,
-                color = if (tint.isSpecified) tint else if (darkMode) Color.White else Color.Black,
+                color = if (iconTint.isSpecified) iconTint else if (darkMode) Color.White else Color.Black,
                 fontFamily = FontFamily(Font(R.font.sf_pro))
             )
         )

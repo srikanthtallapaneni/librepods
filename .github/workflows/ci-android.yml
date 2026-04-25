@@ -84,16 +84,35 @@ jobs:
     needs: build
     permissions:
       contents: write
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
-          name: release-artifacts
-          path: artifacts
+          name: apk-release
+          path: artifacts/apk-release
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk-debug
+          path: artifacts/apk-debug
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: root-module-release
+          path: artifacts/root-module-release
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: root-module-debug
+          path: artifacts/root-module-debug
+
       - id: prev
         run: |
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - id: changelog
         run: |
           if [ -z "${{ steps.prev.outputs.tag }}" ]; then
@@ -104,13 +123,15 @@ jobs:
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
       - id: tag
         run: echo "tag=nightly-${{ needs.build.outputs.short_sha }}" >> $GITHUB_OUTPUT
+
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ steps.tag.outputs.tag }}" \
-            artifacts/* \
+            artifacts/**/* \
             -t "Nightly ${{ needs.build.outputs.short_sha }}" \
             --notes "${{ steps.changelog.outputs.notes }}" \
             --prerelease
