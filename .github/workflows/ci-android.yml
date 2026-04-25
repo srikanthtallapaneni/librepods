@@ -75,7 +75,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: relase-bundle
+          name: release-bundle
           path: release/*.aab
 
   release:
