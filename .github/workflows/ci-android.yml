@@ -55,8 +55,28 @@ jobs:
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts
-          path: release/*
+          name: apk-release
+          path: release/*release.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-debug
+          path: release/*debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-module-release
+          path: release/*release.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-module-debug
+          path: release/*debug.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relase-bundle
+          path: release/*.aab
 
   release:
     if: github.event_name == 'push'
