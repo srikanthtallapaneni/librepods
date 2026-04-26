@@ -107,12 +107,16 @@ jobs:
         with:
           name: root-module-debug
           path: artifacts/root-module-debug
-
       - id: prev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          TAG=$(gh release list \
+            --limit 1 \
+            --json tagName \
+            --jq '.[0].tagName')
 
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
       - id: changelog
         run: |
           if [ -z "${{ steps.prev.outputs.tag }}" ]; then
