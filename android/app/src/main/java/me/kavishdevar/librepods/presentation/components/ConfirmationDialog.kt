@@ -18,37 +18,32 @@
 
 package me.kavishdevar.librepods.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -56,13 +51,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.materials.CupertinoMaterials
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.R
 
 @ExperimentalHazeMaterialsApi
@@ -75,162 +70,107 @@ fun ConfirmationDialog(
     dismissText: String = "Cancel",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit = { showDialog.value = false },
-    hazeState: HazeState,
+    backdrop: LayerBackdrop,
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     val textColor = if (isDarkTheme) Color.White else Color.Black
-    val accentColor = if (isDarkTheme) Color(0xFF007AFF) else Color(0xFF3C6DF5)
+    val accentColor = if (isDarkTheme) Color(0xFF0091FF) else Color(0xFF0088FF)
 
-    val haptics = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
-
-    if (showDialog.value) {
-        Dialog(
-            onDismissRequest = { showDialog.value = false },
-            properties = DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false
-            )
+    AnimatedVisibility(
+        visible = showDialog.value,
+        enter = scaleIn(initialScale = 1.05f) + fadeIn(),
+        exit = scaleOut(targetScale = 1.05f) + fadeOut()
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
+            val innerBackdrop = rememberLayerBackdrop()
             Box(
                 modifier = Modifier
-                    // .fillMaxWidth(0.75f)
-                    .requiredWidthIn(min = 200.dp, max = 360.dp)
-                    .background(Color.Transparent, RoundedCornerShape(14.dp))
-                    .clip(RoundedCornerShape(14.dp))
-                    .hazeEffect(
-                        hazeState,
-                        style = CupertinoMaterials.regular(
-                            containerColor = if (isDarkTheme) Color(0xFF1C1C1E).copy(alpha = 0.95f) else Color.White.copy(alpha = 0.95f)
-                        )
-                    )
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .clickable(enabled = false, onClick = {}),
+                contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        title,
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        ),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        message,
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            color = textColor.copy(alpha = 0.8f),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        ),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(
-                        thickness = 1.dp,
-                        color = Color(0x40888888),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    var leftPressed by remember { mutableStateOf(false) }
-                    var rightPressed by remember { mutableStateOf(false) }
-                    val pressedColor = if (isDarkTheme) Color(0x40888888) else Color(0x40D9D9D9)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val event = awaitPointerEvent()
-                                        val position = event.changes.first().position
-                                        val width = size.width.toFloat()
-                                        val height = size.height.toFloat()
-                                        val isWithinBounds = position.y >= 0 && position.y <= height
-                                        val isLeft = position.x < width / 2
-                                        event.changes.first().consume()
-                                        when (event.type) {
-                                            PointerEventType.Press -> {
-                                                if (isWithinBounds) {
-                                                    leftPressed = isLeft
-                                                    rightPressed = !isLeft
-                                                } else {
-                                                    leftPressed = false
-                                                    rightPressed = false
-                                                }
-                                            }
-                                            PointerEventType.Move -> {
-                                                if (isWithinBounds) {
-                                                    if (leftPressed != isLeft) scope.launch { haptics.performHapticFeedback(
-                                                        HapticFeedbackType.SegmentTick) }
-                                                    leftPressed = isLeft
-                                                    rightPressed = !isLeft
-                                                } else {
-                                                    leftPressed = false
-                                                    rightPressed = false
-                                                }
-                                            }
-                                            PointerEventType.Release -> {
-                                                if (isWithinBounds) {
-                                                    if (leftPressed) {
-                                                        scope.launch { haptics.performHapticFeedback(
-                                                            HapticFeedbackType.Reject) }
-                                                        onDismiss()
-                                                    } else if (rightPressed) {
-                                                        scope.launch { haptics.performHapticFeedback(
-                                                            HapticFeedbackType.Confirm) }
-                                                        onConfirm()
-                                                    }
-                                                }
-                                                leftPressed = false
-                                                rightPressed = false
-                                            }
-                                        }
-                                    }
-                                }
+                Box(
+                    modifier = Modifier
+                        .requiredWidthIn(min = 200.dp, max = 360.dp)
+                        .clip(RoundedCornerShape(48.dp))
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            exportedBackdrop = innerBackdrop,
+                            shape = { RoundedCornerShape(48.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(4f.dp.toPx())
+                                lens(12f.dp.toPx(), 48f.dp.toPx(), true)
                             },
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .background(if (leftPressed) pressedColor else Color.Transparent),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = dismissText,
-                                style = TextStyle(
-                                    color = accentColor,
-                                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                            onDrawSurface = {
+                                drawRect(
+                                    if (isDarkTheme) Color(0xFF1F1F1F).copy(alpha = 0.35f) else Color(0xFFE0E0E0).copy(alpha = 0.7f)
                                 )
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .fillMaxHeight()
-                                .background(Color(0x40888888))
+                            })) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            title,
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
+                                fontFamily = FontFamily(Font(R.font.sf_pro))
+                            ),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .background(if (rightPressed) pressedColor else Color.Transparent),
-                            contentAlignment = Alignment.Center
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            message,
+                            style = TextStyle(
+                                fontSize = 14.sp,
+                                color = textColor.copy(alpha = 0.8f),
+                                fontFamily = FontFamily(Font(R.font.sf_pro))
+                            ),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            Text(
-                                text = confirmText,
-                                style = TextStyle(
-                                    color = accentColor,
-                                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                            StyledButton(
+                                onClick = onDismiss,
+                                backdrop = innerBackdrop,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(
+                                    text = dismissText, style = TextStyle(
+                                        fontFamily = FontFamily(Font(R.font.sf_pro)),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        color = textColor
+                                    )
                                 )
-                            )
+                            }
+                            StyledButton(
+                                onClick = onConfirm,
+                                backdrop = innerBackdrop,
+                                modifier = Modifier.weight(1f),
+                                surfaceColor = accentColor
+                            ) {
+                                Text(
+                                    text = confirmText, style = TextStyle(
+                                        fontFamily = FontFamily(Font(R.font.sf_pro)),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        color = Color.White
+                                    )
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }

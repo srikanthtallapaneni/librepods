@@ -270,7 +270,7 @@ fun HearingAidScreen(viewModel: AirPodsViewModel, navController: NavController) 
             hearingAidEnabled.value = false
             showDialog.value = false
         },
-        hazeState = hazeStateS.value,
-        // backdrop = backdrop
+//        hazeState = hazeStateS.value,
+         backdrop = backdrop
     )
 }

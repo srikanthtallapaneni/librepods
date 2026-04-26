@@ -58,9 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -80,6 +78,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.presentation.components.AppInfoCard
 import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
 import me.kavishdevar.librepods.presentation.components.NavigationButton
 import me.kavishdevar.librepods.presentation.components.StyledBottomSheet
@@ -513,145 +512,8 @@ fun AppSettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
             DeviceInfoCard()
-
-            Box(
-                modifier = Modifier
-                    .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7))
-                    .padding(start = 16.dp, bottom = 2.dp, top = 24.dp, end = 4.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.about), style = TextStyle(
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textColor.copy(alpha = 0.6f),
-                        fontFamily = FontFamily(Font(R.font.sf_pro))
-                    )
-                )
-            }
-
-            val rowHeight = remember { mutableStateOf(0.dp) }
-            val density = LocalDensity.current
-
-            Spacer(modifier = Modifier.height(4.dp))
-            Column(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .fillMaxWidth()
-                    .background(backgroundColor, RoundedCornerShape(28.dp))
-                    .padding(top = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .onGloballyPositioned { coordinates ->
-                            rowHeight.value = with(density) { coordinates.size.height.toDp() }
-                        },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.version), style = TextStyle(
-                            fontSize = 16.sp,
-                            color = textColor,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                    Text(
-                        text = BuildConfig.VERSION_NAME, style = TextStyle(
-                            fontSize = 16.sp,
-                            color = if (isDarkTheme) Color.White.copy(alpha = 0.6f) else Color.Black.copy(
-                                alpha = 0.8f
-                            ),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                }
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.version_code), style = TextStyle(
-                            fontSize = 16.sp,
-                            color = textColor,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                    Text(
-                        text = BuildConfig.VERSION_CODE.toString(), style = TextStyle(
-                            fontSize = 16.sp,
-                            color = if (isDarkTheme) Color.White.copy(alpha = 0.6f) else Color.Black.copy(
-                                alpha = 0.8f
-                            ),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                }
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.flavor), style = TextStyle(
-                            fontSize = 16.sp,
-                            color = textColor,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                    Text(
-                        text = BuildConfig.FLAVOR, style = TextStyle(
-                            fontSize = 16.sp,
-                            color = if (isDarkTheme) Color.White.copy(alpha = 0.6f) else Color.Black.copy(
-                                alpha = 0.8f
-                            ),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                }
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = Color(0x40888888),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.build_type), style = TextStyle(
-                            fontSize = 16.sp,
-                            color = textColor,
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                    Text(
-                        text = BuildConfig.BUILD_TYPE,
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            color = if (isDarkTheme) Color.White.copy(alpha = 0.6f) else Color.Black.copy(
-                                alpha = 0.8f
-                            ),
-                            fontFamily = FontFamily(Font(R.font.sf_pro))
-                        )
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
+            AppInfoCard()
 
             Spacer(modifier = Modifier.height(16.dp))
 

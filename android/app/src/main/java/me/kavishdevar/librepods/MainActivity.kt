@@ -121,6 +121,7 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.ControlCommandRepository
+import me.kavishdevar.librepods.presentation.components.AppInfoCard
 import me.kavishdevar.librepods.presentation.components.ConfirmationDialog
 import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
 import me.kavishdevar.librepods.presentation.components.SelectItem
@@ -249,26 +250,24 @@ fun Main() {
                 verticalArrangement = Arrangement
                     .spacedBy(16.dp)
             ) {
-                val innerBackdrop = rememberLayerBackdrop()
                 Spacer(modifier = Modifier.height(48.dp))
                 Column(
-                    modifier = Modifier.layerBackdrop(innerBackdrop),
+                    modifier = Modifier,
                     verticalArrangement = Arrangement
                         .spacedBy(16.dp)
                 ) {
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = stringResource(R.string.not_supported),
                         style = TextStyle(
                             fontFamily = FontFamily(Font(R.font.sf_pro)),
                             fontWeight = FontWeight.SemiBold,
                             color = textColor,
-                            fontSize = 20.sp,
+                            fontSize = 28.sp,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    DeviceInfoCard()
 
                     Box(
                         modifier = Modifier
@@ -281,7 +280,7 @@ fun Main() {
                             style = TextStyle(
                                 fontFamily = FontFamily(Font(R.font.sf_pro)),
                                 fontWeight = FontWeight.Medium,
-                                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                                color = if (isDarkTheme) Color.White else Color.Black,
                                 fontSize = 16.sp
                             ),
                             modifier = Modifier
@@ -289,22 +288,27 @@ fun Main() {
                                 .padding(horizontal = 12.dp, vertical = 16.dp)
                         )
                     }
-                }
-                StyledButton(
-                    onClick = { showDialog.value = true },
-                    backdrop = innerBackdrop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        text = stringResource(R.string.bypass_compatibility_check),
-                        style = TextStyle(
-                            fontFamily = FontFamily(Font(R.font.sf_pro)),
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                            fontSize = 16.sp
-                        ),
-                    )
+                    StyledButton(
+                        onClick = { showDialog.value = true },
+                        backdrop = rememberLayerBackdrop(),
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        isInteractive = false,
+                        surfaceColor = if (isDarkTheme) Color(0xFF862424) else Color(0xFFC94646)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.bypass_compatibility_check),
+                            style = TextStyle(
+                                fontFamily = FontFamily(Font(R.font.sf_pro)),
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White,
+                                fontSize = 16.sp
+                            ),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    DeviceInfoCard()
+                    AppInfoCard()
                 }
                 Spacer(modifier = Modifier.height(48.dp))
             }
@@ -332,7 +336,8 @@ fun Main() {
             onDismiss = {
                 showDialog.value = false
             },
-            hazeState = hazeState
+            backdrop = backdrop
+//            hazeState = hazeState
         )
 
         if (BuildConfig.PLAY_BUILD) {

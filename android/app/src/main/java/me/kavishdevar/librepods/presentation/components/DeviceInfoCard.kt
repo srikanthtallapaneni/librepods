@@ -46,7 +46,7 @@ fun DeviceInfoCard() {
         Box(
             modifier = Modifier
                 .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7))
-                .padding(start = 16.dp, bottom = 2.dp, top = 24.dp, end = 4.dp)
+                .padding(start = 16.dp, top = 24.dp, end = 4.dp)
         ) {
             Text(
                 text = stringResource(R.string.device_info), style = TextStyle(
