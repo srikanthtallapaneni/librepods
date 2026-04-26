@@ -223,7 +223,7 @@ class MainActivity : ComponentActivity() {
 fun Main() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("settings", MODE_PRIVATE)
-    if (!isSupported(sharedPreferences)) {
+    if (!isSupported(sharedPreferences) && !XposedState.bluetoothScopeEnabled) {
         val showDialog = remember { mutableStateOf(false) }
         val showPlayBypassVisible = remember { mutableStateOf(false) }
         val hazeState = rememberHazeState()
@@ -323,10 +323,10 @@ fun Main() {
                 } else {
                     sharedPreferences.edit {
                         putBoolean("bypass_device_check.v2", true)
-                        val intent = Intent(context, MainActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        context.startActivity(intent)
                     }
+                    val intent = Intent(context, MainActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
                 }
             },
             onDismiss = {
