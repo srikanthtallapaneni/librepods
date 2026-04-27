@@ -625,7 +625,8 @@ fun AppSettingsScreen(
                            fontSize = 18.sp,
                            fontFamily = FontFamily(Font(R.font.sf_pro)),
                            fontWeight = FontWeight.Bold,
-                           textAlign = TextAlign.Center
+                           textAlign = TextAlign.Center,
+                           color = if (isSystemInDarkTheme()) Color.White else Color.Black
                        )
                    )
                    StyledIconButton(
