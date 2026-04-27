@@ -20,6 +20,7 @@ class KotlinModule: XposedModule() {
         log(Log.INFO, TAG, "framework: $frameworkName($frameworkVersionCode) API $apiVersion")
     }
 
+    @SuppressLint("UnsafeDynamicallyLoadedCode")
     override fun onPackageLoaded(param: PackageLoadedParam) {
         log(Log.INFO, TAG, "onPackageLoaded :: ${param.packageName}")
 
@@ -27,8 +28,36 @@ class KotlinModule: XposedModule() {
             log(Log.INFO, TAG, "Bluetooth app detected, hooking l2c_fcr_chk_chan_modes")
             try {
                 if (param.isFirstPackage) {
-                    log(Log.INFO, TAG, "Loading native library for Bluetooth hook")
-                    System.loadLibrary("l2c_fcr_hook")
+                    val abi = android.os.Build.SUPPORTED_ABIS.first()
+                    val soName = "libl2c_fcr_hook.so"
+
+                    val candidates = buildList {
+                        add("${moduleApplicationInfo.sourceDir}!/lib/$abi/$soName")
+
+                        moduleApplicationInfo.splitSourceDirs?.forEach { split ->
+                            add("$split!/lib/$abi/$soName")
+                        }
+                    }
+
+                    var loaded = false
+
+                    for (path in candidates) {
+                        try {
+                            log(Log.INFO, TAG, "Trying to load native lib from $path")
+                            System.load(path)
+                            log(Log.INFO, TAG, "Loaded native lib from $path")
+                            loaded = true
+                            break
+                        } catch (e: Throwable) {
+                            log(Log.WARN, TAG, "Failed to load from $path: ${e.message}")
+                        }
+                    }
+
+                    if (!loaded) {
+                        log(Log.ERROR, TAG, "Could not load $soName from base or splits")
+                        return
+                    }
+
                     val remotePrefValue = getRemotePreferences("me.kavishdevar.librepods").getBoolean("vendor_id_hook", false)
                     log(Log.INFO, TAG, "sdp hook enabled (remote pref): $remotePrefValue")
                     NativeBridge.setSdpHook(remotePrefValue)
