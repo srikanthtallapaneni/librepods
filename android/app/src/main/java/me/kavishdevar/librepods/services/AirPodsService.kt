@@ -2894,6 +2894,11 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                 override fun onServiceDisconnected(profile: Int) {}
             }, BluetoothProfile.A2DP)
+            try {
+                device?.disconnect()
+            } catch (e: Exception) {
+                Log.w(TAG, "device.disconnect() failed, $e")
+            }
         }
         if (checkSelfPermission("android.permission.MODIFY_PHONE_STATE") == PackageManager.PERMISSION_GRANTED){
             bluetoothAdapter.getProfileProxy(this, object : BluetoothProfile.ServiceListener {
@@ -2911,7 +2916,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             }, BluetoothProfile.HEADSET)
         }
         Log.d(TAG, "Disconnected AirPods upon user request")
-
     }
 
     val earDetectionNotification = AirPodsNotifications.EarDetection()
@@ -3001,17 +3005,22 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     fun connectAudio(context: Context, device: BluetoothDevice?) {
         val bluetoothAdapter = context.getSystemService(BluetoothManager::class.java).adapter
-        if (context.checkSelfPermission("android.permission.BLUETOOTH_PRIVILEGED") == PackageManager.PERMISSION_GRANTED) {
-
             bluetoothAdapter?.getProfileProxy(context, object : BluetoothProfile.ServiceListener {
                 override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                     if (profile == BluetoothProfile.A2DP) {
                         try {
-                            val policyMethod = proxy.javaClass.getMethod(
-                                "setConnectionPolicy", BluetoothDevice::class.java, Int::class.java
-                            )
-                            Log.d(TAG, "calling A2DP.setConnectionPolicy for ${device?.address} to 100")
-                            policyMethod.invoke(proxy, device, 100)
+                            if (context.checkSelfPermission("android.permission.BLUETOOTH_PRIVILEGED") == PackageManager.PERMISSION_GRANTED) {
+                                val policyMethod = proxy.javaClass.getMethod(
+                                    "setConnectionPolicy",
+                                    BluetoothDevice::class.java,
+                                    Int::class.java
+                                )
+                                Log.d(TAG, "calling A2DP.setConnectionPolicy for ${device?.address} to 100")
+                                policyMethod.invoke(proxy, device, 100)
+                            }
+                            else {
+                                Log.d(TAG, "not setting connection policy for A2DP, no BLUETOOTH_PRIVILEGED permission")
+                            }
                             val connectMethod =
                                 proxy.javaClass.getMethod("connect", BluetoothDevice::class.java)
                             connectMethod.invoke(
@@ -3063,9 +3072,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                 override fun onServiceDisconnected(profile: Int) {}
             }, BluetoothProfile.HEADSET)
-        } else {
-            Log.d(TAG, "not connecting HEADSET, no MODIFIY_PHONE_STATE permission")
-        }
     }
 
     fun setName(name: String) {
