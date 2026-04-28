@@ -207,10 +207,7 @@ class AACPManager {
         identifier: ControlCommandIdentifiers, value: ByteArray
     ) {
         val existingStatus = getControlCommandStatus(identifier)
-        if (existingStatus == value) {
-            controlCommandStatusList.remove(existingStatus)
-        }
-        if (existingStatus != null) {
+        if (existingStatus?.value.contentEquals(value)) {
             controlCommandStatusList.remove(existingStatus)
         }
         controlCommandListeners[identifier]?.forEach { listener ->
@@ -414,7 +411,13 @@ class AACPManager {
             }
 
             Opcodes.CONTROL_COMMAND -> {
-                val controlCommand = ControlCommand.fromByteArray(packet)
+                val controlCommand = try {
+                    ControlCommand.fromByteArray(packet)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to parse control command: ${e.message}")
+                    callback?.onUnknownPacketReceived(packet)
+                    return
+                }
                 setControlCommandStatusValue(
                     ControlCommandIdentifiers.fromByte(controlCommand.identifier) ?: return,
                     controlCommand.value
@@ -1078,25 +1081,25 @@ class AACPManager {
 
         companion object {
             fun fromByteArray(data: ByteArray): ControlCommand {
-                if (data.size < 4) {
-                    throw IllegalArgumentException("Data array too short to parse ControlCommand")
+                var offset = 0
+                while (data.size - offset >= 4 &&
+                    data[offset] == 0x04.toByte() &&
+                    data[offset + 1] == 0x00.toByte() &&
+                    data[offset + 2] == 0x04.toByte() &&
+                    data[offset + 3] == 0x00.toByte()
+                ) {
+                    offset += 4
                 }
-                if (data[0] == 0x04.toByte() && data[1] == 0x00.toByte() && data[2] == 0x04.toByte() && data[3] == 0x00.toByte()) {
-                    val newData = ByteArray(data.size - 4)
-                    System.arraycopy(data, 4, newData, 0, data.size - 4)
-                    return fromByteArray(newData)
+                if (data.size - offset < 7) {
+                    throw IllegalArgumentException("Too short for ControlCommand")
                 }
-                if (data[0] != Opcodes.CONTROL_COMMAND) {
-                    throw IllegalArgumentException("Data array does not start with CONTROL_COMMAND opcode")
+                if (data[offset] != Opcodes.CONTROL_COMMAND) {
+                    throw IllegalArgumentException("Invalid opcode")
                 }
-                val identifier = data[2]
-
-                val value = ByteArray(4)
-                System.arraycopy(data, 3, value, 0, 4)
-
-                val trimmedValue = value.dropLastWhile { it == 0x00.toByte() }.toByteArray()
-                val finalValue = if (trimmedValue.isEmpty()) byteArrayOf(0x00) else trimmedValue
-                return ControlCommand(identifier, finalValue)
+                val identifier = data[offset + 2]
+                val value = data.copyOfRange(offset + 3, offset + 7)
+                val trimmed = value.dropLastWhile { it == 0x00.toByte() }.toByteArray()
+                return ControlCommand(identifier, if (trimmed.isEmpty()) byteArrayOf(0x00) else trimmed)
             }
         }
     }
@@ -1122,7 +1125,13 @@ class AACPManager {
             Log.d(TAG, "Sending packet: ${packet.joinToString(" ") { "%02X".format(it) }}")
 
             if (packet[4] == Opcodes.CONTROL_COMMAND) {
-                val controlCommand = ControlCommand.fromByteArray(packet)
+                val controlCommand = try {
+                    ControlCommand.fromByteArray(packet)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Invalid control command: ${e.message}")
+                    callback?.onUnknownPacketReceived(packet)
+                    return false
+                }
                 Log.d(
                     TAG, "Control command: ${controlCommand.identifier.toHexString()} - ${
                     controlCommand.value.joinToString(" ") { "%02X".format(it) }
