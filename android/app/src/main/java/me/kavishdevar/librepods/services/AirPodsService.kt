@@ -2768,33 +2768,43 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                     while (socket.isConnected) {
                         socket.let { it ->
-                            val buffer = ByteArray(1024)
-                            val bytesRead = it.inputStream.read(buffer)
-                            var data: ByteArray
-                            if (bytesRead > 0) {
-                                data = buffer.copyOfRange(0, bytesRead)
-                                sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DATA).apply {
-                                    putExtra("data", buffer.copyOfRange(0, bytesRead))
-                                    setPackage(packageName)
-                                })
-                                val bytes = buffer.copyOfRange(0, bytesRead)
-                                val formattedHex = bytes.joinToString(" ") { "%02X".format(it) }
+                            try {
+                                val buffer = ByteArray(1024)
+                                val bytesRead = it.inputStream.read(buffer)
+                                var data: ByteArray
+                                if (bytesRead > 0) {
+                                    data = buffer.copyOfRange(0, bytesRead)
+                                    sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DATA).apply {
+                                        putExtra("data", buffer.copyOfRange(0, bytesRead))
+                                        setPackage(packageName)
+                                    })
+                                    val bytes = buffer.copyOfRange(0, bytesRead)
+                                    val formattedHex = bytes.joinToString(" ") { "%02X".format(it) }
 //                                    CrossDevice.sendReceivedPacket(bytes)
-                                updateNotificationContent(
-                                    true,
-                                    sharedPreferences.getString("name", device.name),
-                                    batteryNotification.getBattery()
-                                )
+                                    updateNotificationContent(
+                                        true,
+                                        sharedPreferences.getString("name", device.name),
+                                        batteryNotification.getBattery()
+                                    )
 
-                                aacpManager.receivePacket(data)
+                                    aacpManager.receivePacket(data)
 
-                                if (!isHeadTrackingData(data)) {
-                                    Log.d("AirPodsData", "Data received: $formattedHex")
-                                    logPacket(data, "AirPods")
+                                    if (!isHeadTrackingData(data)) {
+                                        Log.d("AirPodsData", "Data received: $formattedHex")
+                                        logPacket(data, "AirPods")
+                                    }
+
+                                } else if (bytesRead == -1) {
+                                    Log.d("AirPods Service", "Socket closed (bytesRead = -1)")
+                                    sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DISCONNECTED).apply {
+                                        setPackage(packageName)
+                                    })
+                                    aacpManager.disconnected()
+                                    return@launch
                                 }
-
-                            } else if (bytesRead == -1) {
-                                Log.d("AirPods Service", "Socket closed (bytesRead = -1)")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error reading data, we have probably disconnected.")
+                                e.printStackTrace()
                                 sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DISCONNECTED).apply {
                                     setPackage(packageName)
                                 })
