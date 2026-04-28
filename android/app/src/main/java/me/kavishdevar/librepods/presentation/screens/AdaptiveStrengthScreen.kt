@@ -51,10 +51,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.StyledSlider
-import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 
 @Composable
@@ -95,11 +95,7 @@ fun AdaptiveStrengthScreen(viewModel: AirPodsViewModel, navController: NavContro
                 }
             }
             val sliderValue = remember {
-                mutableFloatStateOf(
-                    state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.AUTO_ANC_STRENGTH]?.getOrNull(
-                        0
-                    )?.toFloat() ?: 50f
-                )
+                mutableFloatStateOf(100f - (state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.AUTO_ANC_STRENGTH]?.getOrNull(0)?.toFloat() ?: 50f))
             }
             var job by remember { mutableStateOf<Job?>(null) }
             val scope = rememberCoroutineScope()
