@@ -77,7 +77,7 @@ fun StyledScaffold(
             .clip(RoundedCornerShape(52.dp))
     ) { paddingValues ->
         val topPadding = paddingValues.calculateTopPadding()
-        val bottomPadding = paddingValues.calculateBottomPadding()
+        val bottomPadding = paddingValues.calculateBottomPadding() + 16.dp
         val startPadding = paddingValues.calculateLeftPadding(LocalLayoutDirection.current)
         val endPadding = paddingValues.calculateRightPadding(LocalLayoutDirection.current)
 
