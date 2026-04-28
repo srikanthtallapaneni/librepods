@@ -20,7 +20,6 @@
 
 package me.kavishdevar.librepods.presentation.screens
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
@@ -34,13 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -48,19 +42,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.bluetooth.AACPManager
+import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.presentation.components.SelectItem
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.StyledSelectList
-import me.kavishdevar.librepods.data.StemAction
-import me.kavishdevar.librepods.services.ServiceManager
-import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import kotlin.experimental.and
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -82,12 +74,7 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
     Log.d("PressAndHoldSettingsScreen", "Noise Cancellation mode: ${(modesByte and 0x02) != 0.toByte()}")
     Log.d("PressAndHoldSettingsScreen", "Adaptive mode: ${(modesByte and 0x08) != 0.toByte()}")
 
-    val context = LocalContext.current
-    val sharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-    val prefKey = if (name.lowercase() == "left") "left_long_press_action" else "right_long_press_action"
-    val longPressActionPref = sharedPreferences.getString(prefKey, StemAction.CYCLE_NOISE_CONTROL_MODES.name)
-    Log.d("PressAndHoldSettingsScreen", "Long press action preference ($prefKey): $longPressActionPref")
-    var longPressAction by remember { mutableStateOf(StemAction.valueOf(longPressActionPref ?: StemAction.CYCLE_NOISE_CONTROL_MODES.name)) }
+    val longPressAction = if (name.lowercase() == "left") state.leftAction else state.rightAction
     val backdrop = rememberLayerBackdrop()
     StyledScaffold(
         title = name
@@ -105,16 +92,14 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
                     name = stringResource(R.string.noise_control),
                     selected = longPressAction == StemAction.CYCLE_NOISE_CONTROL_MODES,
                     onClick = {
-                        longPressAction = StemAction.CYCLE_NOISE_CONTROL_MODES
-                        sharedPreferences.edit { putString(prefKey, StemAction.CYCLE_NOISE_CONTROL_MODES.name) }
+                        viewModel.setLongPressAction(name, StemAction.CYCLE_NOISE_CONTROL_MODES)
                     }
                 ),
                 SelectItem(
                     name = stringResource(R.string.digital_assistant),
                     selected = longPressAction == StemAction.DIGITAL_ASSISTANT,
                     onClick = {
-                        longPressAction = StemAction.DIGITAL_ASSISTANT
-                        sharedPreferences.edit { putString(prefKey, StemAction.DIGITAL_ASSISTANT.name) }
+                        viewModel.setLongPressAction(name, StemAction.DIGITAL_ASSISTANT)
                     },
                     enabled = state.isPremium
                 )
@@ -162,21 +147,10 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val offListeningModeValue = ServiceManager.getService()!!.aacpManager.controlCommandStatusList.find {
-                    it.identifier == AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION
-                }?.value?.takeIf { it.isNotEmpty() }?.get(0)
-                Log.d("PressAndHoldSettingsScreen", "Allow Off state: $offListeningModeValue")
-                val allowOff = offListeningModeValue == 1.toByte()
-                Log.d("PressAndHoldSettingsScreen", "Allow Off option: $allowOff")
-
-                val initialByte = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE_CONFIGS]
-                    ?.get(0)?.toInt()
-                    ?: sharedPreferences.getInt("long_press_byte", 0b0101)
-
-                var currentByte by remember { mutableIntStateOf(initialByte) }
+                val currentByte = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE_CONFIGS]?.get(0)?.toInt() ?: 0
 
                 val listeningModeItems = mutableListOf<SelectItem>()
-                if (allowOff) {
+                if (state.offListeningMode) {
                     listeningModeItems.add(
                         SelectItem(
                             name = stringResource(R.string.off),
@@ -184,21 +158,7 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
                             iconRes = R.drawable.noise_cancellation,
                             selected = (currentByte and 0x01) != 0,
                             onClick = {
-                                val bit = 0x01
-                                val newValue = if ((currentByte and bit) != 0) {
-                                    val temp = currentByte and bit.inv()
-                                    if (countEnabledModes(temp) >= 2) temp else currentByte
-                                } else {
-                                    currentByte or bit
-                                }
-                                viewModel.setControlCommandByte(
-                                    AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE_CONFIGS,
-                                    newValue.toByte()
-                                )
-                                sharedPreferences.edit {
-                                    putInt("long_press_byte", newValue)
-                                }
-                                currentByte = newValue
+                                viewModel.toggleListeningMode(0x01)
                             }
                         )
                     )
@@ -210,21 +170,7 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
                         iconRes = R.drawable.transparency,
                         selected = (currentByte and 0x04) != 0,
                         onClick = {
-                            val bit = 0x04
-                            val newValue = if ((currentByte and bit) != 0) {
-                                val temp = currentByte and bit.inv()
-                                if (countEnabledModes(temp) >= 2) temp else currentByte
-                            } else {
-                                currentByte or bit
-                            }
-                            viewModel.setControlCommandByte(
-                                AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE_CONFIGS,
-                                newValue.toByte()
-                            )
-                            sharedPreferences.edit {
-                                putInt("long_press_byte", newValue)
-                            }
-                            currentByte = newValue
+                            viewModel.toggleListeningMode(0x04)
                         }
                     ),
                     SelectItem(
@@ -233,21 +179,7 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
                         iconRes = R.drawable.adaptive,
                         selected = (currentByte and 0x08) != 0,
                         onClick = {
-                            val bit = 0x08
-                            val newValue = if ((currentByte and bit) != 0) {
-                                val temp = currentByte and bit.inv()
-                                if (countEnabledModes(temp) >= 2) temp else currentByte
-                            } else {
-                                currentByte or bit
-                            }
-                            viewModel.setControlCommandByte(
-                                AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE_CONFIGS,
-                                newValue.toByte()
-                            )
-                            sharedPreferences.edit {
-                                putInt("long_press_byte", newValue)
-                            }
-                            currentByte = newValue
+                            viewModel.toggleListeningMode(0x08)
                         }
                     ),
                     SelectItem(
@@ -256,21 +188,7 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
                         iconRes = R.drawable.noise_cancellation,
                         selected = (currentByte and 0x02) != 0,
                         onClick = {
-                            val bit = 0x02
-                            val newValue = if ((currentByte and bit) != 0) {
-                                val temp = currentByte and bit.inv()
-                                if (countEnabledModes(temp) >= 2) temp else currentByte
-                            } else {
-                                currentByte or bit
-                            }
-                            viewModel.setControlCommandByte(
-                                AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE_CONFIGS,
-                                newValue.toByte()
-                            )
-                            sharedPreferences.edit {
-                                putInt("long_press_byte", newValue)
-                            }
-                            currentByte = newValue
+                            viewModel.toggleListeningMode(0x02)
                         }
                     )
                 ))
@@ -290,14 +208,4 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navController: NavContr
             }
         }
     }
-    Log.d("PressAndHoldSettingsScreen", "Current byte: ${modesByte.toString(2)}")
-}
-
-fun countEnabledModes(byteValue: Int): Int {
-    var count = 0
-    if ((byteValue and 0x01) != 0) count++
-    if ((byteValue and 0x02) != 0) count++
-    if ((byteValue and 0x04) != 0) count++
-    if ((byteValue and 0x08) != 0) count++
-    return count
 }

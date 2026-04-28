@@ -540,6 +540,35 @@ class AirPodsViewModel(
         service.aacpManager.sendPhoneMediaEQ(eq, phoneByte, mediaByte)
     }
 
+    fun setLongPressAction(side: String, action: StemAction) {
+        val prefKey = if (side.lowercase() == "left") "left_long_press_action" else "right_long_press_action"
+        sharedPreferences.edit { putString(prefKey, action.name) }
+        _uiState.update {
+            if (side.lowercase() == "left") it.copy(leftAction = action) else it.copy(rightAction = action)
+        }
+    }
+
+    private fun countEnabledModes(byteValue: Int): Int {
+        var count = 0
+        if ((byteValue and 0x01) != 0) count++
+        if ((byteValue and 0x02) != 0) count++
+        if ((byteValue and 0x04) != 0) count++
+        if ((byteValue and 0x08) != 0) count++
+        return count
+    }
+
+    fun toggleListeningMode(modeBit: Int) {
+        val currentByte = uiState.value.controlStates[ControlCommandIdentifiers.LISTENING_MODE_CONFIGS]?.get(0)?.toInt() ?: 0
+        val newValue = if ((currentByte and modeBit) != 0) {
+            val temp = currentByte and modeBit.inv()
+            if (countEnabledModes(temp) >= 2) temp else currentByte
+        } else {
+            currentByte or modeBit
+        }
+        setControlCommandByte(ControlCommandIdentifiers.LISTENING_MODE_CONFIGS, newValue.toByte())
+        sharedPreferences.edit { putInt("long_press_byte", newValue) }
+    }
+
     fun disconnect() {
         service.disconnectAirPods()
         if (appContext.checkSelfPermission("android.permission.BLUETOOTH_PRIVILEGED") != PackageManager.PERMISSION_GRANTED) {

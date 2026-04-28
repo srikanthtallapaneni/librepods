@@ -539,28 +539,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         }
                     } else {
                         val currentMode = ancNotification.status
+                        val configByte = sharedPreferences.getInt("long_press_byte", 0b0111)
                         val allowOffModeValue =
                             aacpManager.controlCommandStatusList.find { it.identifier == AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION }
-                        val allowOffMode = allowOffModeValue?.value?.takeIf { it.isNotEmpty() }
-                            ?.get(0) == 0x01.toByte()
-
-                        val nextMode = if (allowOffMode) {
-                            when (currentMode) {
-                                1 -> 2
-                                2 -> 3
-                                3 -> 4
-                                4 -> 1
-                                else -> 1
-                            }
-                        } else {
-                            when (currentMode) {
-                                1 -> 2
-                                2 -> 3
-                                3 -> 4
-                                4 -> 2
-                                else -> 2
-                            }
-                        }
+                        val allowOffMode =
+                            allowOffModeValue?.value?.takeIf { it.isNotEmpty() }?.get(0) == 0x01.toByte() || sharedPreferences.getBoolean("off_listening_mode", true)
+                        val nextMode = getNextMode(currentMode = currentMode, configByte = configByte, allowOffMode)
 
                         aacpManager.sendControlCommand(
                             AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE.value,
@@ -568,7 +552,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         )
                         Log.d(
                             TAG,
-                            "Cycling ANC mode from $currentMode to $nextMode (offListeningMode: $allowOffMode)"
+                            "Cycling ANC mode from $currentMode to $nextMode"
                         )
                     }
                 }
@@ -1970,7 +1954,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             val allowOffModeValue =
                 aacpManager.controlCommandStatusList.find { it.identifier == AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION }
             val allowOffMode =
-                allowOffModeValue?.value?.takeIf { it.isNotEmpty() }?.get(0) == 0x01.toByte()
+                allowOffModeValue?.value?.takeIf { it.isNotEmpty() }?.get(0) == 0x01.toByte() || sharedPreferences.getBoolean("off_listening_mode", true)
             it.setInt(
                 R.id.widget_off_button,
                 "setBackgroundResource",
@@ -3184,4 +3168,21 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 private fun Int.dpToPx(): Int {
     val density = Resources.getSystem().displayMetrics.density
     return (this * density).toInt()
+}
+
+fun getNextMode(currentMode: Int, configByte: Int, offmodeEnabled: Boolean): Int {
+    val enabledModes = buildList {
+        if ((configByte and 0x01) != 0 && offmodeEnabled) add(1)
+        if ((configByte and 0x04) != 0) add(3)
+        if ((configByte and 0x08) != 0) add(4)
+        if ((configByte and 0x02) != 0) add(2)
+    }
+    Log.d(TAG, "currentMode: $currentMode, config: ${configByte.toString(2)}")
+
+    if (enabledModes.isEmpty()) return currentMode
+
+    val currentIndex = enabledModes.indexOf(currentMode)
+    val nextIndex = if (currentIndex == -1) 0 else (currentIndex + 1) % enabledModes.size
+
+    return enabledModes[nextIndex]
 }
