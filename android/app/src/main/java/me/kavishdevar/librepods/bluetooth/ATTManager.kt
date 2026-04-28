@@ -172,6 +172,7 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
     }
 
     private fun writeRaw(pdu: ByteArray) {
+        if (output == null) return
         output?.write(pdu)
         output?.flush()
         Log.d(TAG, "writeRaw: ${pdu.joinToString(" ") { String.format("%02X", it) }}")
