@@ -177,6 +177,8 @@ fun registerRootModuleZipTask(
         rename { "LibrePods.apk" }
     }
 
+    delete(layout.buildDirectory.dir("outputs/rootModuleZips"))
+
     archiveFileName.set("LibrePods-FOSS-v$appVersionName-$buildType.zip")
     destinationDirectory.set(layout.buildDirectory.dir("outputs/rootModuleZips"))
 }
