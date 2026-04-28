@@ -3171,6 +3171,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             CoroutineScope(Dispatchers.IO).launch {
                 Log.d(TAG, "connecting to $macAddress")
                 connectToSocket(bluetoothAdapter, device!!, manual = true)
+                connectAudio(this@AirPodsService, device!!)
             }
         }
     }
