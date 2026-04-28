@@ -240,7 +240,7 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
                 item(key = "spacer_call") { Spacer(modifier = Modifier.height(16.dp)) }
                 item(key = "call_control") {
                     val bytes = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CALL_MANAGEMENT_CONFIG]?.take(2)?.toByteArray() ?: byteArrayOf(0x00, 0x00)
-                    val flipped = bytes[1] == 0x02.toByte()
+                    val flipped = try { bytes[1] == 0x02.toByte() } catch (e: Exception) { false }
                     CallControlSettings(
                         hazeState = hazeState,
                         flipped = flipped,
