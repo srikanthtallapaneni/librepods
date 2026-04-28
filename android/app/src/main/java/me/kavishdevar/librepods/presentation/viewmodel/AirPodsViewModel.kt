@@ -23,6 +23,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -529,7 +531,7 @@ class AirPodsViewModel(
                 actualModel = fakeInstance.actualModelNumber,
                 serialNumbers = listOf("DEMO", "DEMO", "DEMO"),
                 version3 = "Demo Firmware",
-//                isPremium = true
+                isPremium = true
             )
         }
     }
@@ -540,5 +542,9 @@ class AirPodsViewModel(
 
     fun disconnect() {
         service.disconnectAirPods()
+        if (appContext.checkSelfPermission("android.permission.BLUETOOTH_PRIVILEGED") != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(appContext, "App has disconnected, disconnect from Android Settings.",
+                Toast.LENGTH_LONG).show()
+        }
     }
 }

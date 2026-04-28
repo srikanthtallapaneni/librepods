@@ -3020,21 +3020,26 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                 override fun onServiceDisconnected(profile: Int) {}
             }, BluetoothProfile.A2DP)
-        } else {
-            Log.d(TAG, "not connecting A2DP, no BLUETOOTH_PRIVILEGED permission")
-        }
-        if (checkSelfPermission("android.permission.MODIFY_PHONE_STATE") == PackageManager.PERMISSION_GRANTED) {
+
             bluetoothAdapter?.getProfileProxy(context, object : BluetoothProfile.ServiceListener {
                 override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                     if (profile == BluetoothProfile.HEADSET) {
                         try {
-                            val policyMethod = proxy.javaClass.getMethod(
-                                "setConnectionPolicy",
-                                BluetoothDevice::class.java,
-                                Int::class.java
-                            )
-                            Log.d(TAG, "calling HEADSET.setConnectionPolicy for ${device?.address} to 100")
-                            policyMethod.invoke(proxy, device, 100)
+                            if (checkSelfPermission("android.permission.MODIFY_PHONE_STATE") == PackageManager.PERMISSION_GRANTED) {
+
+                                val policyMethod = proxy.javaClass.getMethod(
+                                    "setConnectionPolicy",
+                                    BluetoothDevice::class.java,
+                                    Int::class.java
+                                )
+                                Log.d(
+                                    TAG,
+                                    "calling HEADSET.setConnectionPolicy for ${device?.address} to 100"
+                                )
+                                policyMethod.invoke(proxy, device, 100)
+                            } else {
+                                Log.d(TAG, "not setting connection policy for HEADSET, no MODIFIY_PHONE_STATE permission")
+                            }
                             val connectMethod =
                                 proxy.javaClass.getMethod("connect", BluetoothDevice::class.java)
                             connectMethod.invoke(proxy, device)
