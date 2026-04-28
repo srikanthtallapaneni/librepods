@@ -712,8 +712,16 @@ class IslandWindow(private val context: Context) {
         }
         isClosing = false
         // Make sure all animations are canceled
-        springAnimation.cancel()
-        flingAnimator.cancel()
+        try {
+            springAnimation.cancel()
+        } catch (e: Exception) {
+            e("IslandWindow", "Error cancelling spring animation $e")
+        }
+        try {
+            flingAnimator.cancel()
+        } catch (e: Exception) {
+            e("IslandWindow", "Error cancelling fling animation $e")
+        }
     }
 
     fun forceClose() {
