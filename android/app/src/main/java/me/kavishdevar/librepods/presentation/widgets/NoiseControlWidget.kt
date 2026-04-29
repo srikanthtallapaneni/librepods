@@ -28,8 +28,8 @@ import android.content.Intent
 import android.util.Log
 import android.widget.RemoteViews
 import me.kavishdevar.librepods.R
-import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.bluetooth.AACPManager
+import me.kavishdevar.librepods.services.ServiceManager
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class NoiseControlWidget : AppWidgetProvider() {
@@ -82,8 +82,14 @@ class NoiseControlWidget : AppWidgetProvider() {
         if (intent.action == "ACTION_SET_ANC_MODE") {
             val mode = intent.getIntExtra("ANC_MODE", 1)
             Log.d("NoiseControlWidget", "Setting ANC mode to $mode")
-            ServiceManager.getService()!!
-                .aacpManager
+            val service = ServiceManager.getService()
+
+            if (service == null) {
+                Log.w("NoiseControlWidget", "Service unavailable")
+                return
+            }
+
+             service.aacpManager
                 .sendControlCommand(
                     AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE.value,
                     mode.toByte()
