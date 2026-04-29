@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.billing.BillingManager
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
-import me.kavishdevar.librepods.utils.NativeBridge
-import me.kavishdevar.librepods.utils.XposedState
 import kotlin.math.roundToInt
 
 data class AppSettingsUiState(
@@ -90,9 +88,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false),
                 connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false)
             )
-        }
-        if (XposedState.isAvailable && XposedState.bluetoothScopeEnabled) {
-            NativeBridge.setSdpHook(_uiState.value.vendorIdHook)
         }
     }
 
@@ -178,7 +173,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun setVendorIdHook(enabled: Boolean) {
-        NativeBridge.setSdpHook(enabled)
         xposedRemotePref.putBoolean("vendor_id_hook", enabled)
         _uiState.update { it.copy(vendorIdHook = enabled) }
     }
