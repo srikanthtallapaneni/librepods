@@ -99,9 +99,9 @@ import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledIconButton
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.StyledToggle
+import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.utils.HeadTracking
-import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.abs
 import kotlin.math.cos
@@ -151,9 +151,13 @@ fun HeadTrackingScreen(viewModel: AirPodsViewModel, navController: NavController
 
         var lastClickTime by remember { mutableLongStateOf(0L) }
         var shouldExplode by remember { mutableStateOf(false) }
+
+        val scrollState = rememberScrollState()
+
         Column(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column (
@@ -163,7 +167,6 @@ fun HeadTrackingScreen(viewModel: AirPodsViewModel, navController: NavController
                     .layerBackdrop(backdrop)
                     .padding(top = 8.dp)
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(scrollState)
             ) {
                 Spacer(modifier = Modifier.height(topPadding))
 
