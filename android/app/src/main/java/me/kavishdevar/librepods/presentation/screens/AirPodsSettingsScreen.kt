@@ -552,19 +552,22 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
                     }
                     Spacer(Modifier.height(16.dp))
                 }
-                StyledButton(
-                    onClick = {
-                        viewModel.reconnectFromSavedMac()
-                    }, backdrop = backdrop, modifier = Modifier.fillMaxWidth(0.9f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.reconnect_to_last_device), style = TextStyle(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = FontFamily(Font(R.font.sf_pro)),
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                if (state.connectionSuccessful) {
+                    StyledButton(
+                        onClick = {
+                            viewModel.reconnectFromSavedMac()
+                        }, backdrop = backdrop, modifier = Modifier.fillMaxWidth(0.9f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.reconnect_to_last_device),
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = FontFamily(Font(R.font.sf_pro)),
+                                color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

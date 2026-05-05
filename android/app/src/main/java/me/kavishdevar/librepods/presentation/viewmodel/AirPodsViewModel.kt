@@ -91,7 +91,9 @@ data class AirPodsUiState(
     val isPremium: Boolean = false,
     val vendorIdHook: Boolean = false,
 
-    val dynamicEndOfCharge: Boolean = false
+    val dynamicEndOfCharge: Boolean = false,
+
+    val connectionSuccessful: Boolean = false
 )
 
 class AirPodsViewModel(
@@ -354,6 +356,8 @@ class AirPodsViewModel(
         val vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false)
         val dynamicEndOfCharge = sharedPreferences.getBoolean("dynamic_end_of_charge", false)
 
+        val connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false)
+
         _uiState.update {
             it.copy(
                 offListeningMode = offListeningModeEnabled,
@@ -363,7 +367,8 @@ class AirPodsViewModel(
                 leftAction = leftAction,
                 rightAction = rightAction,
                 vendorIdHook = vendorIdHook,
-                dynamicEndOfCharge = dynamicEndOfCharge
+                dynamicEndOfCharge = dynamicEndOfCharge,
+                connectionSuccessful = connectionSuccessful
             )
         }
     }
