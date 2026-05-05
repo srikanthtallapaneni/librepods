@@ -89,7 +89,9 @@ data class AirPodsUiState(
     val hearingAidData: ByteArray = byteArrayOf(),
 
     val isPremium: Boolean = false,
-    val vendorIdHook: Boolean = false
+    val vendorIdHook: Boolean = false,
+
+    val dynamicEndOfCharge: Boolean = false
 )
 
 class AirPodsViewModel(
@@ -268,9 +270,16 @@ class AirPodsViewModel(
                 val current = state.controlStates[identifier]
                 if (current?.contentEquals(value) == true) return@update state
 
-                state.copy(
-                    controlStates = state.controlStates + (identifier to value)
-                )
+                if (identifier == ControlCommandIdentifiers.DYNAMIC_END_OF_CHARGE) {
+                    state.copy(
+                        dynamicEndOfCharge = value[0] == 0x01.toByte(),
+                        controlStates = state.controlStates + (identifier to value)
+                    )
+                } else {
+                    state.copy(
+                        controlStates = state.controlStates + (identifier to value)
+                    )
+                }
             }
         }
 
@@ -305,6 +314,7 @@ class AirPodsViewModel(
             ControlCommandIdentifiers.AUTOMATIC_CONNECTION_CONFIG,
             ControlCommandIdentifiers.OWNS_CONNECTION,
             ControlCommandIdentifiers.PPE_TOGGLE_CONFIG,
+            ControlCommandIdentifiers.DYNAMIC_END_OF_CHARGE
         )
         for (identifier in identifiersList) {
             observeControl(identifier)
@@ -342,6 +352,7 @@ class AirPodsViewModel(
             ) ?: "CYCLE_NOISE_CONTROL_MODES"
         )
         val vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false)
+        val dynamicEndOfCharge = sharedPreferences.getBoolean("dynamic_end_of_charge", false)
 
         _uiState.update {
             it.copy(
@@ -351,7 +362,8 @@ class AirPodsViewModel(
                 headGesturesEnabled = headGesturesEnabled,
                 leftAction = leftAction,
                 rightAction = rightAction,
-                vendorIdHook = vendorIdHook
+                vendorIdHook = vendorIdHook,
+                dynamicEndOfCharge = dynamicEndOfCharge
             )
         }
     }
@@ -368,6 +380,14 @@ class AirPodsViewModel(
         sharedPreferences.edit { putBoolean("head_gestures", enabled) }
         _uiState.update {
             it.copy(headGesturesEnabled = enabled)
+        }
+    }
+
+    fun setDynamicEndOfCharge(enabled: Boolean) {
+        service.aacpManager.sendControlCommand(ControlCommandIdentifiers.DYNAMIC_END_OF_CHARGE.value, enabled)
+        sharedPreferences.edit { putBoolean("dynamic_end_of_charge", enabled) }
+        _uiState.update {
+            it.copy(dynamicEndOfCharge = enabled)
         }
     }
 

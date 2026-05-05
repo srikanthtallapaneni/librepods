@@ -398,6 +398,16 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
                     }
                 }
 
+                item(key = "spacer_dynamic_end_of_charge") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "dynamic_end_of_charge") {
+                    StyledToggle(
+                        label = stringResource(R.string.optimized_charging),
+                        description = stringResource(R.string.optimized_charging_description),
+                        checked = state.dynamicEndOfCharge,
+                        onCheckedChange = viewModel::setDynamicEndOfCharge
+                    )
+                }
+
                 item(key = "spacer_accessibility") { Spacer(modifier = Modifier.height(16.dp)) }
                 item(key = "accessibility") {
                     NavigationButton(

@@ -109,7 +109,8 @@ class AACPManager {
             EAR_DETECTION_CONFIG(0x0A), AUTOMATIC_CONNECTION_CONFIG(0x20), OWNS_CONNECTION(0x06), PPE_TOGGLE_CONFIG(
                 0x37
             ),
-            PPE_CAP_LEVEL_CONFIG(0x38);
+            PPE_CAP_LEVEL_CONFIG(0x38),
+            DYNAMIC_END_OF_CHARGE(0x3B);
 
             companion object {
                 fun fromByte(byte: Byte): ControlCommandIdentifiers? =
