@@ -31,7 +31,7 @@ fun isSupported(sharedPreferences: SharedPreferences): Boolean {
     if (isPixel) {
         when (Build.VERSION.SDK_INT) {
             36 -> {
-                return Build.ID == "CP1A.260305.018" || Build.ID == "CP1A.260405.005"
+                return Build.ID == "CP1A.260305.018" || Build.ID == "CP1A.260405.005" || Build.ID == "CP1A.260505.005"
             }
 
             37 -> {
