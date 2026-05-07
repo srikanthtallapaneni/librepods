@@ -28,9 +28,8 @@ android {
 
     defaultConfig {
         applicationId = "me.kavishdevar.librepods"
-        minSdk = 33
         targetSdk = 37
-        versionCode = 50
+        versionCode = 52
         versionName = appVersionName
     }
     buildTypes {
@@ -47,21 +46,29 @@ android {
             }
             buildConfigField("Boolean", "PLAY_BUILD", "false")
             signingConfig = signingConfigs.getByName("release")
+            defaultConfig {
+                minSdk = 33
+            }
         }
         debug {
             buildConfigField("Boolean", "PLAY_BUILD", "false")
             signingConfig = signingConfigs.getByName("release")
             versionNameSuffix = "-debug"
+            defaultConfig {
+                minSdk = 33
+            }
         }
-        create("playRelease") {
-            initWith(getByName("release"))
+    }
+    productFlavors {
+        create("foss") {
+            dimension = "env"
+            buildConfigField("Boolean", "PLAY_BUILD", "false")
+        }
+        create("play") {
+            dimension = "env"
             buildConfigField("Boolean", "PLAY_BUILD", "true")
             versionNameSuffix = "-play"
-        }
-        create("playDebug") {
-            initWith(getByName("debug"))
-            buildConfigField("Boolean", "PLAY_BUILD", "true")
-            versionNameSuffix = "-youshouldnothavethis"
+            minSdk = 36
         }
     }
     compileOptions {
@@ -91,25 +98,6 @@ android {
     ndkVersion = "30.0.14904198"
 
     flavorDimensions += "env"
-
-    productFlavors {
-        create("normal") {
-            dimension = "env"
-            externalNativeBuild {
-                cmake {
-                    arguments += "-DIS_XPOSED=OFF"
-                }
-            }
-        }
-        create("xposed") {
-            dimension = "env"
-            externalNativeBuild {
-                cmake {
-                    arguments += "-DIS_XPOSED=ON"
-                }
-            }
-        }
-    }
 }
 
 dependencies {
@@ -139,9 +127,10 @@ dependencies {
     implementation(libs.backdrop)
 //    implementation(libs.hilt)
 //    implementation(libs.hilt.compiler)
-    add("xposedCompileOnly", libs.libxposed.api)
-    add("xposedImplementation", libs.libxposed.service)
-    add("playReleaseImplementation", libs.billing)
+    compileOnly(libs.libxposed.api)
+    implementation(libs.libxposed.service)
+    implementation(libs.play.review)
+    implementation(libs.play.review.ktx)
 }
 
 aboutLibraries {
@@ -184,14 +173,14 @@ fun registerRootModuleZipTask(
 }
 
 val zipRelease = registerRootModuleZipTask(
-    "zipXposedReleaseModule",
-    "xposed",
+    "zipReleaseModule",
+    "foss",
     "release"
 )
 
 val zipDebug = registerRootModuleZipTask(
-    "zipXposedDebugModule",
-    "xposed",
+    "zipDebugModule",
+    "foss",
     "debug"
 )
 
@@ -200,22 +189,22 @@ val collect = tasks.register<Copy>("collectReleaseArtifacts") {
     dependsOn(
         zipRelease,
         zipDebug,
-        "bundleXposedPlayRelease"
+        "bundlePlayRelease"
     )
 
     into(releaseDir)
 
-    from(layout.buildDirectory.dir("outputs/apk/xposed/release")) {
+    from(layout.buildDirectory.dir("outputs/apk/foss/release")) {
         include("*.apk")
         rename(".*", "LibrePods-FOSS-v$appVersionName-release.apk")
     }
 
-    from(layout.buildDirectory.dir("outputs/apk/xposed/debug")) {
+    from(layout.buildDirectory.dir("outputs/apk/foss/debug")) {
         include("*.apk")
         rename(".*", "LibrePods-FOSS-v$appVersionName-debug.apk")
     }
 
-    from(layout.buildDirectory.dir("outputs/bundle/xposedPlayRelease")) {
+    from(layout.buildDirectory.dir("outputs/bundle/playRelease")) {
         include("*.aab")
     }
 

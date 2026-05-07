@@ -131,7 +131,6 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
         viewModel.refreshInitialData()
     }
 
-    isSystemInDarkTheme()
     val hazeStateS = remember { mutableStateOf(HazeState()) }
 
     StyledScaffold(

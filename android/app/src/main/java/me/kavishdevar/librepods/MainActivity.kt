@@ -24,6 +24,7 @@ package me.kavishdevar.librepods
 // import me.kavishdevar.librepods.utils.RadareOffsetFinder
 //import dagger.hilt.android.AndroidEntryPoint
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -65,7 +66,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -87,13 +87,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -114,6 +112,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.play.core.review.ReviewManagerFactory
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
@@ -122,14 +121,8 @@ import dev.chrisbanes.haze.rememberHazeState
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.presentation.components.AppInfoCard
-import me.kavishdevar.librepods.presentation.components.ConfirmationDialog
 import me.kavishdevar.librepods.presentation.components.DeviceInfoCard
-import me.kavishdevar.librepods.presentation.components.SelectItem
-import me.kavishdevar.librepods.presentation.components.StyledBottomSheet
-import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledIconButton
-import me.kavishdevar.librepods.presentation.components.StyledInputField
-import me.kavishdevar.librepods.presentation.components.StyledSelectList
 import me.kavishdevar.librepods.presentation.screens.AccessibilitySettingsScreen
 import me.kavishdevar.librepods.presentation.screens.AdaptiveStrengthScreen
 import me.kavishdevar.librepods.presentation.screens.AirPodsSettingsScreen
@@ -159,6 +152,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 lateinit var serviceConnection: ServiceConnection
 lateinit var connectionStatusReceiver: BroadcastReceiver
+lateinit var testReviewReceiver: BroadcastReceiver
 
 //@AndroidEntryPoint
 @ExperimentalMaterial3Api
@@ -225,8 +219,6 @@ fun Main() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("settings", MODE_PRIVATE)
     if (!isSupported(sharedPreferences) && !XposedState.bluetoothScopeEnabled) {
-        val showDialog = remember { mutableStateOf(false) }
-        val showPlayBypassVisible = remember { mutableStateOf(false) }
         val hazeState = rememberHazeState()
         val backdrop = rememberLayerBackdrop()
         val isDarkTheme = isSystemInDarkTheme()
@@ -243,7 +235,7 @@ fun Main() {
                 .background(if (isDarkTheme) Color.Black else Color(0xFFF2F2F7)),
             contentAlignment = Alignment.Center
         ) {
-            Column (
+            Column(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .verticalScroll(scrollState),
@@ -288,173 +280,25 @@ fun Main() {
                                 .padding(horizontal = 12.dp, vertical = 16.dp)
                         )
                     }
-                    StyledButton(
-                        onClick = { showDialog.value = true },
-                        backdrop = rememberLayerBackdrop(),
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.enable_app_in_xposed_or_update_device),
+                        style = TextStyle(
+                            fontFamily = FontFamily(Font(R.font.sf_pro)),
+                            fontWeight = FontWeight.Light,
+                            color = if (isDarkTheme) Color.White else Color.Black,
+                            fontSize = 14.sp
+                        ),
                         modifier = Modifier
-                            .fillMaxWidth(),
-                        isInteractive = false,
-                        surfaceColor = if (isDarkTheme) Color(0xFF862424) else Color(0xFFC94646)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.bypass_compatibility_check),
-                            style = TextStyle(
-                                fontFamily = FontFamily(Font(R.font.sf_pro)),
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White,
-                                fontSize = 16.sp
-                            ),
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                    )
                     DeviceInfoCard()
                     AppInfoCard()
                 }
                 Spacer(modifier = Modifier.height(48.dp))
             }
         }
-
-        ConfirmationDialog(
-            showDialog = showDialog,
-            title = stringResource(R.string.bypass_compatibility_check),
-            message = stringResource(R.string.bypass_compatiblity_check_confirmation),
-            confirmText = stringResource(R.string.yes),
-            dismissText = stringResource(R.string.no),
-            onConfirm = {
-                showDialog.value = false
-                if (BuildConfig.PLAY_BUILD) {
-                    showPlayBypassVisible.value = true
-                } else {
-                    sharedPreferences.edit {
-                        putBoolean("bypass_device_check.v2", true)
-                    }
-                    val intent = Intent(context, MainActivity::class.java)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    context.startActivity(intent)
-                }
-            },
-            onDismiss = {
-                showDialog.value = false
-            },
-            backdrop = backdrop
-//            hazeState = hazeState
-        )
-
-        if (BuildConfig.PLAY_BUILD) {
-            StyledBottomSheet(
-                visible = showPlayBypassVisible.value,
-                onDismiss = {
-                    showPlayBypassVisible.value = false
-                    showDialog.value = true
-                },
-                backdrop = backdrop
-            ) { innerBackdrop, _ ->
-                val contentColor = if (isDarkTheme) Color.White else Color.Black
-
-                var acknowledged by remember { mutableStateOf(false) }
-                val inputState = rememberTextFieldState("")
-
-                val isValid = acknowledged && inputState.text.trim() == "OK"
-
-                val sfPro = FontFamily(Font(R.font.sf_pro))
-
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(R.string.bypass_compatibility_check),
-                        style = TextStyle(
-                            fontFamily = sfPro,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp,
-                            color = contentColor
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-
-                    Text(
-                        text = stringResource(R.string.compatibility_play_dialog_confirmation),
-                        style = TextStyle(
-                            fontFamily = sfPro,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp,
-                            color = contentColor
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-
-                    StyledSelectList(
-                        items = listOf(
-                            SelectItem(
-                                name = stringResource(R.string.read_compatibility_requirements),
-                                selected = acknowledged,
-                                onClick = { acknowledged = !acknowledged }
-                            )
-                        )
-                    )
-
-                    val focusRequester = remember { FocusRequester() }
-                    val keyboardController = LocalSoftwareKeyboardController.current
-
-                    LaunchedEffect(Unit) {
-                        focusRequester.requestFocus()
-                        keyboardController?.show()
-                    }
-
-                    StyledInputField(
-                        inputState = inputState,
-                        focusRequester = focusRequester,
-                        placeholder = stringResource(R.string.type_ok_to_continue, "OK")
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        StyledButton(
-                            onClick = { showPlayBypassVisible.value = false },
-                            backdrop = innerBackdrop,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.no),
-                                style = TextStyle(
-                                    fontFamily = sfPro,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 14.sp,
-                                    color = contentColor
-                                )
-                            )
-                        }
-                        StyledButton(
-                            onClick =  {
-                                showPlayBypassVisible.value = false
-                                sharedPreferences.edit {
-                                    putBoolean("bypass_device_check.v2", true)
-                                    val intent = Intent(context, MainActivity::class.java)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                    context.startActivity(intent)
-                                }
-                            },
-                            backdrop = innerBackdrop,
-                            isInteractive = isValid,
-                            modifier = Modifier.weight(1f),
-                            enabled = isValid,
-                            surfaceColor = if (isDarkTheme) Color(0xFF0091FF) else Color(0xFF0088FF)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.proceed),
-                                style = TextStyle(
-                                    fontFamily = sfPro,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 14.sp,
-                                    color = if (isValid) contentColor else contentColor.copy(alpha = 0.4f)
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
         return
     }
 
@@ -514,6 +358,31 @@ fun Main() {
     if (permissionState.allPermissionsGranted && (canDrawOverlays || overlaySkipped.value)) {
 
         val navController = rememberNavController()
+
+        LaunchedEffect(Unit) {
+            if (BuildConfig.PLAY_BUILD) {
+                val now = System.currentTimeMillis()
+                val firstConn =
+                    sharedPreferences.getLong("first_connection_successful_time", 0L)
+
+                val alreadyPrompted =
+                    sharedPreferences.getBoolean("review_prompted", false)
+
+                val oneDay = 24 * 60 * 60 * 1000L
+
+                if (
+                    firstConn != 0L &&
+                    !alreadyPrompted &&
+                    (now - firstConn) > oneDay
+                ) {
+                    triggerReviewFlow(context as? Activity ?: return@LaunchedEffect)
+
+                    sharedPreferences.edit {
+                        putBoolean("review_prompted", true)
+                    }
+                }
+            }
+        }
 
         Box(
             modifier = Modifier.fillMaxSize()
@@ -652,6 +521,12 @@ fun Main() {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                     val binder = service as AirPodsService.LocalBinder
                     airPodsService.value = binder.getService()
+
+                    if (!sharedPreferences.contains("first_connection_successful_time")) {
+                        sharedPreferences.edit {
+                            putLong("first_connection_successful_time", System.currentTimeMillis())
+                        }
+                    }
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {
@@ -674,6 +549,17 @@ fun Main() {
             permissionState = permissionState,
             canDrawOverlays = canDrawOverlays,
             onOverlaySettingsReturn = { canDrawOverlays = Settings.canDrawOverlays(context) })
+    }
+}
+
+private fun triggerReviewFlow(activity: Activity) {
+    val manager = ReviewManagerFactory.create(activity)
+    val request = manager.requestReviewFlow()
+    request.addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            val reviewInfo = task.result
+            manager.launchReviewFlow(activity, reviewInfo)
+        }
     }
 }
 

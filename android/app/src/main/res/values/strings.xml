@@ -252,7 +252,8 @@
         \n• Google Pixel® running 17 Beta 3 and above
         \n• OnePlus devices running OxygenOS 16 or later
         \n• Oppo devices running ColorOS 16 or later
-        \n\nFor details, see the project documentation.</string>
+        \n\nFor details, see the project documentation.
+    </string>
     <string name="name_your_own_price">(Name your own price)</string>
     <string name="compatibility_play_dialog_confirmation">
         This device may not be supported due to platform limitations and requires an Xposed framework. Tick the checkbox below and type OK to continue.
@@ -273,5 +274,6 @@
     <string name="subject">Subject</string>
     <string name="describe_your_issue">Describe your issue</string>
     <string name="optimized_charging">Optimized Charge Limit</string>
-    <string name="optimized_charging_description">AirPods can learn from your daily usage and determine when to charge to an optmized limit and when to allow or full charge. This limit adapts to your daily usage and preserves your battery lifespan over time.\\nThis setting may not affect unsupported AirPods, or AirPods on an older firmware version.</string>
+    <string name="optimized_charging_description">AirPods can learn from your daily usage and determine when to charge to an optmized limit and when to allow or full charge. This limit adapts to your daily usage and preserves your battery lifespan over time.\nThis setting may not affect unsupported AirPods, or AirPods on an older firmware version.</string>
+    <string name="enable_app_in_xposed_or_update_device">Enable LibrePods in Xposed or update your device to proceed.</string>
 </resources>

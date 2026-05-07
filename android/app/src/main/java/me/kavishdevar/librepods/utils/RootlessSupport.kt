@@ -23,7 +23,7 @@ import android.os.Build
 
 fun isSupported(sharedPreferences: SharedPreferences): Boolean {
     val isPixel = Build.MANUFACTURER.lowercase() == "google"
-    val isOppoOrOnePlus = Build.MANUFACTURER.lowercase() in listOf("oneplus", "oppo")
+    val isOppoFamily = Build.MANUFACTURER.lowercase() in listOf("oneplus", "oppo", "realme")
     val isBypassFlagActive = sharedPreferences.getBoolean("bypass_device_check.v2", false)
 
     if (isBypassFlagActive) return true
@@ -31,14 +31,14 @@ fun isSupported(sharedPreferences: SharedPreferences): Boolean {
     if (isPixel) {
         when (Build.VERSION.SDK_INT) {
             36 -> {
-                return Build.ID == "CP1A.260305.018" || Build.ID == "CP1A.260405.005" || Build.ID == "CP1A.260505.005"
+                return Build.ID.startsWith("CP1A")
             }
 
             37 -> {
                 return true
             }
         }
-    } else if (isOppoOrOnePlus) {
+    } else if (isOppoFamily) {
         return Build.VERSION.SDK_INT >= 36
     }
     return false

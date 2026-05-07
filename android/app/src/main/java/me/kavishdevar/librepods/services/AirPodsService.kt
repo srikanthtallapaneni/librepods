@@ -126,6 +126,7 @@ import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_
 import me.kavishdevar.librepods.utils.SystemApisUtils.METADATA_UNTETHERED_RIGHT_LOW_BATTERY_THRESHOLD
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.time.LocalDateTime
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -2712,6 +2713,14 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         )
                         Log.d(TAG, "<LogCollector:Complete:Success> Socket connected")
                         sharedPreferences.edit { putBoolean("connection_successful", true) }
+                        if (!sharedPreferences.contains("first_connection_successful_time")) {
+                            sharedPreferences.edit {
+                                putLong(
+                                    "first_connection_successful_time",
+                                    System.currentTimeMillis()
+                                )
+                            }
+                        }
                         sendBroadcast(Intent(AirPodsNotifications.AIRPODS_L2CAP_CONNECTED))
                     } catch (e: Exception) {
 //                        sharedPreferences.edit { putBoolean("connection_successful", false) }
