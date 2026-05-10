@@ -6,6 +6,7 @@ on:
       - '*'
     paths:
       - 'android/**'
+      - 'root-module-manual/**'
   pull_request:
     paths:
       - 'android/**'
