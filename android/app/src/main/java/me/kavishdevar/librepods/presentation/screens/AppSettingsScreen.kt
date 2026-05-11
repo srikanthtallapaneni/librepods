@@ -20,6 +20,7 @@ package me.kavishdevar.librepods.presentation.screens
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -542,10 +543,23 @@ fun AppSettingsScreen(
                     name = stringResource(R.string.github_issues),
                     navController = navController,
                     onClick = {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            "https://github.com/kavishdevar/librepods/issues".toUri()
+                        val appVersion = Uri.encode("v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                        val device = Uri.encode("${Build.MANUFACTURER} ${Build.MODEL}")
+                        val androidVersion = Uri.encode("${Build.ID} (${Build.DISPLAY})")
+                        val appSource = Uri.encode(
+                            when {
+                                BuildConfig.PLAY_BUILD -> "Play"
+                                else -> "GitHub"
+                            }
                         )
+                        val url = "https://github.com/kavishdevar/librepods/issues/new" +
+                            "?template=01-bug-report-android.yml" +
+                            "&app-source=$appSource" +
+                            "&app-version=$appVersion" +
+                            "&device=$device" +
+                            "&android-version=$androidVersion"
+
+                        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                         context.startActivity(intent)
                     },
                     independent = false
