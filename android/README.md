@@ -41,6 +41,7 @@ Want to try the latest features before they're officially released? You can grab
 > [!WARNING]
 > These builds are automatically generated from the latest code and may contain new features and bug fixes that haven't been included in a stable release yet. However, please note that they may also be less stable than official releases, so use them at your own risk.
 
+## Screenshots
 
 |                                                                                 |                                            |                                                                      |
 | ------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
