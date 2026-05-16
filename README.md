@@ -31,46 +31,6 @@ Development paused due to lack of time until June 2026 (JEE Advanced). PRs and i
 
 LibrePods allows you to use AirPods features that are exclusive to Apple devices. It implements the proprietary protocol used to exchange data between AirPods and Apple devices, enabling features like changing noise control modes, fast ear detection, accurate battery status, head gestures, conversational awareness, and more on non-Apple platforms.
 
-# Installation
-
-> [!IMPORTANT]
-> Before installing, please read the [feature availability](#feature-availability) and platform-specific READMEs.
-
-## Android
-
-### README: [android/README.md](./android/README.md)
-
-### Google Play Store
-
-If you are using a supported device/OS combination listed in the [root requirements section](/android/#root-requirement), you can install LibrePods from the Google Play Store. You can use the VendorID hook features with root even from the Play Store version.
-
-<a href="https://play.google.com/store/apps/details?id=me.kavishdevar.librepods"><img width="170" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/2948308f-af92-443f-94d9-ee381c3a6ccc"/></a>
-
-
-### GitHub Releases
-
-If you need xposed because of the [root requirement](/android/#root-requirement), you will have to use the apk/zip from the [GitHub releases](https://github.com/kavishdevar/librepods/releases/latest).
-
-### Root Module
-
-If you want LibrePods to have privileged Bluetooth permissions to 
-- show battery status in the system settings and widgets
-- show AirPods icon in the system settings (xposed is also currently required for this)
-- disconnect AirPods when you take them out of your ears
-
-## Linux
-
-### README: [linux/README.md](./linux/README.md)
-
-### GitHub Releases
-
-The app is ready to download as an AppImage or an executable. You can download the latest pre-release from the [GitHub releases](https://github.com/kavishdevar/librepods/releases?q="linux-v0").
-
-### Nightly Builds (recommended)
-
-You can also try the latest build of the new version from the [GitHub Actions artifacts](https://github.com/kavishdevar/librepods/actions/workflows/ci-linux-rust.yml). On the latest successful workflow run, download the **librepods-x86_64.AppImage** or **librepods** binary from **Artifacts**.
-
-
 # Feature availability
 
 | Feature                                                     | Linux | Android |
@@ -125,6 +85,11 @@ On iOS/iPadOS, you can continue using A2DP while AirPods send the audio stream f
 Since there is no way on Android to have a virtual audio source which can be used for calls where the LibrePods app can provide the higher quality microphone stream, the app will need root on Android.s
 
 &ast; Features marked with an asterisk require the VendorID to be change to that of Apple.
+
+# Installation
+
+- [**Android**](/android/README.md)
+- [**Linux**](/linux/README.md)
 
 # VendorID Spoofing
 
