@@ -49,7 +49,7 @@ If you are using a supported device/OS combination listed in the [root requireme
 
 ### GitHub Releases
 
-If you need xposed because of the [root requirement](#root-requirement), you will have to use the apk/zip from the [GitHub releases](https://github.com/kavishdevar/librepods/releases/latest).
+If you need xposed because of the [root requirement](/android/#root-requirement), you will have to use the apk/zip from the [GitHub releases](https://github.com/kavishdevar/librepods/releases/latest).
 
 ### Root Module
 
@@ -93,8 +93,8 @@ You can also try the latest build of the new version from the [GitHub Actions ar
 | [Find My](#find-my)                                         | ❓     | ❓       |
 | [High quality two-way audio](#high-quality-two-way-audio)   | 🔴     | 🔴       |
 
-| Emoji | Meaning                                                             |
-| ----- | ------------------------------------------------------------------- |
+| Symbol | Meaning                                                             |
+| ------ | ------------------------------------------------------------------- |
 | ✅     | Implemented and works well                                          |
 | ⚪     | Needs [VendorID spoofing](#vendorid-spoofing); use at your own risk |
 | 🔴     | Not implemented yet; planned                                        |
