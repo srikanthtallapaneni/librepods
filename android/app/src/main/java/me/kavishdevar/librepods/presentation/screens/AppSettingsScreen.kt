@@ -24,6 +24,7 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -91,6 +92,7 @@ import me.kavishdevar.librepods.presentation.components.StyledSlider
 import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
 import me.kavishdevar.librepods.utils.XposedState
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -147,7 +149,39 @@ fun AppSettingsScreen(
                     )
                 }
             }
-
+            if (state.timeUntilFOSSPremiumExpiry > 0L) {
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFF32829B), RoundedCornerShape(28.dp))
+                        .clip(RoundedCornerShape(28.dp))
+                        .clickable {
+                            val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = "mailto:".toUri()
+                                putExtra(Intent.EXTRA_EMAIL, arrayOf("billing@kavish.xyz"))
+                                putExtra(Intent.EXTRA_SUBJECT, "LibrePods Play billing error")
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Please enter your GitHub username to restore your premium access:\n\nGitHub username: "
+                                )
+                            }
+                            context.startActivity(emailIntent)
+                        }
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.play_foss_premium_banner, maxOf(1, TimeUnit.MILLISECONDS.toDays(state.timeUntilFOSSPremiumExpiry).toInt())
+                        ),
+                        modifier = Modifier
+                            .padding(16.dp),
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontFamily = FontFamily(Font(R.font.sf_pro))
+                        )
+                    )
+                }
+            }
             if (state.connectionSuccessful) {
                 StyledToggle(
                     title = stringResource(R.string.widget),

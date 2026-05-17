@@ -53,11 +53,11 @@ import androidx.navigation.NavController
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
-import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.viewmodel.PurchaseViewModel
+import me.kavishdevar.librepods.utils.XposedState
 
 @Composable
 fun PurchaseScreen(
@@ -199,7 +199,7 @@ fun PurchaseScreen(
                             )
                         )
                     }
-                    if (BuildConfig.FLAVOR == "xposed") {
+                    if (XposedState.isAvailable) {
                         HorizontalDivider(
                             thickness = 1.dp,
                             color = Color(0x40888888),

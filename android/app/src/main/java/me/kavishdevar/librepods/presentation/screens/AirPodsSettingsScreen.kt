@@ -23,10 +23,14 @@ package me.kavishdevar.librepods.presentation.screens
 // import me.kavishdevar.librepods.utils.RadareOffsetFinder
 import android.annotation.SuppressLint
 import android.content.Context.MODE_PRIVATE
+import android.content.Intent
 import android.content.SharedPreferences
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -64,6 +69,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -93,6 +99,7 @@ import me.kavishdevar.librepods.presentation.components.StyledIconButton
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
+import java.util.concurrent.TimeUnit
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
@@ -170,6 +177,44 @@ fun AirPodsSettingsScreen(viewModel: AirPodsViewModel, navController: NavControl
                         }
                     } else Modifier)) {
                 item(key = "spacer_top") { Spacer(modifier = Modifier.height(topPadding)) }
+
+                item(key = "play_update_banner") {
+                    if (state.timeUntilFOSSPremiumExpiry > 0L) {
+                        val context = LocalContext.current
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFF32829B), RoundedCornerShape(28.dp))
+                                .clip(RoundedCornerShape(28.dp))
+                                .clickable {
+                                    val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                        data = "mailto:".toUri()
+                                        putExtra(Intent.EXTRA_EMAIL, arrayOf("billing@kavish.xyz"))
+                                        putExtra(Intent.EXTRA_SUBJECT, "LibrePods Play billing error")
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "Please enter your GitHub username to restore your premium access:\n\nGitHub username: "
+                                        )
+                                    }
+                                    context.startActivity(emailIntent)
+                                }
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.play_foss_premium_banner, maxOf(1, TimeUnit.MILLISECONDS.toDays(state.timeUntilFOSSPremiumExpiry).toInt())
+                                ),
+                                modifier = Modifier
+                                    .padding(16.dp),
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontFamily = FontFamily(Font(R.font.sf_pro))
+                                )
+                            )
+                        }
+                    }
+                }
+
                 item(key = "battery") {
                     BatteryView(
                         batteryList = state.battery,
