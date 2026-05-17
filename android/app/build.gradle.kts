@@ -41,7 +41,7 @@ android {
     defaultConfig {
         applicationId = "me.kavishdevar.librepods"
         targetSdk = 37
-        versionCode = 52
+        versionCode = 53
         versionName = appVersionName
     }
     buildTypes {
@@ -56,7 +56,6 @@ android {
                     arguments += "-DCMAKE_BUILD_TYPE=Release"
                 }
             }
-            buildConfigField("Boolean", "PLAY_BUILD", "false")
             if (releaseSigningAvailable) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -65,7 +64,6 @@ android {
             }
         }
         debug {
-            buildConfigField("Boolean", "PLAY_BUILD", "false")
             if (releaseSigningAvailable) {
                 signingConfig = signingConfigs.getByName("release")
             }
