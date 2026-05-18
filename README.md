@@ -82,9 +82,7 @@ This is being worked upon, check the #⁠reverse-engineering channel on the Libr
 ## High quality two-way audio
 On iOS/iPadOS, you can continue using A2DP while AirPods send the audio stream from its microphone over AACP. 
 
-Since there is no way on Android to have a virtual audio source which can be used for calls where the LibrePods app can provide the higher quality microphone stream, the app will need root on Android.s
-
-&ast; Features marked with an asterisk require the VendorID to be change to that of Apple.
+Since this needs deeper integration with audio on Android, it will most likely need root.
 
 # Installation
 
