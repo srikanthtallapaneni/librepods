@@ -52,13 +52,13 @@ enum class ATTCCCDHandles(val value: Int) {
 
 class ATTManager(private val adapter: BluetoothAdapter, private val device: BluetoothDevice) {
     companion object {
-        private const val TAG = "ATTManager"
-
         private const val OPCODE_READ_REQUEST: Byte = 0x0A
         private const val OPCODE_WRITE_REQUEST: Byte = 0x12
         private const val OPCODE_HANDLE_VALUE_NTF: Byte = 0x1B
     }
-
+    private val id = System.identityHashCode(this)
+    @Suppress("PrivatePropertyName")
+    private val TAG = "ATTManager[$id]"
     var socket: BluetoothSocket? = null
     private var input: InputStream? = null
     private var output: OutputStream? = null
@@ -72,16 +72,25 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
     fun connect() {
         val uuid = ParcelUuid.fromString("00000000-0000-0000-0000-000000000000")
 
-        try {
-            socket = createBluetoothSocket(adapter, device, uuid)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to create socket")
+        if (socket == null) {
+            Log.d(TAG, "Socket doesn't exist, creating")
+            try {
+                socket = createBluetoothSocket(adapter, device, uuid)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to create socket")
+                e.printStackTrace()
+                return
+            }
         }
-        try {
-            socket!!.connect()
-        } catch (e: Exception) {
-            Log.w(TAG, "ATT socket failed to connect")
-            return
+        if (socket?.isConnected != true) {
+            Log.d(TAG, "Connection to socket")
+            try {
+                socket!!.connect()
+            } catch (e: Exception) {
+                Log.w(TAG, "ATT socket failed to connect")
+                e.printStackTrace()
+                return
+            }
         }
         input = socket!!.inputStream
         output = socket!!.outputStream
@@ -112,6 +121,10 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
                     if (socket?.isConnected != true) break
                 }
             }
+        }
+        if (output != null) {
+            Log.d(TAG, "sending read req for hearing aid declaration")
+            output?.write(byteArrayOf(0x0A, 0x29, 0x00))
         }
     }
 
@@ -216,11 +229,11 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
         )
 
         val constructors = BluetoothSocket::class.java.declaredConstructors
-        Log.d("ATTManager", "BluetoothSocket has ${constructors.size} constructors:")
+        Log.d(TAG, "BluetoothSocket has ${constructors.size} constructors:")
 
         constructors.forEachIndexed { index, constructor ->
             val params = constructor.parameterTypes.joinToString(", ") { it.simpleName }
-            Log.d("ATTManager", "Constructor $index: ($params)")
+            Log.d(TAG, "Constructor $index: ($params)")
         }
 
         var lastException: Exception? = null
@@ -228,7 +241,7 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
 
         for ((index, params) in constructorSpecs.withIndex()) {
             try {
-                Log.d("ATTManager", "Trying constructor signature #${index + 1}")
+                Log.d(TAG, "Trying constructor signature #${index + 1}")
                 attemptedConstructors++
 
                 val paramTypes = params.map { it::class.javaPrimitiveType ?: it::class.java }.toTypedArray()
@@ -237,13 +250,13 @@ class ATTManager(private val adapter: BluetoothAdapter, private val device: Blue
                 return constructor.newInstance(*params) as BluetoothSocket
 
             } catch (e: Exception) {
-                Log.e("ATTManager", "Constructor signature #${index + 1} failed: ${e.message}")
+                Log.e(TAG, "Constructor signature #${index + 1} failed: ${e.message}")
                 lastException = e
             }
         }
 
         val errorMessage = "Failed to create BluetoothSocket after trying $attemptedConstructors constructor signatures"
-        Log.e("ATTManager", errorMessage)
+        Log.e(TAG, errorMessage)
         throw lastException ?: IllegalStateException(errorMessage)
     }
 }

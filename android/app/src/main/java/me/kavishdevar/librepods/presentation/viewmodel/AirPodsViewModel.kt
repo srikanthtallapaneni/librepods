@@ -530,7 +530,9 @@ class AirPodsViewModel(
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                service.attManager?.connect()
+                if (service.attManager?.socket?.isConnected != true) {
+                    service.attManager?.connect()
+                }
                 while (service.attManager?.socket?.isConnected != true) {
                     delay(250)
                 }
@@ -545,21 +547,28 @@ class AirPodsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val loudSoundReduction =
                 runCatching { service.attManager?.read(ATTHandles.LOUD_SOUND_REDUCTION) }.getOrNull()
+            val loudSoundReductionEnabled = loudSoundReduction?.size?.let {
+                if (it > 0) {
+                    loudSoundReduction[0].toInt() == 1
+                } else false
+            }
             val transparencyData =
                 runCatching { service.attManager?.read(ATTHandles.TRANSPARENCY) }.getOrNull()?: byteArrayOf()
-            val hearingAid =
+            val hearingAidData =
                 runCatching { service.attManager?.read(ATTHandles.HEARING_AID) }.getOrNull()?: byteArrayOf()
             _uiState.value = _uiState.value.copy(
-                loudSoundReductionEnabled = loudSoundReduction?.get(0)?.toInt() == 0x01,
+                loudSoundReductionEnabled = loudSoundReductionEnabled == true,
                 transparencyData = transparencyData,
-                hearingAidData = hearingAid
+                hearingAidData = hearingAidData
             )
         }
     }
 
     fun observeATT() {
         viewModelScope.launch(Dispatchers.IO) {
-            service.attManager?.connect()
+            if (service.attManager?.socket?.isConnected != true) {
+                service.attManager?.connect()
+            }
             while (service.attManager?.socket?.isConnected != true) {
                 delay(1000)
             }
