@@ -62,6 +62,7 @@ import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.StyledScaffold
 import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.bluetooth.ATTHandles
+import me.kavishdevar.librepods.bluetooth.ATTManagerv2
 import me.kavishdevar.librepods.data.HearingAidSettings
 import me.kavishdevar.librepods.data.parseHearingAidSettingsResponse
 import me.kavishdevar.librepods.data.sendHearingAidSettings
@@ -73,17 +74,17 @@ private const val TAG = "HearingAidAdjustments"
 @Composable
 fun UpdateHearingTestScreen() {
     val verticalScrollState = rememberScrollState()
-    val attManager = ServiceManager.getService()?.attManager
-    if (attManager == null) {
-        Text(
-            text = stringResource(R.string.att_manager_is_null_try_reconnecting),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            textAlign = TextAlign.Center
-        )
-        return
-    }
+//    val attManager = ServiceManager.getService()?.attManager
+//    if (attManager == null) {
+//        Text(
+//            text = stringResource(R.string.att_manager_is_null_try_reconnecting),
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .padding(16.dp),
+//            textAlign = TextAlign.Center
+//        )
+//        return
+//    }
 
     val backdrop = rememberLayerBackdrop()
     StyledScaffold(
@@ -167,11 +168,11 @@ fun UpdateHearingTestScreen() {
             }
 
 
-            DisposableEffect(Unit) {
-                onDispose {
-                    attManager.unregisterListener(ATTHandles.HEARING_AID, hearingAidATTListener)
-                }
-            }
+//            DisposableEffect(Unit) {
+//                onDispose {
+//                    attManager.unregisterListener(ATTHandles.HEARING_AID, hearingAidATTListener)
+//                }
+//            }
 
             LaunchedEffect(
                 leftEQ.value,
@@ -214,20 +215,20 @@ fun UpdateHearingTestScreen() {
                     ownVoiceAmplification = ownVoiceAmplification.floatValue
                 )
                 Log.d(TAG, "Updated settings: ${hearingAidSettings.value}")
-                sendHearingAidSettings(attManager, hearingAidSettings.value, debounceJob)
+                sendHearingAidSettings(hearingAidSettings.value, debounceJob)
             }
 
             LaunchedEffect(Unit) {
                 Log.d(TAG, "Connecting to ATT...")
                 try {
-                    attManager.enableNotifications(ATTHandles.HEARING_AID)
-                    attManager.registerListener(ATTHandles.HEARING_AID, hearingAidATTListener)
+//                    attManager.enableNotifications(ATTHandles.HEARING_AID)
+//                    attManager.registerListener(ATTHandles.HEARING_AID, hearingAidATTListener)
 
                     var parsedSettings: HearingAidSettings? = null
                     for (attempt in 1..3) {
                         initialReadAttempts.intValue = attempt
                         try {
-                            val data = attManager.read(ATTHandles.HEARING_AID)
+                            val data = ATTManagerv2.readCharacteristic(ATTHandles.HEARING_AID)?: byteArrayOf()
                             parsedSettings = parseHearingAidSettingsResponse(data = data)
                             if (parsedSettings != null) {
                                 Log.d(TAG, "Parsed settings on attempt $attempt")

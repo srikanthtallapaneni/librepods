@@ -18,23 +18,22 @@
 
 package me.kavishdevar.librepods.bluetooth
 
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
-import android.util.Log
 
 object BluetoothConnectionManager {
-    private const val TAG = "BluetoothConnectionManager"
+    private var aacpSocket: BluetoothSocket? = null
+    private var attSocket: BluetoothSocket? = null
 
-    private var currentSocket: BluetoothSocket? = null
-    private var currentDevice: BluetoothDevice? = null
-
-    fun setCurrentConnection(socket: BluetoothSocket, device: BluetoothDevice) {
-        currentSocket = socket
-        currentDevice = device
-        Log.d(TAG, "Current connection set to device: ${device.address}")
+    fun setCurrentConnection(aacpSocket: BluetoothSocket?, attSocket: BluetoothSocket?) {
+        BluetoothConnectionManager.aacpSocket = aacpSocket
+        BluetoothConnectionManager.attSocket = attSocket
     }
 
-    fun getCurrentSocket(): BluetoothSocket? {
-        return currentSocket
+    fun getAACPSocket(): BluetoothSocket? {
+        return aacpSocket
+    }
+
+    fun getATTSocket(): BluetoothSocket? {
+        return attSocket
     }
 }

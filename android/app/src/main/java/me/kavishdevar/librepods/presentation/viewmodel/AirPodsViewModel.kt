@@ -40,6 +40,7 @@ import me.kavishdevar.librepods.billing.BillingManager
 import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.bluetooth.AACPManager.Companion.ControlCommandIdentifiers
 import me.kavishdevar.librepods.bluetooth.ATTHandles
+import me.kavishdevar.librepods.bluetooth.ATTManagerv2
 import me.kavishdevar.librepods.data.AirPodsInstance
 import me.kavishdevar.librepods.data.AirPodsModels
 import me.kavishdevar.librepods.data.AirPodsNotifications
@@ -51,6 +52,7 @@ import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import me.kavishdevar.librepods.services.AirPodsService
+import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("ArrayInDataClass")
 data class AirPodsUiState(
@@ -530,13 +532,7 @@ class AirPodsViewModel(
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                if (service.attManager?.socket?.isConnected != true) {
-                    service.attManager?.connect()
-                }
-                while (service.attManager?.socket?.isConnected != true) {
-                    delay(250)
-                }
-                service.attManager?.write(handle, value)
+                ATTManagerv2.writeCharacteristic(handle, value)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -545,19 +541,14 @@ class AirPodsViewModel(
 
     fun refreshATT() {
         viewModelScope.launch(Dispatchers.IO) {
-            val loudSoundReduction =
-                runCatching { service.attManager?.read(ATTHandles.LOUD_SOUND_REDUCTION) }.getOrNull()
-            val loudSoundReductionEnabled = loudSoundReduction?.size?.let {
-                if (it > 0) {
+            val loudSoundReduction = ATTManagerv2.readCharacteristic(ATTHandles.LOUD_SOUND_REDUCTION) ?: byteArrayOf()
+            val loudSoundReductionEnabled = if (loudSoundReduction.isNotEmpty()) {
                     loudSoundReduction[0].toInt() == 1
-                } else false
-            }
-            val transparencyData =
-                runCatching { service.attManager?.read(ATTHandles.TRANSPARENCY) }.getOrNull()?: byteArrayOf()
-            val hearingAidData =
-                runCatching { service.attManager?.read(ATTHandles.HEARING_AID) }.getOrNull()?: byteArrayOf()
+            } else false
+            val transparencyData = ATTManagerv2.readCharacteristic(ATTHandles.TRANSPARENCY)?: byteArrayOf()
+            val hearingAidData = ATTManagerv2.readCharacteristic(ATTHandles.HEARING_AID)?:byteArrayOf()
             _uiState.value = _uiState.value.copy(
-                loudSoundReductionEnabled = loudSoundReductionEnabled == true,
+                loudSoundReductionEnabled = loudSoundReductionEnabled,
                 transparencyData = transparencyData,
                 hearingAidData = hearingAidData
             )
@@ -566,19 +557,9 @@ class AirPodsViewModel(
 
     fun observeATT() {
         viewModelScope.launch(Dispatchers.IO) {
-            if (service.attManager?.socket?.isConnected != true) {
-                service.attManager?.connect()
-            }
-            while (service.attManager?.socket?.isConnected != true) {
-                delay(1000)
-            }
-            service.attManager?.enableNotifications(ATTHandles.LOUD_SOUND_REDUCTION)
-            service.attManager?.enableNotifications(ATTHandles.TRANSPARENCY)
-            service.attManager?.enableNotifications(ATTHandles.HEARING_AID)
-
             while (true) {
                 refreshATT()
-                delay(15000)
+                delay(15000.milliseconds)
             }
         }
     }

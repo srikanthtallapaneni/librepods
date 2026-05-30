@@ -1143,7 +1143,7 @@ class AACPManager {
                 )
             }
 
-            val socket = BluetoothConnectionManager.getCurrentSocket() ?: return false
+            val socket = BluetoothConnectionManager.getAACPSocket() ?: return false
 
             if (socket.isConnected) {
                 socket.outputStream?.write(packet)

@@ -56,12 +56,14 @@ import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.services.ServiceManager
 import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.bluetooth.ATTHandles
+import me.kavishdevar.librepods.bluetooth.ATTManagerv2
 import me.kavishdevar.librepods.data.HearingAidSettings
 import me.kavishdevar.librepods.data.parseHearingAidSettingsResponse
 import me.kavishdevar.librepods.data.sendHearingAidSettings
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import java.io.IOException
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.time.Duration.Companion.milliseconds
 
 private var debounceJob: MutableState<Job?> = mutableStateOf(null)
 private const val TAG = "HearingAidAdjustments"
@@ -74,7 +76,7 @@ fun HearingAidAdjustmentsScreen(viewModel: AirPodsViewModel) {
     isSystemInDarkTheme()
     val verticalScrollState = rememberScrollState()
     val hazeState = remember { HazeState() }
-    val attManager = ServiceManager.getService()?.attManager ?: throw IllegalStateException("ATTManager not available")
+//    val attManager = ServiceManager.getService()?.attManager ?: throw IllegalStateException("ATTManager not available")
 
     val state by viewModel.uiState.collectAsState()
 
@@ -175,20 +177,20 @@ fun HearingAidAdjustmentsScreen(viewModel: AirPodsViewModel) {
                     ownVoiceAmplification = ownVoiceAmplification.floatValue
                 )
                 Log.d(TAG, "Updated settings: ${hearingAidSettings.value}")
-                sendHearingAidSettings(attManager, hearingAidSettings.value, debounceJob)
+                sendHearingAidSettings(hearingAidSettings.value, debounceJob)
             }
 
             LaunchedEffect(Unit) {
                 Log.d(TAG, "Connecting to ATT...")
                 try {
-                    attManager.enableNotifications(ATTHandles.HEARING_AID)
-                    attManager.registerListener(ATTHandles.HEARING_AID, hearingAidATTListener)
+//                    attManager.enableNotifications(ATTHandles.HEARING_AID)
+//                    attManager.registerListener(ATTHandles.HEARING_AID, hearingAidATTListener)
 
                     var parsedSettings: HearingAidSettings? = null
                     for (attempt in 1..3) {
                         initialReadAttempts.intValue = attempt
                         try {
-                            val data = attManager.read(ATTHandles.HEARING_AID)
+                            val data = ATTManagerv2.readCharacteristic(ATTHandles.HEARING_AID) ?: return@LaunchedEffect
                             parsedSettings = parseHearingAidSettingsResponse(data = data)
                             if (parsedSettings != null) {
                                 Log.d(TAG, "Parsed settings on attempt $attempt")
@@ -199,7 +201,7 @@ fun HearingAidAdjustmentsScreen(viewModel: AirPodsViewModel) {
                         } catch (e: Exception) {
                             Log.w(TAG, "Read attempt $attempt failed: ${e.message}")
                         }
-                        delay(200)
+                        delay(200.milliseconds)
                     }
 
                     if (parsedSettings != null) {
