@@ -68,8 +68,9 @@ fun RenameScreen(viewModel: AirPodsViewModel) {
         ) {
             Spacer(modifier = Modifier.height(spacerHeight))
 
-            val textFieldState = rememberTextFieldState()
-            textFieldState.edit { sharedPreferences.getString("name", "") ?: "" }
+            val name = sharedPreferences.getString("name", "")?: ""
+            val textFieldState = rememberTextFieldState(initialText = name)
+            
             LaunchedEffect(textFieldState.text) {
                 sharedPreferences.edit {putString("name", textFieldState.text as String?)}
                 viewModel.setName(textFieldState.text.toString())
