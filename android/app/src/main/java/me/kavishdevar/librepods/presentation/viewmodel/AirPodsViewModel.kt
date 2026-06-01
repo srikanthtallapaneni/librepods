@@ -24,6 +24,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
@@ -40,6 +41,7 @@ import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.bluetooth.AACPManager.Companion.ControlCommandIdentifiers
 import me.kavishdevar.librepods.bluetooth.ATTCCCDHandles
 import me.kavishdevar.librepods.bluetooth.ATTHandles
+import me.kavishdevar.librepods.bluetooth.BluetoothConnectionManager
 import me.kavishdevar.librepods.data.AirPodsInstance
 import me.kavishdevar.librepods.data.AirPodsModels
 import me.kavishdevar.librepods.data.AirPodsNotifications
@@ -352,7 +354,7 @@ class AirPodsViewModel(
         service.let { service ->
             _uiState.update {
                 it.copy(
-                    isLocallyConnected = service.isConnected(), battery = service.getBattery()
+                    isLocallyConnected = BluetoothConnectionManager.getAACPSocket()?.isConnected == true, battery = service.getBattery()
                 )
             }
         }
@@ -382,7 +384,6 @@ class AirPodsViewModel(
 
         val connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false)
 
-        val fossUpgraded = sharedPreferences.getBoolean("foss_upgraded", false)
         _uiState.update {
             it.copy(
                 offListeningMode = offListeningModeEnabled,
@@ -398,8 +399,8 @@ class AirPodsViewModel(
         }
 
         // faulty update on Play caused PLAY_BUILD to be false and resulted in use of FOSS billing in Play. since FOSS is not verified, we need to give 2 weeks to verify the purchase
-
         if (BuildConfig.PLAY_BUILD) {
+            val fossUpgraded = sharedPreferences.getBoolean("foss_upgraded", false)
             val expiryTime = sharedPreferences.getLong("premium_expiry_time", 0L)
             val now = System.currentTimeMillis()
 

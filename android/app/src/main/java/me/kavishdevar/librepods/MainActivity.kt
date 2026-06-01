@@ -118,6 +118,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
+import me.kavishdevar.librepods.bluetooth.BluetoothConnectionManager
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.presentation.components.AppInfoCard
@@ -541,7 +542,7 @@ fun Main() {
             Context.BIND_AUTO_CREATE
         )
 
-        if (airPodsService.value?.isConnected() == true) {
+        if (BluetoothConnectionManager.getAACPSocket()?.isConnected == true) {
             isConnected.value = true
         }
     } else {

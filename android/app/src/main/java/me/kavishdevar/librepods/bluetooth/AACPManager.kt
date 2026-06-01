@@ -31,9 +31,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * constructing and parsing packets for communication with AirPods.
  */
 class AACPManager {
+    private val TAG = "AACPManager[${System.identityHashCode(this)}]"
     companion object {
-        private const val TAG = "AACPManager"
-
         @Suppress("unused")
         object Opcodes {
             const val SET_FEATURE_FLAGS: Byte = 0x4D
