@@ -179,7 +179,7 @@ class AirPodsViewModel(
                 if (premium) {
                     sharedPreferences.edit {
                         remove("premium_expiry_time")
-                        remove("foss_upgraded")
+                        if (BuildConfig.PLAY_BUILD) remove("foss_upgraded")
                     }
                     _uiState.update { it.copy(isPremium = true, timeUntilFOSSPremiumExpiry = 0L) }
                 } else {
@@ -399,47 +399,49 @@ class AirPodsViewModel(
 
         // faulty update on Play caused PLAY_BUILD to be false and resulted in use of FOSS billing in Play. since FOSS is not verified, we need to give 2 weeks to verify the purchase
 
-        val expiryTime = sharedPreferences.getLong("premium_expiry_time", 0L)
-        val now = System.currentTimeMillis()
+        if (BuildConfig.PLAY_BUILD) {
+            val expiryTime = sharedPreferences.getLong("premium_expiry_time", 0L)
+            val now = System.currentTimeMillis()
 
-        when {
-            // existing temporary premium
-            expiryTime > 0L -> {
-                if (expiryTime <= now) {
+            when {
+                // existing temporary premium
+                expiryTime > 0L -> {
+                    if (expiryTime <= now) {
+                        sharedPreferences.edit {
+                            remove("premium_expiry_time")
+                            remove("foss_upgraded")
+                        }
+
+                        _uiState.update {
+                            it.copy(
+                                timeUntilFOSSPremiumExpiry = 0L,
+                                isPremium = false
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                timeUntilFOSSPremiumExpiry = expiryTime - now,
+                                isPremium = true
+                            )
+                        }
+                    }
+                }
+
+                // First migration from accidental FOSS Play build
+                fossUpgraded && !_uiState.value.isPremium -> {
+                    val newExpiry = now + 28L * 24 * 60 * 60 * 1000
+
                     sharedPreferences.edit {
-                        remove("premium_expiry_time")
-                        remove("foss_upgraded")
+                        putLong("premium_expiry_time", newExpiry)
                     }
 
                     _uiState.update {
                         it.copy(
-                            timeUntilFOSSPremiumExpiry = 0L,
-                            isPremium = false
-                        )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            timeUntilFOSSPremiumExpiry = expiryTime - now,
+                            timeUntilFOSSPremiumExpiry = newExpiry - now,
                             isPremium = true
                         )
                     }
-                }
-            }
-
-            // First migration from accidental FOSS Play build
-            fossUpgraded && !_uiState.value.isPremium && BuildConfig.PLAY_BUILD -> {
-                val newExpiry = now + 28L * 24 * 60 * 60 * 1000
-
-                sharedPreferences.edit {
-                    putLong("premium_expiry_time", newExpiry)
-                }
-
-                _uiState.update {
-                    it.copy(
-                        timeUntilFOSSPremiumExpiry = newExpiry - now,
-                        isPremium = true
-                    )
                 }
             }
         }
