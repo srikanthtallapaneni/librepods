@@ -1912,7 +1912,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             )
             it.setViewVisibility(
                 R.id.left_charging_icon,
-                if (leftBattery?.status == BatteryStatus.CHARGING) View.VISIBLE else View.GONE
+                if (leftBattery?.status == BatteryStatus.CHARGING || leftBattery?.status == BatteryStatus.OPTIMIZED_CHARGING) View.VISIBLE else View.GONE
             )
 
             it.setTextViewText(R.id.right_battery_widget, rightBattery?.let {
@@ -1923,7 +1923,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             )
             it.setViewVisibility(
                 R.id.right_charging_icon,
-                if (rightBattery?.status == BatteryStatus.CHARGING) View.VISIBLE else View.GONE
+                if (rightBattery?.status == BatteryStatus.CHARGING || rightBattery?.status == BatteryStatus.OPTIMIZED_CHARGING ) View.VISIBLE else View.GONE
             )
 
             it.setTextViewText(R.id.case_battery_widget, caseBattery?.let {
@@ -1934,7 +1934,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             )
             it.setViewVisibility(
                 R.id.case_charging_icon,
-                if (caseBattery?.status == BatteryStatus.CHARGING) View.VISIBLE else View.GONE
+                if (caseBattery?.status == BatteryStatus.CHARGING || caseBattery?.status == BatteryStatus.OPTIMIZED_CHARGING ) View.VISIBLE else View.GONE
             )
 
             it.setViewVisibility(
