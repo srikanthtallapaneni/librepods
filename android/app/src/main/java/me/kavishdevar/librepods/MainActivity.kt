@@ -130,6 +130,7 @@ import me.kavishdevar.librepods.presentation.screens.AirPodsSettingsScreen
 import me.kavishdevar.librepods.presentation.screens.AppSettingsScreen
 import me.kavishdevar.librepods.presentation.screens.CameraControlScreen
 import me.kavishdevar.librepods.presentation.screens.DebugScreen
+import me.kavishdevar.librepods.presentation.screens.EqualizerScreen
 import me.kavishdevar.librepods.presentation.screens.HeadTrackingScreen
 import me.kavishdevar.librepods.presentation.screens.HearingAidAdjustmentsScreen
 import me.kavishdevar.librepods.presentation.screens.HearingAidScreen
@@ -478,6 +479,9 @@ fun Main() {
                     composable("purchase_screen") {
                         val purchaseViewModel: PurchaseViewModel = viewModel()
                         PurchaseScreen(purchaseViewModel, navController)
+                    }
+                    composable("equalizer_screen") {
+                        if (airPodsViewModel != null) EqualizerScreen(airPodsViewModel)
                     }
                 }
             }

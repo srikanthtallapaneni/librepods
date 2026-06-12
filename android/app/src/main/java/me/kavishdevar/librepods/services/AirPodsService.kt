@@ -96,6 +96,8 @@ import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.Battery
 import me.kavishdevar.librepods.data.BatteryComponent
 import me.kavishdevar.librepods.data.BatteryStatus
+import me.kavishdevar.librepods.data.Capability
+import me.kavishdevar.librepods.data.CustomEq
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import me.kavishdevar.librepods.data.isHeadTrackingData
@@ -1159,11 +1161,19 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 }
             }
 
-            override fun onEQPacketReceived(eqData: FloatArray) {
+            override fun onHeadphoneAccommodationReceived(eqData: FloatArray) {
                 sendBroadcast(
                     Intent(AirPodsNotifications.EQ_DATA).putExtra("eqData", eqData).apply {
                         setPackage(packageName)
                     })
+            }
+
+            override fun onCustomEqReceived(customEq: CustomEq) {
+                // TODO
+            }
+
+            override fun onCapabilitiesReceived(capabilities: List<Capability>) {
+                // TODO
             }
 
             override fun onUnknownPacketReceived(packet: ByteArray) {
@@ -2839,7 +2849,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 }
 
                             } else if (bytesRead == -1) {
-                                Log.d("AirPods Service", "BluetoothConnectionManager.getAACPSocket()? closed (bytesRead = -1)")
+                                Log.d("AirPodsService", "socket closed (bytesRead = -1)")
                                 sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DISCONNECTED).apply {
                                     setPackage(packageName)
                                 })
