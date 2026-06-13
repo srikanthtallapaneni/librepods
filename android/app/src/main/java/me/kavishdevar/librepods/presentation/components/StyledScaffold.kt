@@ -52,7 +52,6 @@ import androidx.compose.ui.zIndex
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
@@ -93,24 +92,29 @@ fun StyledScaffold(
                     .height(64.dp + topPadding)
                     .fillMaxWidth()
                     .layerBackdrop(backdrop)
-                    .hazeEffect(state = hazeState) {
-                        tints = listOf(HazeTint(color = if (isDarkTheme) Color.Black else Color.White))
-                        progressive = HazeProgressive.verticalGradient(startIntensity = 1f, endIntensity = 0f)
+                    .hazeEffect(
+                        state = hazeState
+                    ) {
+                        backgroundColor = if (isDarkTheme) Color(0xFF000000) else Color(0xFFF2F2F7)
+                        tints = listOf(HazeTint(
+                            if (isDarkTheme) Color.Black.copy(0.55f) else Color(0xFFF2F2F7).copy(alpha = 0.85f)
+                        ))
+                        blurRadius = 6.dp
                     }
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Spacer(modifier = Modifier.height(topPadding + 12.dp))
                     Text(
-                            text = title,
-                            style = TextStyle(
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isDarkTheme) Color.White else Color.Black,
-                                fontFamily = FontFamily(Font(R.font.sf_pro))
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
+                        text = title,
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isDarkTheme) Color.White else Color.Black,
+                            fontFamily = FontFamily(Font(R.font.sf_pro))
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
             Row(
