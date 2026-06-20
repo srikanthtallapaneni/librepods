@@ -181,7 +181,7 @@ fun Main() {
 
     val onboardingComplete = sharedPreferences.getBoolean("onboarding_complete", false)
 
-    val releaseNotesShownPrefKey = "release_notes_shown_${BuildConfig.VERSION_NAME.removeSuffix("-debug")}"
+    val releaseNotesShownPrefKey = "release_notes_shown_${BuildConfig.VERSION_NAME.removeSuffix("-debug").removeSuffix("-play")}"
     val releaseNotesShown = sharedPreferences.getBoolean(releaseNotesShownPrefKey, false)
 
     fun bindService() {
