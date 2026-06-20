@@ -46,8 +46,8 @@ fun AboutCard(
 
         DesignSystem.Material -> listOf(
             serialNumbers[0],
-            stringResource(R.string.left) + " " + {serialNumbers[1]},
-            stringResource(R.string.right) + " " + {serialNumbers[2]},
+            stringResource(R.string.left) + " " + serialNumbers[1],
+            stringResource(R.string.right) + " " + serialNumbers[2],
         )
     }
 
