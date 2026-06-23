@@ -131,7 +131,6 @@ fun NoiseControlSettings(
             Column {
                 Box(
                     modifier = Modifier
-                        .background(Color.Transparent)
                         .padding(horizontal = 16.dp)
                         .padding(top = 4.dp, bottom = 12.dp)
                 ) {
