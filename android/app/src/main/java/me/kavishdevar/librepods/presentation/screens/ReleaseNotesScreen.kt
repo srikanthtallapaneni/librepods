@@ -78,7 +78,7 @@ import androidx.graphics.shapes.Morph
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.data.updates.UpdateItem
-import me.kavishdevar.librepods.data.updates.update0_3_1
+import me.kavishdevar.librepods.data.updates.updates
 import me.kavishdevar.librepods.presentation.theme.DesignSystem
 import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
 import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
@@ -375,7 +375,7 @@ fun ReleaseNotesScreenPreview() {
         m3eEnabled = false
     ) {
         ReleaseNotesScreen(
-            updates = update0_3_1,
+            updates = updates,
             releaseNotesShown = { }
         )
     }

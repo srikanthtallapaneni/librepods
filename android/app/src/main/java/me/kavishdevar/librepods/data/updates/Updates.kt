@@ -8,7 +8,7 @@ import me.kavishdevar.librepods.presentation.screens.EqualizerScreenPreviewMater
 import me.kavishdevar.librepods.presentation.theme.DesignSystem
 import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
 
-val update0_3_1 = listOf(
+val update1_0_0 = listOf(
         UpdateItem(
             titleRes = R.string.material3e,
             descriptionRes = R.string.update_m3e_description,
@@ -32,4 +32,4 @@ val update0_3_1 = listOf(
         ),
     )
 
-val updates = update0_3_1
+val updates = update1_0_0
