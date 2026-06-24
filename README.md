@@ -1,8 +1,8 @@
->[!IMPORTANT]
-Development paused due to lack of time until June 2026 (JEE Advanced). PRs and issues might not be responded to until then.
-
----
-
+> [!WARNING]
+> librepods.org is not an official website of the LibrePods project. It inaccurately claims to be the official website of the project by claiming copyrights and using the LibrePods logo in the footer. And at the same time, they say that the project is not affiliated with the LibrePods project or its developers.
+> 
+> Please report any other such websites to [me@kavish.xyz](mailto:me@kavish.xyz)
+ 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./imgs/banner-dark.png" />
   <source media="(prefers-color-scheme: light)" srcset="./imgs/banner.png" />
@@ -250,4 +250,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-All trademarks, logos, and brand names are the property of their respective owners. Use of them does not imply any affiliation with or endorsement by them. All AirPods images, symbols, and the SF Pro font are the property of Apple Inc.
+# Trademark Notice
+
+The GPL does not grant any rights to use the LibrePods name, logo, or branding. The LibrePods name and logo may not be used for software, websites, domains, products, services, or other projects in a manner that suggests affiliation with, endorsement by, or association with the official LibrePods project without prior permission.
+
+If you see any misuse of the LibrePods name or logo, please report it to [me@kavish.xyz](mailto:me@kavish.xyz).
+
+The SF Pro font used in the Android app is the property of Apple Inc.. This will be removed in future versions of the app and replaced with an open alternative soon.
+
+AirPods, AirPods Pro, AirPods Max, and the AirPods logo are trademarks of Apple Inc. The LibrePods project is not affiliated with or endorsed by Apple Inc. in any way.
