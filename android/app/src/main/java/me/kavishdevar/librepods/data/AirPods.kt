@@ -185,7 +185,7 @@ class AirPods5WCC: AirPodsBase(
         Capability.ADAPTIVE_AUDIO,
         Capability.SLEEP_DETECTION,
         Capability.ADAPTIVE_VOLUME,
-        Capability.STEM_CONFIG
+        Capability.STEM_CONFIG,
         Capability.SWIPE_FOR_VOLUME
     )
 )
