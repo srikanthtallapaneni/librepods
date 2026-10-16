@@ -11,7 +11,6 @@
     <string name="adaptive_audio_description">自適應音訊會動態回應你的環境，並消除或允許外部噪音。你可以自訂自適應音訊以允許更多或更少的噪音。</string>
     <string name="buds">耳機</string>
     <string name="case_alt">充電盒</string>
-    <string name="test">測試</string>
     <string name="name">名稱</string>
     <string name="noise_control">聽覺模式</string>
     <string name="off">關閉</string>
@@ -23,8 +22,8 @@
     <string name="head_gestures">頭部手勢</string>
     <string name="left">左耳</string>
     <string name="right">右耳</string>
-    <string name="conversational_awareness">對話感知</string>
-    <string name="conversational_awareness_description">當你開始與他人交談時，降低媒體音量並減少背景噪音。</string>
+    <string name="conversation_awareness">對話感知</string>
+    <string name="conversation_awareness_description">當你開始與他人交談時，降低媒體音量並減少背景噪音。</string>
     <string name="personalized_volume">個人化音量</string>
     <string name="personalized_volume_description">根據你的環境調整媒體音量。</string>
     <string name="noise_cancellation_single_airpod">使用一只 AirPod 進行降噪</string>
@@ -35,10 +34,10 @@
     <string name="airpods_not_connected_description">請連接你的 AirPods 以存取設定。</string>
     <string name="back">返回</string>
     <string name="customizations">自訂</string>
-    <string name="relative_conversational_awareness_volume">相對音量</string>
-    <string name="relative_conversational_awareness_volume_description">降低至當前音量的百分比，而不是最大音量。</string>
-    <string name="conversational_awareness_pause_music">暫停音樂</string>
-    <string name="conversational_awareness_pause_music_description">當你開始說話時，音樂將會暫停。</string>
+    <string name="relative_conversation_awareness_volume">相對音量</string>
+    <string name="relative_conversation_awareness_volume_description">降低至當前音量的百分比，而不是最大音量。</string>
+    <string name="conversation_awareness_pause_music">暫停音樂</string>
+    <string name="conversation_awareness_pause_music_description">當你開始說話時，音樂將會暫停。</string>
     <string name="appwidget_text">範例</string>
     <string name="add_widget">新增小工具</string>
     <string name="noise_control_widget_description">直接從主畫面控制聽覺模式。</string>
@@ -142,7 +141,7 @@
     <string name="widget">小工具</string>
     <string name="show_phone_battery_in_widget">在小工具中顯示手機電量</string>
     <string name="show_phone_battery_in_widget_description">在小工具中同時顯示手機電量與 AirPods 電量</string>
-    <string name="conversational_awareness_volume">對話感知音量</string>
+    <string name="conversation_awareness_volume">對話感知音量</string>
     <string name="quick_settings_tile">快速設定方塊</string>
     <string name="open_dialog_for_controlling">開啟控制對話方塊</string>
     <string name="open_dialog_for_controlling_description">若停用，點擊快速設定方塊將循環切換模式。若啟用，則會顯示用於控制聽覺模式和對話感知的對話方塊。</string>
@@ -240,5 +239,4 @@
     <string name="bypass_compatibility_check">略過相容性檢查</string>
     <string name="bypass_compatiblity_check_confirmation">你確定你的裝置原生支援或已啟用 Xposed 模組嗎？</string>
     <string name="not_supported">不支援</string>
-    <string name="check_the_repository_for_more_info">請查看儲存庫以獲取更多資訊。</string>
 </resources>

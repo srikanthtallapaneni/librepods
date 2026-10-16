@@ -439,7 +439,7 @@ fun AirPodsSettingsScreen(
                 val model = state.instance?.model ?: AirPodsPro3()
                 val adaptiveVolumeCapability =
                     model.capabilities.contains(Capability.ADAPTIVE_VOLUME)
-                val conversationalAwarenessCapability =
+                val conversationAwarenessCapability =
                     model.capabilities.contains(Capability.CONVERSATION_AWARENESS)
                 val loudSoundReductionCapability =
                     model.capabilities.contains(Capability.LOUD_SOUND_REDUCTION)
@@ -450,14 +450,14 @@ fun AirPodsSettingsScreen(
                     state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.ADAPTIVE_VOLUME_CONFIG]?.getOrNull(
                         0
                     ) == 0x01.toByte()
-                val conversationalAwarenessChecked =
+                val conversationAwarenessChecked =
                     state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG]?.getOrNull(
                         0
                     ) == 0x01.toByte()
 
                 AudioSettings(
                     adaptiveVolumeCapability = adaptiveVolumeCapability,
-                    conversationalAwarenessCapability = conversationalAwarenessCapability,
+                    conversationAwarenessCapability = conversationAwarenessCapability,
                     loudSoundReductionCapability = loudSoundReductionCapability,
                     adaptiveAudioCapability = adaptiveAudioCapability,
                     customEqCapability = true,
@@ -468,8 +468,8 @@ fun AirPodsSettingsScreen(
                             checked
                         )
                     },
-                    conversationalAwarenessChecked = conversationalAwarenessChecked && state.isPremium,
-                    onConversationalAwarenessCheckedChange = { checked ->
+                    conversationAwarenessChecked = conversationAwarenessChecked && state.isPremium,
+                    onConversationAwarenessCheckedChange = { checked ->
                         setControlCommandBoolean(
                             AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG,
                             checked

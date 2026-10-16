@@ -10,7 +10,6 @@
     <string name="adaptive_audio_description">Adaptives Audio reagiert dynamisch auf deine Umgebung und blockiert oder lässt externe Geräusche durch. Du kannst Adaptives Audio so anpassen, dass mehr oder weniger Geräusche durchgelassen werden.</string>
     <string name="buds">Ohrhörer</string>
     <string name="case_alt">Case</string>
-    <string name="test">Test</string>
     <string name="name">Name</string>
     <string name="noise_control">Hörmodus</string>
     <string name="off">Aus</string>
@@ -22,8 +21,8 @@
     <string name="head_gestures">Kopfgesten</string>
     <string name="left">Links</string>
     <string name="right">Rechts</string>
-    <string name="conversational_awareness">Sprecherkennung</string>
-    <string name="conversational_awareness_description">Verringert die Lautstärke von Medien und reduziert Hintergrundgeräusche, sobald du anfängst zu sprechen.</string>
+    <string name="conversation_awareness">Sprecherkennung</string>
+    <string name="conversation_awareness_description">Verringert die Lautstärke von Medien und reduziert Hintergrundgeräusche, sobald du anfängst zu sprechen.</string>
     <string name="personalized_volume">Personalisierte Lautstärke</string>
     <string name="personalized_volume_description">Passt die Medienlautstärke entsprechend deiner Umgebung an.</string>
     <string name="noise_cancellation_single_airpod">Geräuschunterdrückung mit einem AirPod</string>
@@ -34,10 +33,10 @@
     <string name="airpods_not_connected_description">Bitte verbinde deine AirPods, um auf die Einstellungen zuzugreifen.</string>
     <string name="back">Zurück</string>
     <string name="customizations">Anpassungen</string>
-    <string name="relative_conversational_awareness_volume">Relative Lautstärke</string>
-    <string name="relative_conversational_awareness_volume_description">Reduziert auf einen Prozentsatz der aktuellen Lautstärke statt auf die maximale.</string>
-    <string name="conversational_awareness_pause_music">Musik pausieren</string>
-    <string name="conversational_awareness_pause_music_description">Sobald du anfängst zu sprechen, wird die Musik pausiert.</string>
+    <string name="relative_conversation_awareness_volume">Relative Lautstärke</string>
+    <string name="relative_conversation_awareness_volume_description">Reduziert auf einen Prozentsatz der aktuellen Lautstärke statt auf die maximale.</string>
+    <string name="conversation_awareness_pause_music">Musik pausieren</string>
+    <string name="conversation_awareness_pause_music_description">Sobald du anfängst zu sprechen, wird die Musik pausiert.</string>
     <string name="appwidget_text">BEISPIEL</string>
     <string name="add_widget">Widget hinzufügen</string>
     <string name="noise_control_widget_description">Steuere den Hörmodus direkt vom Homescreen.</string>
@@ -139,7 +138,7 @@
     <string name="widget">Widget</string>
     <string name="show_phone_battery_in_widget">Telefonakku im Widget anzeigen</string>
     <string name="show_phone_battery_in_widget_description">Zeigt den Akkustand deines Telefons im Widget neben dem Akkustand der AirPods an</string>
-    <string name="conversational_awareness_volume">Lautstärke der Sprecherkennung</string>
+    <string name="conversation_awareness_volume">Lautstärke der Sprecherkennung</string>
     <string name="quick_settings_tile">Schnelleinstellungs-Kachel</string>
     <string name="open_dialog_for_controlling">Dialog zum Steuern öffnen</string>
     <string name="open_dialog_for_controlling_description">Wenn deaktiviert, wechselt ein Tippen auf die Kachel durch die Modi. Wenn aktiviert, wird ein Dialog zum Steuern von Hörmodus und Sprecherkennung angezeigt.</string>
@@ -238,15 +237,6 @@
     <string name="bypass_compatibility_check">Kompatibilitätsprüfung umgehen</string>
     <string name="bypass_compatiblity_check_confirmation">Sicher, dass dein Gerät nativ unterstützt wird oder dass du das Xposed-Modul aktiviert hast?</string>
     <string name="not_supported">Nicht unterstützt</string>
-    <string name="check_the_repository_for_more_info">
-        Viele Geräte werden aufgrund von Einschränkungen im Bluetooth-Stack von Android nicht unterstützt.
-        \nAuf diesen Geräten ist Root-Zugriff mit einem Xposed-Framework für die volle Funktionalität erforderlich.
-        \n\nDiese Einschränkung wurde in neueren Android-Versionen behoben. Folgende Gerätekonfigurationen können die App nativ ausführen:
-        \n• Google Pixel® mit Android 16 March-Update oder neuer und dem neuesten Play-System-Update
-        \n• Google Pixel® mit Android 17 Beta 3 oder neuer
-        \n• OnePlus-Geräte mit OxygenOS 16 oder neuer
-        \n• Oppo-Geräte mit ColorOS 16 oder neuer
-        \n\nDetails findest du in der Projektdokumentation.</string>
     <string name="name_your_own_price">(Wähle deinen eigenen Preis)</string>
     <string name="compatibility_play_dialog_confirmation">
         Dieses Gerät wird möglicherweise aufgrund von Plattformbeschränkungen nicht unterstützt und benötigt ein Xposed-Framework. Setze unten den Haken und tippe OK ein, um fortzufahren.

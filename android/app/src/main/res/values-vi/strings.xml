@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="app_name" translatable="false">LibrePods</string>
+
     <string name="app_description">Sử dụng AirPods của bạn mà không cần hệ sinh thái của Apple.</string>
     <string name="app_widget_description">Xem trạng thái pin AirPods trên màn hình chính!</string>
     <string name="accessibility">Trợ năng</string>
@@ -11,7 +11,6 @@
     <string name="adaptive_audio_description">Âm thanh thích ứng tự động phản ứng với môi trường xung quanh và chặn hoặc cho phép tiếng ồn bên ngoài. Bạn có thể tùy chỉnh Âm thanh thích ứng để cho phép nhiều hoặc ít tiếng ồn hơn.</string>
     <string name="buds">Tai nghe</string>
     <string name="case_alt">Hộp sạc</string>
-    <string name="test">Kiểm tra</string>
     <string name="name">Tên</string>
     <string name="noise_control">Chế độ nghe</string>
     <string name="off">Tắt</string>
@@ -23,8 +22,8 @@
     <string name="head_gestures">Cử chỉ đầu</string>
     <string name="left">Trái</string>
     <string name="right">Phải</string>
-    <string name="conversational_awareness">Phát hiện giọng nói</string>
-    <string name="conversational_awareness_description">Tự động bật chế độ xuyên âm khi bạn bắt đầu nói chuyện với người khác.</string>
+    <string name="conversation_awareness">Phát hiện giọng nói</string>
+    <string name="conversation_awareness_description">Tự động bật chế độ xuyên âm khi bạn bắt đầu nói chuyện với người khác.</string>
     <string name="personalized_volume">Âm lượng cá nhân hóa</string>
     <string name="personalized_volume_description">Điều chỉnh âm lượng Media phù hợp với môi trường xung quanh.</string>
     <string name="noise_cancellation_single_airpod">Chống ồn với một bên tai nghe</string>
@@ -35,10 +34,10 @@
     <string name="airpods_not_connected_description">Vui lòng kết nối đến AirPods của bạn để truy cập cài đặt.</string>
     <string name="back">Quay lại</string>
     <string name="customizations">Tùy chỉnh</string>
-    <string name="relative_conversational_awareness_volume">Âm lượng tương đối</string>
-    <string name="relative_conversational_awareness_volume_description">Giảm xuống phần trăm của âm lượng hiện tại thay vì âm lượng tối đa.</string>
-    <string name="conversational_awareness_pause_music">Tạm dừng nhạc</string>
-    <string name="conversational_awareness_pause_music_description">Khi bạn nói, nhạc sẽ bị tạm dừng.</string>
+    <string name="relative_conversation_awareness_volume">Âm lượng tương đối</string>
+    <string name="relative_conversation_awareness_volume_description">Giảm xuống phần trăm của âm lượng hiện tại thay vì âm lượng tối đa.</string>
+    <string name="conversation_awareness_pause_music">Tạm dừng nhạc</string>
+    <string name="conversation_awareness_pause_music_description">Khi bạn nói, nhạc sẽ bị tạm dừng.</string>
     <string name="appwidget_text">EXAMPLE</string>
     <string name="add_widget">Thêm widget</string>
     <string name="noise_control_widget_description">Điều khiển chế độ chống ồn trực tiếp từ màn hình chính.</string>
@@ -140,7 +139,7 @@
     <string name="widget">Widget</string>
     <string name="show_phone_battery_in_widget">Hiển thị pin điện thoại trong widget</string>
     <string name="show_phone_battery_in_widget_description">Hiển thị pin điện thoại trong widget cùng với pin AirPods</string>
-    <string name="conversational_awareness_volume">Âm lượng nhận biết hội thoại</string>
+    <string name="conversation_awareness_volume">Âm lượng nhận biết hội thoại</string>
     <string name="quick_settings_tile">Ô cài đặt nhanh</string>
     <string name="open_dialog_for_controlling">Mở hộp thoại để điều khiển</string>
     <string name="open_dialog_for_controlling_description">Nếu tắt, nhấp vào QS sẽ chuyển đổi qua các chế độ. Nếu bật, nó sẽ hiển thị hộp thoại để điều khiển chế độ chống ồn và nhận biết hội thoại</string>

@@ -10,7 +10,6 @@
     <string name="adaptive_audio_description">自适应音频会动态响应所处环境，降低或允许外部噪声。你可以自定义自适应音频以允许较多或较少噪声。</string>
     <string name="buds">耳机</string>
     <string name="case_alt">充电盒</string>
-    <string name="test">测试</string>
     <string name="name">名称</string>
     <string name="noise_control">聆听模式</string>
     <string name="off">关闭</string>
@@ -22,8 +21,8 @@
     <string name="head_gestures">头部动作</string>
     <string name="left">左</string>
     <string name="right">右</string>
-    <string name="conversational_awareness">对话感知</string>
-    <string name="conversational_awareness_description">开始与他人讲话时降低媒体音量并减少背景噪声。</string>
+    <string name="conversation_awareness">对话感知</string>
+    <string name="conversation_awareness_description">开始与他人讲话时降低媒体音量并减少背景噪声。</string>
     <string name="personalized_volume">个性化音量</string>
     <string name="personalized_volume_description">根据所处环境调整媒体音量。</string>
     <string name="noise_cancellation_single_airpod">一只 AirPod 入耳时使用降噪</string>
@@ -34,10 +33,10 @@
     <string name="airpods_not_connected_description">请连接 AirPods 以访问设置。</string>
     <string name="back">返回</string>
     <string name="customizations">个性化设置</string>
-    <string name="relative_conversational_awareness_volume">相对音量</string>
-    <string name="relative_conversational_awareness_volume_description">降低到当前音量的百分比，而不是最大音量。</string>
-    <string name="conversational_awareness_pause_music">暂停音乐</string>
-    <string name="conversational_awareness_pause_music_description">当你开始讲话时，音乐会自动暂停。</string>
+    <string name="relative_conversation_awareness_volume">相对音量</string>
+    <string name="relative_conversation_awareness_volume_description">降低到当前音量的百分比，而不是最大音量。</string>
+    <string name="conversation_awareness_pause_music">暂停音乐</string>
+    <string name="conversation_awareness_pause_music_description">当你开始讲话时，音乐会自动暂停。</string>
     <string name="appwidget_text">示例</string>
     <string name="add_widget">添加小组件</string>
     <string name="noise_control_widget_description">直接在主屏幕上控制聆听模式。</string>
@@ -146,7 +145,7 @@
     <string name="show_bottom_sheet_popup_description">连接 AirPods 时在底部显示 iOS 风格的弹窗。</string>
     <string name="show_island_popup">灵动岛弹窗</string>
     <string name="show_island_popup_description">在顶部以灵动岛样式显示连接和接管事件的弹窗。</string>
-    <string name="conversational_awareness_volume">对话感知音量</string>
+    <string name="conversation_awareness_volume">对话感知音量</string>
     <string name="quick_settings_tile">快捷设置磁贴</string>
     <string name="open_dialog_for_controlling">打开控制对话框</string>
     <string name="open_dialog_for_controlling_description">如果禁用，点按快捷设置磁贴将循环切换模式。如果启用，则会显示一个用于控制聆听模式和对话感知的对话框。</string>
@@ -244,16 +243,6 @@
     <string name="bypass_compatibility_check">跳过兼容性检查</string>
     <string name="bypass_compatiblity_check_confirmation">你确定你的设备原生受支持，或已启用 Xposed 模块吗？</string>
     <string name="not_supported">不受支持</string>
-    <string name="check_the_repository_for_more_info">
-        由于 Android 蓝牙协议栈的限制，许多设备并不受支持。
-        \n在这些设备上，需要 Root 权限配合 Xposed 框架才能使用完整功能。
-        \n\n较新的 Android 版本已解决这一限制。以下设备配置可以原生运行本应用：
-        \n• 搭载 Android 16 三月更新及更高版本，并安装最新 Play 系统更新的 Google Pixel®
-        \n• 搭载 Android 17 Beta 3 及更高版本的 Google Pixel®
-        \n• 搭载 OxygenOS 16 或更高版本的一加设备
-        \n• 搭载 ColorOS 16 或更高版本的 OPPO 设备
-        \n\n详情请参阅项目文档。
-    </string>
     <string name="name_your_own_price">（价格由你决定）</string>
     <string name="compatibility_play_dialog_confirmation">
         由于平台限制，此设备可能不受支持，需要使用 Xposed 框架。请勾选下方的复选框并输入 OK 以继续。
