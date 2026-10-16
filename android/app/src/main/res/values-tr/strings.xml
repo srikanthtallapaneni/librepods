@@ -208,4 +208,5 @@
     <string name="listening_mode_transparency_description">Dış sesleri içeri alır</string>
     <string name="listening_mode_adaptive_description">Dış gürültüyü dinamik olarak ayarlar</string>
     <string name="listening_mode_noise_cancellation_description">Dış sesleri engeller</string>
+    <string name="play_foss_premium_banner">Uygulamanız Google Play sürümüne güncellendi; gelişmiş özellikler %1$d gün içinde devre dışı bırakılacaktır. FOSS sürümünde kalmak için orijinal kaynağınızdan güncelleyin, yükseltmeyi doğrudan satın almak için bu sürenin bitmesini bekleyin veya halihazırda bir destekçiyseniz promosyon kodu talep etmek için buraya dokunun.</string>
 </resources>

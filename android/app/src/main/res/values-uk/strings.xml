@@ -208,4 +208,5 @@
     <string name="listening_mode_transparency_description">Пропускає зовнішні звуки</string>
     <string name="listening_mode_adaptive_description">Динамічно налаштовує зовнішній шум</string>
     <string name="listening_mode_noise_cancellation_description">Блокує зовнішні звуки</string>
+    <string name="play_foss_premium_banner">Ваш застосунок було оновлено до версії з Google Play; розширені функції буде вимкнено через %1$d дн. Оновіть його з початкового джерела, щоб залишитися на FOSS-версії, дочекайтеся завершення цього періоду, щоб придбати оновлення напряму, або натисніть тут, щоб запросити промокод, якщо ви вже підтримуєте проєкт.</string>
 </resources>

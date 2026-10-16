@@ -265,7 +265,7 @@
     <string name="optimized_charging">最適化された充電上限</string>
     <string name="optimized_charging_description">AirPodsが毎日の使用状況を学習し、最適化された上限まで充電するタイミングと、フル充電を許可するタイミングを判断します。この上限は日々の使用状況に適応し、長期的にバッテリーの寿命を延ばします。\n非対応のAirPodsや古いファームウェアバージョンのAirPodsでは、この設定が反映されない場合があります。</string>
     <string name="enable_app_in_xposed_or_update_device">続行するには、デバイスをアップデートするか、XposedでLibrePodsを有効にしてからアプリを開き直してください。</string>
-    <string name="play_foss_premium_banner">決済エラーのため、プレミアムアクセスは %1$d 日後に期限切れになります。すでにアプリをアップグレード済みの場合は、このメッセージをタップして billing@kavish.xyz までメールを送り、アクセスの復元または確認を行ってください。ご不便をおかけして申し訳ございません。</string>
+    <string name="play_foss_premium_banner">アプリがGoogle Play版に更新されたため、高度な機能は%1$d日後に無効になります。FOSS版を使い続けるには元の入手先から更新してください。期間終了後にアップグレードを直接購入するか、すでにプロジェクトを支援されている場合はこちらをタップしてプロモーションコードをリクエストしてください。</string>
     <string name="custom">カスタム</string>
     <string name="recommended">推奨</string>
     <string name="appearance">外観</string>

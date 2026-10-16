@@ -208,4 +208,5 @@
     <string name="listening_mode_transparency_description">Cho phép âm thanh bên ngoài</string>
     <string name="listening_mode_adaptive_description">Điều chỉnh động tiếng ồn bên ngoài</string>
     <string name="listening_mode_noise_cancellation_description">Chặn âm thanh bên ngoài</string>
+    <string name="play_foss_premium_banner">Ứng dụng của bạn đã được cập nhật lên phiên bản Google Play; các tính năng nâng cao sẽ bị tắt sau %1$d ngày. Hãy cập nhật từ nguồn ban đầu để tiếp tục dùng phiên bản FOSS, đợi hết thời gian này để mua nâng cấp trực tiếp, hoặc nhấn vào đây để yêu cầu mã khuyến mãi nếu bạn đã là người ủng hộ.</string>
 </resources>

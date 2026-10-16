@@ -239,4 +239,5 @@
     <string name="bypass_compatibility_check">略過相容性檢查</string>
     <string name="bypass_compatiblity_check_confirmation">你確定你的裝置原生支援或已啟用 Xposed 模組嗎？</string>
     <string name="not_supported">不支援</string>
+    <string name="play_foss_premium_banner">您的應用程式已更新為 Google Play 版本，進階功能將在 %1$d 天後停用。請從您的原始安裝來源更新以繼續使用 FOSS 版本，或等待此期限結束後直接購買升級；如果您已是支持者，請點按此處申請促銷代碼。</string>
 </resources>

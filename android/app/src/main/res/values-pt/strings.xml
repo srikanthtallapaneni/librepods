@@ -213,4 +213,5 @@
     <string name="show_bottom_sheet_popup_description">Exibe o pop-up estilo iOS na parte inferior quando os AirPods se conectam.</string>
     <string name="show_island_popup">Pop-up Dynamic Island</string>
     <string name="show_island_popup_description">Exibe o pop-up estilo Dynamic Island no topo da tela em eventos de conexão e transferência.</string>
+    <string name="play_foss_premium_banner">O seu aplicativo foi atualizado para a versão do Google Play; os recursos avançados serão desativados em %1$d dias. Atualize a partir da sua fonte original para permanecer na versão FOSS, aguarde o fim deste período para comprar o upgrade diretamente ou toque aqui para solicitar um código promocional se você já apoia o projeto.</string>
 </resources>

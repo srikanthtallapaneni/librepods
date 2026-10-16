@@ -256,4 +256,5 @@
     <string name="app_enabled_in_xposed">App in Xposed aktiviert</string>
     <string name="subject">Betreff</string>
     <string name="describe_your_issue">Beschreibe dein Problem</string>
+    <string name="play_foss_premium_banner">Deine App wurde auf die Google Play-Version aktualisiert; erweiterte Funktionen werden in %1$d Tagen deaktiviert. Aktualisiere über deine ursprüngliche Quelle, um bei der FOSS-Version zu bleiben, warte bis zum Ende dieses Zeitraums, um das Upgrade direkt zu kaufen, oder tippe hier, um einen Promo-Code anzufordern, falls du das Projekt bereits unterstützt.</string>
 </resources>

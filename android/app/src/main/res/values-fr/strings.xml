@@ -213,4 +213,5 @@
     <string name="show_bottom_sheet_popup_description">Afficher la fenêtre contextuelle de style iOS en bas de l\'écran lors de la connexion des AirPods.</string>
     <string name="show_island_popup">Fenêtre Dynamic Island</string>
     <string name="show_island_popup_description">Afficher la fenêtre de style Dynamic Island en haut de l\'écran pour les événements de connexion et de transfert.</string>
+    <string name="play_foss_premium_banner">Votre application a été mise à jour vers la version Google Play ; les fonctionnalités avancées seront désactivées dans %1$d jours. Mettez-la à jour depuis votre source d\'origine pour conserver la version FOSS, attendez la fin de cette période pour acheter la mise à niveau directement, ou appuyez ici pour demander un code promotionnel si vous soutenez déjà le projet.</string>
 </resources>

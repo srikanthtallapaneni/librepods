@@ -213,4 +213,5 @@
     <string name="show_bottom_sheet_popup_description">Muestra la ventana emergente estilo iOS en la parte inferior cuando los AirPods se conectan.</string>
     <string name="show_island_popup">Ventana emergente Dynamic Island</string>
     <string name="show_island_popup_description">Muestra la ventana emergente estilo Dynamic Island en la parte superior para eventos de conexión y traspaso.</string>
+    <string name="play_foss_premium_banner">Tu aplicación se actualizó a la versión de Google Play; las funciones avanzadas se desactivarán en %1$d días. Actualiza desde tu fuente original para mantener la versión FOSS, espera a que finalice este periodo para comprar la actualización directamente o toca aquí para solicitar un código promocional si ya colaboras con el proyecto.</string>
 </resources>

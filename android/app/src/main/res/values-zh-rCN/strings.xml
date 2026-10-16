@@ -265,7 +265,7 @@
     <string name="optimized_charging">优化充电上限</string>
     <string name="optimized_charging_description">AirPods 可学习你的每日用量，并决定何时充电至优化上限以及何时允许完全充电。此上限根据你的每日用量调整，并可在长期内延长电池寿命。\n此设置可能对不受支持的 AirPods 或固件版本较旧的 AirPods 无效。</string>
     <string name="enable_app_in_xposed_or_update_device">请更新你的设备，或在 Xposed 中启用 LibrePods 并重新打开应用以继续。</string>
-    <string name="play_foss_premium_banner">由于计费出现错误，高级功能的使用权限将在 %1$d 天后到期。如果你已经升级过应用，请点按此消息发送邮件至 billing@kavish.xyz 以恢复或验证权限。给你带来不便，敬请谅解。</string>
+    <string name="play_foss_premium_banner">您的应用已更新为 Google Play 版本，高级功能将在 %1$d 天后停用。请从您的原始安装源更新以继续使用 FOSS 版本，或等待此期限结束后直接购买升级；如果您已是支持者，请点按此处申请促销代码。</string>
     <string name="custom">自定义</string>
     <string name="recommended">推荐</string>
     <string name="appearance">外观</string>
