@@ -172,26 +172,12 @@ jobs:
         id: prev
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APP_VERSION: ${{ needs.build.outputs.app_version }}
+          CURRENT_TAG: ${{ steps.release_check.outputs.tag }}
         run: |
           if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
-            TAG=$(gh release list \
-              --limit 1000 \
-              --json tagName,publishedAt |
-              jq -r --arg current "${{ steps.release_check.outputs.tag }}" \
-                '[.[] | select(.tagName | startswith("v") and (.tagName | startswith("rewrite-") | not) and .tagName != $current)]
-                | sort_by(.publishedAt)
-                | last
-                | .tagName // empty')
+            TAG=$(gh release list --limit 1000 --json tagName -q 'first(.[] | select((.tagName | startswith("v")) and .tagName != env.CURRENT_TAG) | .tagName) // empty')
           else
-            TAG=$(gh release list \
-              --limit 1000 \
-              --json tagName,publishedAt |
-              jq -r --arg current "${{ steps.release_check.outputs.tag }}" \
-                '[.[] | select(.tagName | startswith("rewrite-") and .tagName != $current)]
-                | sort_by(.publishedAt)
-                | last
-                | .tagName // empty')
+            TAG=$(gh release list --limit 1000 --json tagName -q 'first(.[] | select((.tagName | startswith("rewrite-")) and .tagName != env.CURRENT_TAG) | .tagName) // empty')
           fi
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
