@@ -1984,7 +1984,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, NoiseControlWidget::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
-        val remoteViews = RemoteViews(packageName, R.layout.noise_control_widget).also { it ->
+        val remoteViews = RemoteViews(packageName, R.layout.listening_mode_widget).also { it ->
             val ancStatus = ancNotification.status
             val allowOffModeValue =
                 aacpManager.controlCommandStatusList.find { it.identifier == AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION }

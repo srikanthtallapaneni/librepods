@@ -353,7 +353,7 @@ fun AirPodsSettingsScreen(
                 item(key = "spacer_noise") {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                item(key = "noise_control") {
+                item(key = "listening_mode") {
                     NoiseControlSettings(
                         showOffListeningMode = state.offListeningMode,
                         noiseControlModeValue = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE]?.getOrNull(

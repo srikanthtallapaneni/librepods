@@ -12,13 +12,13 @@
     <string name="buds">Kulaklıklar</string>
     <string name="case_alt">Kılıf</string>
     <string name="name">İsim</string>
-    <string name="noise_control">Dinleme Modu</string>
+    <string name="listening_mode">Dinleme Modu</string>
     <string name="off">Kapalı</string>
     <string name="transparency">Şeffaflık</string>
     <string name="adaptive">Uyarlanabilir</string>
     <string name="noise_cancellation">Gürültü Engelleme</string>
     <string name="press_and_hold_airpods">AirPods\'a Basılı Tutun</string>
-    <string name="press_and_hold_noise_control_description">Seçili dinleme modları arasında geçiş yapmak için sapı basılı tutun.</string>
+    <string name="press_and_hold_listening_mode_description">Seçili dinleme modları arasında geçiş yapmak için sapı basılı tutun.</string>
     <string name="head_gestures">Kafa Hareketleri</string>
     <string name="left">Sol</string>
     <string name="right">Sağ</string>
@@ -40,7 +40,7 @@
     <string name="conversation_awareness_pause_music_description">Konuşmaya başladığınızda müzik duraklatılacaktır.</string>
     <string name="appwidget_text">ÖRNEK</string>
     <string name="add_widget">Widget ekle</string>
-    <string name="noise_control_widget_description">Gürültü Kontrol Modunu doğrudan Ana Ekranınızdan kontrol edin.</string>
+    <string name="listening_mode_widget_description">Gürültü Kontrol Modunu doğrudan Ana Ekranınızdan kontrol edin.</string>
     <string name="island_connected_text">Bağlı</string>
     <string name="island_connected_remote_text">Linux\'a bağlı</string>
     <string name="island_taking_over_text">Bağlı</string>

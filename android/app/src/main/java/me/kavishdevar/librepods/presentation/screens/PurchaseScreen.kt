@@ -105,8 +105,8 @@ fun PurchaseScreen(
                 )
 
                 StyledListItem(
-                    name = stringResource(R.string.noise_control),
-                    description = stringResource(R.string.noise_control_description),
+                    name = stringResource(R.string.listening_mode),
+                    description = stringResource(R.string.listening_mode_description),
                     enabled = false,
                     orientation = ListItemOrientation.Vertical
                 )

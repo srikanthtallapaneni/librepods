@@ -11,13 +11,13 @@
     <string name="buds">耳机</string>
     <string name="case_alt">充电盒</string>
     <string name="name">名称</string>
-    <string name="noise_control">聆听模式</string>
+    <string name="listening_mode">聆听模式</string>
     <string name="off">关闭</string>
     <string name="transparency">通透模式</string>
     <string name="adaptive">自适应</string>
     <string name="noise_cancellation">降噪</string>
     <string name="press_and_hold_airpods">按住 AirPods</string>
-    <string name="press_and_hold_noise_control_description">按住耳机柄在所选聆听模式之间切换。</string>
+    <string name="press_and_hold_listening_mode_description">按住耳机柄在所选聆听模式之间切换。</string>
     <string name="head_gestures">头部动作</string>
     <string name="left">左</string>
     <string name="right">右</string>
@@ -39,7 +39,7 @@
     <string name="conversation_awareness_pause_music_description">当你开始讲话时，音乐会自动暂停。</string>
     <string name="appwidget_text">示例</string>
     <string name="add_widget">添加小组件</string>
-    <string name="noise_control_widget_description">直接在主屏幕上控制聆听模式。</string>
+    <string name="listening_mode_widget_description">直接在主屏幕上控制聆听模式。</string>
     <string name="island_connected_text">已连接</string>
     <string name="island_connected_remote_text">已连接到 Linux</string>
     <string name="island_taking_over_text">已连接</string>
@@ -221,7 +221,7 @@
     <string name="ear_detection_description">摘下 AirPods 时自动暂停播放，重新戴上时继续播放。</string>
     <string name="battery">电池</string>
     <string name="battery_description">在应用和通知中查看准确的电池状态。</string>
-    <string name="noise_control_description">直接在应用或快捷设置中切换聆听模式。</string>
+    <string name="listening_mode_description">直接在应用或快捷设置中切换聆听模式。</string>
     <string name="advanced_device_settings">高级设备设置</string>
     <string name="advanced_device_settings_description">自定义个性化音量、自适应音频、入睡时暂停媒体等设置，以及其他辅助功能设置。</string>
     <string name="automatic_connection">自动连接</string>

@@ -11,13 +11,13 @@
     <string name="buds">Ohrhörer</string>
     <string name="case_alt">Case</string>
     <string name="name">Name</string>
-    <string name="noise_control">Hörmodus</string>
+    <string name="listening_mode">Hörmodus</string>
     <string name="off">Aus</string>
     <string name="transparency">Transparenz</string>
     <string name="adaptive">Adaptiv</string>
     <string name="noise_cancellation">Geräuschunterdrückung</string>
     <string name="press_and_hold_airpods">AirPods drücken und halten</string>
-    <string name="press_and_hold_noise_control_description">Drücke und halte den Stiel, um zwischen den ausgewählten Hörmodi zu wechseln.</string>
+    <string name="press_and_hold_listening_mode_description">Drücke und halte den Stiel, um zwischen den ausgewählten Hörmodi zu wechseln.</string>
     <string name="head_gestures">Kopfgesten</string>
     <string name="left">Links</string>
     <string name="right">Rechts</string>
@@ -39,7 +39,7 @@
     <string name="conversation_awareness_pause_music_description">Sobald du anfängst zu sprechen, wird die Musik pausiert.</string>
     <string name="appwidget_text">BEISPIEL</string>
     <string name="add_widget">Widget hinzufügen</string>
-    <string name="noise_control_widget_description">Steuere den Hörmodus direkt vom Homescreen.</string>
+    <string name="listening_mode_widget_description">Steuere den Hörmodus direkt vom Homescreen.</string>
     <string name="island_connected_text">Verbunden</string>
     <string name="island_connected_remote_text">Mit Linux verbunden</string>
     <string name="island_taking_over_text">Verbunden</string>
@@ -214,7 +214,7 @@
     <string name="ear_detection_description">Stoppt die Audiowiedergabe automatisch, wenn du die AirPods abnimmst, und setzt sie fort, wenn du sie wieder aufsetzt.</string>
     <string name="battery">Batterie</string>
     <string name="battery_description">Genauen Akkustand in der App und in Benachrichtigungen anzeigen.</string>
-    <string name="noise_control_description">Direkt aus der App oder den Schnelleinstellungen zwischen Hörmodi wechseln.</string>
+    <string name="listening_mode_description">Direkt aus der App oder den Schnelleinstellungen zwischen Hörmodi wechseln.</string>
     <string name="advanced_device_settings">Erweiterte Geräteeinstellungen</string>
     <string name="advanced_device_settings_description">Einstellungen wie Personalisierte Lautstärke, Adaptives Audio, Medien beim Einschlafen pausieren und weitere Bedienungshilfen anpassen.</string>
     <string name="automatic_connection">Automatische Verbindung</string>
