@@ -196,7 +196,7 @@ fun registerRootModuleZipTask(
 
     delete(layout.buildDirectory.dir("outputs/rootModuleZips"))
 
-    archiveFileName.set("LibrePods-FOSS-v$appVersionName-$buildType.zip")
+    archiveFileName.set("LibrePods-FOSS-v$appVersionName-$appVersionCode-$buildType.zip")
     destinationDirectory.set(layout.buildDirectory.dir("outputs/rootModuleZips"))
 }
 
@@ -225,12 +225,12 @@ val collect = tasks.register<Copy>("collectReleaseArtifacts") {
 
     from(layout.buildDirectory.dir("outputs/apk/foss/release")) {
         include("*.apk")
-        rename(".*", "LibrePods-FOSS-v$appVersionName-release.apk")
+        rename(".*", "LibrePods-FOSS-v$appVersionName-$appVersionCode-release.apk")
     }
 
     from(layout.buildDirectory.dir("outputs/apk/foss/debug")) {
         include("*.apk")
-        rename(".*", "LibrePods-FOSS-v$appVersionName-debug.apk")
+        rename(".*", "LibrePods-FOSS-v$appVersionName-$appVersionCode-debug.apk")
     }
 
     from(layout.buildDirectory.dir("outputs/bundle/playRelease")) {
