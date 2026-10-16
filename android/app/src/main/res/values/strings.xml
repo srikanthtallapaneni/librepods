@@ -291,4 +291,10 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="i_agree">I agree</string>
     <string name="compatibility_check_bypassed">Compatibility check bypassed. Are you sure your device is compatible?</string>
+    <string name="not_compatible_update">Your device is not currently compatible. Please update your device to continue.</string>
+    <string name="not_compatitble_description">Due to a limitation in Android, a newer version of Android is required to use LibrePods.
+        \n• Google Pixel devices need Android 16 March update or later with the latest Google Play system update
+        \n• OnePlus and Oppo devices need Android 16
+        \n• All other devices need Android 17 (OneUI 9, MagicOS 11, Nothing OS 5.0, etc.)
+    </string>
 </resources>
