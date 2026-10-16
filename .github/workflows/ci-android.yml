@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     env:
-      GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx16g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC" -Dkotlin.daemon.jvm.options="-Xmx6g -XX:+UseParallelGC" -Dorg.gradle.workers.max=8'
+      GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx16g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC" -Dkotlin.daemon.jvm.options="-Xmx6g,-XX:+UseParallelGC" -Dorg.gradle.workers.max=8'
     outputs:
       short_sha: ${{ steps.vars.outputs.short_sha }}
       app_version: ${{ steps.version.outputs.app_version }}
@@ -36,7 +36,7 @@ jobs:
         with:
           distribution: zulu
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
+
       - name: Mount Gradle Cache
         uses: useblacksmith/stickydisk@v1
         with:
@@ -49,6 +49,12 @@ jobs:
           key: ${{ github.repository }}-android-cxx-cache
           path: android/app/.cxx
 
+      - name: Mount Android NDK
+        uses: useblacksmith/stickydisk@v1
+        with:
+          key: ${{ github.repository }}-android-ndk
+          path: /usr/local/lib/android/sdk/ndk
+
       - name: Decode keystore
         if: github.event_name != 'pull_request'
         run: echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 --decode > android/release.keystore
@@ -59,7 +65,13 @@ jobs:
       - name: Accept Licenses
         run: yes | sdkmanager --licenses
       - name: Install NDK
-        run: sdkmanager "ndk;30.0.14904198"
+        run: |
+          if [ ! -d "/usr/local/lib/android/sdk/ndk/30.0.14904198" ]; then
+            sdkmanager "ndk;30.0.14904198"
+          else
+            echo "NDK 30.0.14904198 already cached on sticky disk"
+          fi
+
       - name: Create local.properties
         if: github.event_name != 'pull_request'
         run: |
@@ -85,7 +97,6 @@ jobs:
           echo "$VERSION_OUTPUT" | sed -n 's/^VERSION_NAME=/app_version=/p' >> "$GITHUB_OUTPUT"
       - id: vars
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'
         with:
@@ -147,13 +158,12 @@ jobs:
           echo "title=${TITLE}" >> "$GITHUB_OUTPUT"
           echo "description=${DESCRIPTION}" >> "$GITHUB_OUTPUT"
 
-          # Check if a release with this exact tag already exists
           if gh release view "$NEW_TAG" &>/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release $NEW_TAG already exists. Will update it."
+            echo "Release $NEW_TAG already exists."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Release $NEW_TAG does not exist. Will create a new one."
+            echo "Release $NEW_TAG does not exist."
           fi
 
       - name: Download release APK
@@ -214,23 +224,34 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Create or Update release
+        id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.release_check.outputs.tag }}
           TITLE: ${{ steps.release_check.outputs.title }}
           NOTES: ${{ steps.changelog.outputs.notes }}
           EXISTS: ${{ steps.release_check.outputs.exists }}
-          REF: ${{ github.ref }}
         run: |
+          IS_STABLE=true
+          if [[ "$TAG" =~ -(alpha|beta|rc) ]]; then
+            IS_STABLE=false
+          fi
+
           PRERELEASE_FLAG=""
-          if [[ "$REF" != "refs/heads/main" ]]; then
+          if [[ "$IS_STABLE" == "false" ]]; then
             PRERELEASE_FLAG="--prerelease"
           fi
 
           if [[ "$EXISTS" == "true" ]]; then
-            echo "Updating existing release $TAG..."
-            gh release upload "$TAG" artifacts/apk-release/* artifacts/apk-debug/* --clobber
-            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES"
+            if [[ "$IS_STABLE" == "true" ]]; then
+              echo "Stable release $TAG already exists. Overwriting assets and updating notes..."
+              gh release upload "$TAG" artifacts/apk-release/* artifacts/apk-debug/* --clobber
+              gh release edit "$TAG" --title "$TITLE" --notes "$NOTES"
+              echo "posted=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Prerelease $TAG already exists. Skipping..."
+              echo "posted=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "Creating new release $TAG..."
             gh release create "$TAG" \
@@ -240,13 +261,16 @@ jobs:
               --title "$TITLE" \
               --notes "$NOTES" \
               $PRERELEASE_FLAG
+            echo "posted=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get timestamp
+        if: steps.release.outputs.posted == 'true'
         id: timestamp
         run: echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Post to Discord
+        if: steps.release.outputs.posted == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_ANDROID_CI_URL }}
           RELEASE_TAG: ${{ steps.release_check.outputs.tag }}
