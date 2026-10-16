@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="app_description">Apple 생태계 밖에서도 AirPods의 기능을 자유롭게 사용하세요.</string>
     <string name="app_widget_description">홈 화면에서 AirPods 배터리 상태를 바로 확인하세요!</string>
     <string name="accessibility">손쉬운 사용</string>
