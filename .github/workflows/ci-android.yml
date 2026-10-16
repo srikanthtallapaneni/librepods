@@ -180,13 +180,6 @@ jobs:
                   "title": "LibrePods Nightly Build",
                   "description": "Download the latest debug and release APKs.",
                   "color": 253060,
-                  "fields": [
-                    {
-                      "name": "Changelog",
-                      "value": "${{ steps.changelog.outputs.notes }}",
-                      "inline": false
-                    }
-                  ],
                   "timestamp": "${{ steps.timestamp.outputs.timestamp }}",
                   "footer": {
                     "text": "GitHub Actions"
