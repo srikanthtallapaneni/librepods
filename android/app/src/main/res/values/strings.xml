@@ -297,4 +297,7 @@
         \n• OnePlus and Oppo devices need Android 16
         \n• All other devices need Android 17 (OneUI 9, MagicOS 11, Nothing OS 5.0, etc.)
     </string>
+    <string name="eq_low">Low</string>
+    <string name="eq_mid">Mid</string>
+    <string name="eq_high">High</string>
 </resources>
