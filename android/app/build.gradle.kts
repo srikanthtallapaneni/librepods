@@ -1,6 +1,7 @@
 import java.util.Properties
 
-val appVersionName = "1.0.3"
+val appVersionName = rootProject.extra["appVersionName"] as String
+val appVersionCode = rootProject.extra["appVersionCode"] as Int
 
 plugins {
     alias(libs.plugins.android.application)
@@ -49,7 +50,7 @@ android {
     defaultConfig {
         applicationId = "me.kavishdevar.librepods"
         targetSdk = 37
-        versionCode = 66
+        versionCode = appVersionCode
         versionName = appVersionName
     }
     buildTypes {
@@ -212,6 +213,7 @@ val zipDebug = registerRootModuleZipTask(
 )
 
 val collect = tasks.register<Copy>("collectReleaseArtifacts") {
+    description = "Collects release artifacts into a single directory."
 
     dependsOn(
         zipRelease,
@@ -238,8 +240,4 @@ val collect = tasks.register<Copy>("collectReleaseArtifacts") {
     from(layout.buildDirectory.dir("outputs/rootModuleZips")) {
         include("*.zip")
     }
-}
-
-tasks.register("packageReleaseArtifacts") {
-    dependsOn(collect)
 }
