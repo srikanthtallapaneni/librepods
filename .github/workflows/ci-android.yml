@@ -3,10 +3,9 @@ name: Android CI
 on:
   push:
     branches:
-      - '*'
+      - '**'
     paths:
       - 'android/**'
-      - 'root-module-manual/**'
       - '.github/workflows/ci-android.yml'
   pull_request:
     paths:
@@ -21,20 +20,35 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    env:
+      GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx16g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC" -Dkotlin.daemon.jvm.options="-Xmx6g -XX:+UseParallelGC" -Dorg.gradle.workers.max=8'
     outputs:
       short_sha: ${{ steps.vars.outputs.short_sha }}
       app_version: ${{ steps.version.outputs.app_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           submodules: true
+          fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: zulu
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
+      - name: Mount Gradle Cache
+        uses: useblacksmith/stickydisk@v1
+        with:
+          key: ${{ github.repository }}-android-gradle-cache
+          path: ~/.gradle
+
+      - name: Mount Native NDK CXX Cache
+        uses: useblacksmith/stickydisk@v1
+        with:
+          key: ${{ github.repository }}-android-cxx-cache
+          path: android/app/.cxx
+
       - name: Decode keystore
         if: github.event_name != 'pull_request'
         run: echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 --decode > android/release.keystore
@@ -61,13 +75,17 @@ jobs:
         working-directory: android
       - name: Build release artifacts
         if: github.event_name != 'pull_request'
-        run: ./gradlew packageReleaseArtifacts
+        run: ./gradlew collectReleaseArtifacts
         working-directory: android
       - name: Get app version
         id: version
-        run: echo "app_version=$(grep 'appVersionName =' android/app/build.gradle.kts | sed 's/.*= "\(.*\)"/\1/')" >> $GITHUB_OUTPUT
+        working-directory: android
+        run: |
+          VERSION_OUTPUT=$(./gradlew -q printAppVersion)
+          echo "$VERSION_OUTPUT" | sed -n 's/^VERSION_NAME=/app_version=/p' >> "$GITHUB_OUTPUT"
       - id: vars
-        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'
         with:
@@ -89,120 +107,216 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'
         with:
-          name: root-module-release
-          path: release/*release.zip
-
-      - uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
-        with:
-          name: root-module-debug
-          path: release/*debug.zip
-
-      - uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
-        with:
           name: release-bundle
           path: release/*.aab
 
   release:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' ||
+       github.ref == 'refs/heads/android/rewrite')
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     needs: build
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/download-artifact@v4
+
+      - name: Determine release tag and action type
+        id: release_check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_VERSION: ${{ needs.build.outputs.app_version }}
+          SHORT_SHA: ${{ needs.build.outputs.short_sha }}
+        run: |
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            NEW_TAG="v${APP_VERSION}"
+            TITLE="${NEW_TAG}"
+            DESCRIPTION="Download the latest release and debug APKs."
+          else
+            NEW_TAG="rewrite-v${APP_VERSION}"
+            TITLE="v${APP_VERSION} (rewrite)"
+            DESCRIPTION="Download rewrite testing versions. THINGS WILL BE BROKEN!"
+          fi
+
+          echo "tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+          echo "title=${TITLE}" >> "$GITHUB_OUTPUT"
+          echo "description=${DESCRIPTION}" >> "$GITHUB_OUTPUT"
+
+          # Check if a release with this exact tag already exists
+          if gh release view "$NEW_TAG" &>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $NEW_TAG already exists. Will update it."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Release $NEW_TAG does not exist. Will create a new one."
+          fi
+
+      - name: Download release APK
+        uses: actions/download-artifact@v4
         with:
           name: apk-release
           path: artifacts/apk-release
 
-      - uses: actions/download-artifact@v4
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
         with:
           name: apk-debug
           path: artifacts/apk-debug
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: root-module-release
-          path: artifacts/root-module-release
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: root-module-debug
-          path: artifacts/root-module-debug
-      - id: prev
+      - name: Find previous release
+        id: prev
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_VERSION: ${{ needs.build.outputs.app_version }}
         run: |
-          TAG=$(gh release list \
-            --limit 1 \
-            --json tagName \
-            --jq '.[0].tagName')
-
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-      - id: changelog
-        run: |
-          if [ -z "${{ steps.prev.outputs.tag }}" ]; then
-            NOTES=$(git log --pretty=format:"- %s ([%h](https://github.com/kavishdevar/librepods/commit/%H))")
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            TAG=$(gh release list \
+              --limit 1000 \
+              --json tagName,publishedAt |
+              jq -r --arg current "${{ steps.release_check.outputs.tag }}" \
+                '[.[] | select(.tagName | startswith("v") and (.tagName | startswith("rewrite-") | not) and .tagName != $current)]
+                | sort_by(.publishedAt)
+                | last
+                | .tagName // empty')
           else
-            NOTES=$(git log ${{ steps.prev.outputs.tag }}..HEAD --pretty=format:"- %s ([%h](https://github.com/kavishdevar/librepods/commit/%H))")
+            TAG=$(gh release list \
+              --limit 1000 \
+              --json tagName,publishedAt |
+              jq -r --arg current "${{ steps.release_check.outputs.tag }}" \
+                '[.[] | select(.tagName | startswith("rewrite-") and .tagName != $current)]
+                | sort_by(.publishedAt)
+                | last
+                | .tagName // empty')
           fi
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
-      - id: tag
-        run: echo "tag=nightly-${{ needs.build.outputs.short_sha }}" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate changelog
+        id: changelog
+        env:
+          PREVIOUS_TAG: ${{ steps.prev.outputs.tag }}
         run: |
-          gh release create "${{ steps.tag.outputs.tag }}" \
-            artifacts/**/* \
-            -t "Nightly ${{ needs.build.outputs.short_sha }}" \
-            --notes "${{ steps.changelog.outputs.notes }}" \
-            --prerelease
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            if [ -z "$PREVIOUS_TAG" ]; then
+              NOTES=$(git log --pretty=format:"- %s ([%h](https://github.com/kavishdevar/librepods/commit/%H))")
+            else
+              NOTES=$(git log "${PREVIOUS_TAG}..HEAD" --pretty=format:"- %s ([%h](https://github.com/kavishdevar/librepods/commit/%H))")
+            fi
+          else
+            if [ -z "$PREVIOUS_TAG" ]; then
+              RANGE="HEAD"
+            else
+              RANGE="${PREVIOUS_TAG}..HEAD"
+            fi
+
+            NOTES=$(git log "$RANGE" \
+              --pretty=format:"%s|%h|%H" |
+              awk -F '|' '$1 ~ /^android/ {
+                printf "- %s ([%s](https://github.com/kavishdevar/librepods/commit/%s))\n", $1, $2, $3
+              }')
+          fi
+
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create or Update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release_check.outputs.tag }}
+          TITLE: ${{ steps.release_check.outputs.title }}
+          NOTES: ${{ steps.changelog.outputs.notes }}
+          EXISTS: ${{ steps.release_check.outputs.exists }}
+          REF: ${{ github.ref }}
+        run: |
+          PRERELEASE_FLAG=""
+          if [[ "$REF" != "refs/heads/main" ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          if [[ "$EXISTS" == "true" ]]; then
+            echo "Updating existing release $TAG..."
+            gh release upload "$TAG" artifacts/apk-release/* artifacts/apk-debug/* --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES"
+          else
+            echo "Creating new release $TAG..."
+            gh release create "$TAG" \
+              artifacts/apk-release/* \
+              artifacts/apk-debug/* \
+              --target "$GITHUB_SHA" \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              $PRERELEASE_FLAG
+          fi
+
       - name: Get timestamp
         id: timestamp
-        run: echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+        run: echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_ANDROID_CI_URL }}
+          RELEASE_TAG: ${{ steps.release_check.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.release_check.outputs.title }}
+          RELEASE_DESCRIPTION: ${{ steps.release_check.outputs.description }}
+          APP_VERSION: ${{ needs.build.outputs.app_version }}
+          TIMESTAMP: ${{ steps.timestamp.outputs.timestamp }}
+          CHANGELOG_NOTES: ${{ steps.changelog.outputs.notes }}
         run: |
-          curl -X POST "${{ secrets.DISCORD_ANDROID_CI_URL }}?with_components=true" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [
+          jq -n \
+            --arg title "$RELEASE_TITLE" \
+            --arg description "$RELEASE_DESCRIPTION" \
+            --arg timestamp "$TIMESTAMP" \
+            --arg changelog "$CHANGELOG_NOTES" \
+            --arg release_url "https://github.com/kavishdevar/librepods/releases/download/${RELEASE_TAG}/LibrePods-FOSS-v${APP_VERSION}-release.apk" \
+            --arg debug_url "https://github.com/kavishdevar/librepods/releases/download/${RELEASE_TAG}/LibrePods-FOSS-v${APP_VERSION}-debug.apk" \
+            '{
+              embeds: [
                 {
-                  "title": "LibrePods Nightly Build",
-                  "description": "Download the latest debug and release APKs.",
-                  "color": 253060,
-                  "timestamp": "${{ steps.timestamp.outputs.timestamp }}",
-                  "footer": {
-                    "text": "GitHub Actions"
+                  title: $title,
+                  description: $description,
+                  color: 253060,
+                  timestamp: $timestamp,
+                  fields: [
+                    {
+                      name: "Changelog",
+                      value: (if $changelog == "" then "No changes." elif ($changelog | length) > 1024 then (($changelog | .[0:1021]) + "...") else $changelog end),
+                      inline: false
+                    }
+                  ],
+                  footer: {
+                    text: "GitHub Actions"
                   }
                 }
               ],
-              "components": [
+              components: [
                 {
-                  "type": 1,
-                  "components": [
+                  type: 1,
+                  components: [
                     {
-                      "type": 2,
-                      "label": "Download Release APK",
-                      "style": 5,
-                      "url": "https://github.com/kavishdevar/librepods/releases/download/nightly-${{ needs.build.outputs.short_sha }}/LibrePods-FOSS-v${{ needs.build.outputs.app_version }}-release.apk"
+                      type: 2,
+                      label: "Download Release APK",
+                      style: 5,
+                      url: $release_url
                     },
                     {
-                      "type": 2,
-                      "label": "Download Debug APK",
-                      "style": 5,
-                      "url": "https://github.com/kavishdevar/librepods/releases/download/nightly-${{ needs.build.outputs.short_sha }}/LibrePods-FOSS-v${{ needs.build.outputs.app_version }}-debug.apk"
+                      type: 2,
+                      label: "Download Debug APK",
+                      style: 5,
+                      url: $debug_url
                     }
                   ]
                 }
               ]
-            }'
+            }' |
+          curl --fail-with-body -X POST \
+            "${DISCORD_WEBHOOK}?with_components=true" \
+            -H "Content-Type: application/json" \
+            --data-binary @-
