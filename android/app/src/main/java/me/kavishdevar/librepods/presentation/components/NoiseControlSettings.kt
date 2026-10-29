@@ -86,22 +86,13 @@ import kotlin.math.roundToInt
 @SuppressLint("UnspecifiedRegisterReceiverFlag", "UnusedBoxWithConstraintsScope")
 @Composable
 fun NoiseControlSettings(
-    showOffListeningMode: Boolean,
     noiseControlModeValue: Int,
     onNoiseControlModeChanged: (Int) -> Unit
 ) {
+    val showOffListeningMode = false
     when (LocalDesignSystem.current) {
         DesignSystem.Material -> {
             val options = buildList {
-                if (showOffListeningMode) {
-                    add(
-                        Triple(
-                            NoiseControlMode.OFF,
-                            R.string.off,
-                            R.drawable.noise_cancellation
-                        )
-                    )
-                }
 
                 add(
                     Triple(
@@ -512,7 +503,6 @@ fun NoiseControlSettingsPreview() {
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
         ) {
             NoiseControlSettings(
-                showOffListeningMode = false,
                 noiseControlModeValue = 2,
                 onNoiseControlModeChanged = { }
             )

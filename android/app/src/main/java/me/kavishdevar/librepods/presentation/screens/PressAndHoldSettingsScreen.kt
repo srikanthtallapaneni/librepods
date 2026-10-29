@@ -114,26 +114,8 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navigateToPurchase: () 
                         StemAction.DIGITAL_ASSISTANT
                     )
                 },
-                enabled = state.isPremium
+                enabled = true
             )
-        }
-
-        if (!state.isPremium) {
-            Spacer(modifier = Modifier.height(24.dp))
-            StyledButton(
-                onClick = navigateToPurchase,
-                backdrop = rememberLayerBackdrop(),
-                modifier = Modifier.fillMaxWidth(),
-                maxScale = 0.05f,
-                surfaceColor = MaterialTheme.colorScheme.primary
-            ) {
-                Text(
-                    stringResource(R.string.unlock_advanced_features),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         if (longPressAction == StemAction.CYCLE_NOISE_CONTROL_MODES) {
@@ -145,28 +127,6 @@ fun LongPress(viewModel: AirPodsViewModel, name: String, navigateToPurchase: () 
                 title = stringResource(R.string.noise_control),
                 description = stringResource(R.string.press_and_hold_noise_control_description)
             ) {
-                if (state.offListeningMode) {
-                    StyledListItem(
-                        name = stringResource(R.string.off),
-                        description = stringResource(R.string.listening_mode_off_description),
-                        selected = (currentByte and 0x01) != 0,
-                        onClick = {
-                            viewModel.toggleListeningMode(0x01)
-                        },
-                        orientation = ListItemOrientation.Vertical,
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.noise_cancellation),
-                                contentDescription = "Icon",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .height(42.dp)
-                                    .wrapContentWidth()
-                            )
-                        }
-                    )
-                }
-
                 StyledListItem(
                     name = stringResource(R.string.transparency),
                     description = stringResource(R.string.listening_mode_transparency_description),

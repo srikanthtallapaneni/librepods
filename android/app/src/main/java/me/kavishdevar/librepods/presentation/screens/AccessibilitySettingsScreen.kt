@@ -106,23 +106,6 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navigateToPurchase:
     ) {
         Spacer(modifier = Modifier.height(topPadding))
 
-        if (!state.isPremium) {
-            StyledButton(
-                onClick = navigateToPurchase,
-                backdrop = rememberLayerBackdrop(),
-                modifier = Modifier.fillMaxWidth(),
-                maxScale = 0.05f,
-                surfaceColor = MaterialTheme.colorScheme.primary
-            ) {
-                Text(
-                    stringResource(R.string.unlock_advanced_features),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
 //            val phoneMediaEQ = remember { mutableStateOf(FloatArray(8) { 0.5f }) }
 //            val phoneEQEnabled = remember { mutableStateOf(false) }
 //            val mediaEQEnabled = remember { mutableStateOf(false) }
@@ -253,7 +236,7 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navigateToPurchase:
                     AACPManager.Companion.ControlCommandIdentifiers.ONE_BUD_ANC_MODE, it
                 )
             },
-            enabled = state.isPremium
+            enabled = true
         )
 
         if (state.capabilities.contains(Capability.LOUD_SOUND_REDUCTION) && state.vendorIdHook) {
@@ -267,7 +250,7 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navigateToPurchase:
                         if (it) byteArrayOf(0x01) else byteArrayOf(0x00)
                     )
                 },
-                enabled = state.isPremium
+                enabled = true
             )
         }
 
@@ -275,7 +258,7 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navigateToPurchase:
             StyledListItem(
                 name = stringResource(R.string.customize_transparency_mode),
                 onClick = navigateToTransparencyCustomization,
-                enabled = state.isPremium
+                enabled = true
             )
         }
 
@@ -306,7 +289,7 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navigateToPurchase:
             startIcon = "\uDBC0\uDEA1",
             endIcon = "\uDBC0\uDEA9",
             independent = true,
-            enabled = state.isPremium
+            enabled = true
         )
 
         if (state.capabilities.contains(Capability.SWIPE_FOR_VOLUME)) {
@@ -323,7 +306,7 @@ fun AccessibilitySettingsScreen(viewModel: AirPodsViewModel, navigateToPurchase:
                         AACPManager.Companion.ControlCommandIdentifiers.VOLUME_SWIPE_MODE, it
                     )
                 },
-                enabled = state.isPremium
+                enabled = true
             )
 
             StyledList(

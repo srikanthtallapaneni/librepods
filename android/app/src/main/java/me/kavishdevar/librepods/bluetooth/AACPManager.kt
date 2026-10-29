@@ -246,6 +246,7 @@ class AACPManager {
         fun onHeadphoneAccommodationReceived(eqData: FloatArray)
         fun onCustomEqReceived(customEq: CustomEq)
         fun onCapabilitiesReceived(capabilities: List<Capability>)
+        fun onNameReceived(name: String)
     }
 
     fun parseStemPressResponse(data: ByteArray): Pair<StemPressType, StemPressBudType> {
@@ -593,6 +594,17 @@ class AACPManager {
                 )
 
                 callback?.onHeadphoneAccommodationReceived(eqData)
+            }
+
+            Opcodes.RENAME -> {
+                // Packet layout: [04 00 04 00] [opcode=1A] [00 01] [len] [00] [name bytes...]
+                if (packet.size > 9) {
+                    val name = packet.sliceArray(9 until packet.size).decodeToString().trimEnd('\u0000')
+                    if (name.isNotBlank()) {
+                        Log.d(TAG, "Received name/engraving from device: $name")
+                        callback?.onNameReceived(name)
+                    }
+                }
             }
 
             Opcodes.INFORMATION -> {

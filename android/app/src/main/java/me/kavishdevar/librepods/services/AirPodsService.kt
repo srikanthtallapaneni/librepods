@@ -912,10 +912,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     setPackage(packageName)
                 })
 
-                if (conversationAwarenessNotification.status == 1.toByte() || conversationAwarenessNotification.status == 2.toByte()) {
-                    MediaController.startSpeaking()
-                } else if (conversationAwarenessNotification.status == 6.toByte() ||conversationAwarenessNotification.status == 8.toByte() || conversationAwarenessNotification.status == 9.toByte()) {
-                    MediaController.stopSpeaking()
+                val caEnabled = sharedPreferences.getBoolean("conversational_awareness", true)
+                if (caEnabled) {
+                    if (conversationAwarenessNotification.status == 1.toByte() || conversationAwarenessNotification.status == 2.toByte()) {
+                        MediaController.startSpeaking()
+                    } else if (conversationAwarenessNotification.status == 6.toByte() || conversationAwarenessNotification.status == 8.toByte() || conversationAwarenessNotification.status == 9.toByte()) {
+                        MediaController.stopSpeaking()
+                    }
                 }
 
                 Log.d(
@@ -1024,8 +1027,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     "Device Information: name: ${deviceInformation.name}, modelNumber: ${deviceInformation.modelNumber}, manufacturer: ${deviceInformation.manufacturer}, serialNumber: ${deviceInformation.serialNumber}, version1: ${deviceInformation.version1}, version2: ${deviceInformation.version2}, hardwareRevision: ${deviceInformation.hardwareRevision}, updaterIdentifier: ${deviceInformation.updaterIdentifier}, leftSerialNumber: ${deviceInformation.leftSerialNumber}, rightSerialNumber: ${deviceInformation.rightSerialNumber}, version3: ${deviceInformation.version3}"
                 )
                 // Store in SharedPreferences
+                // Note: do NOT overwrite "name" here — the generic model name from this
+                // packet is not the engraving. The engraving arrives via the RENAME packet
+                // (opcode 0x1A) and is stored by onNameReceived().
                 sharedPreferences.edit {
-                    putString("name", deviceInformation.name)
                     putString("airpods_model_number", deviceInformation.modelNumber)
                     putString("airpods_manufacturer", deviceInformation.manufacturer)
                     putString("airpods_serial_number", deviceInformation.serialNumber)
@@ -1176,6 +1181,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 // TODO
             }
 
+            override fun onNameReceived(name: String) {
+                Log.d("AirPodsParser", "Name received from device: $name")
+                sharedPreferences.edit { putString("name", name) }
+                config.deviceName = name
+                device?.alias = name
+            }
+
             override fun onUnknownPacketReceived(packet: ByteArray) {
                 Log.d(
                     "AACPManager",
@@ -1198,12 +1210,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     private fun executeStemAction(action: StemAction) {
         when (action) {
-            StemAction.defaultActions[StemPressType.SINGLE_PRESS] -> {
-                Log.d(
-                    "AirPodsParser", "Default single press action: Play/Pause, not taking action."
-                )
-            }
-
             StemAction.PLAY_PAUSE -> MediaController.sendPlayPause()
             StemAction.PREVIOUS_TRACK -> MediaController.sendPreviousTrack()
             StemAction.NEXT_TRACK -> MediaController.sendNextTrack()
