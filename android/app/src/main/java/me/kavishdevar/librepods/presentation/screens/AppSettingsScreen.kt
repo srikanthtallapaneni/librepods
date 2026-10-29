@@ -207,18 +207,18 @@ fun AppSettingsScreen(
 
             StyledList (title = stringResource(R.string.conversation_awareness)) {
                 StyledToggle(
-                    label = stringResource(R.string.conversational_awareness_pause_music),
-                    description = stringResource(R.string.conversational_awareness_pause_music_description),
-                    checked = state.conversationalAwarenessPauseMusicEnabled,
-                    onCheckedChange = viewModel::setConversationalAwarenessPauseMusicEnabled,
+                    label = stringResource(R.string.conversation_awareness_pause_music),
+                    description = stringResource(R.string.conversation_awareness_pause_music_description),
+                    checked = state.conversationAwarenessPauseMusicEnabled,
+                    onCheckedChange = viewModel::setConversationAwarenessPauseMusicEnabled,
                     enabled = true
                 )
 
                 StyledToggle(
-                    label = stringResource(R.string.relative_conversational_awareness_volume),
-                    description = stringResource(R.string.relative_conversational_awareness_volume_description),
-                    checked = state.relativeConversationalAwarenessVolumeEnabled,
-                    onCheckedChange = viewModel::setRelativeConversationalAwarenessVolumeEnabled,
+                    label = stringResource(R.string.relative_conversation_awareness_volume),
+                    description = stringResource(R.string.relative_conversation_awareness_volume_description),
+                    checked = state.relativeConversationAwarenessVolumeEnabled,
+                    onCheckedChange = viewModel::setRelativeConversationAwarenessVolumeEnabled,
                     enabled = true,
                 )
             }

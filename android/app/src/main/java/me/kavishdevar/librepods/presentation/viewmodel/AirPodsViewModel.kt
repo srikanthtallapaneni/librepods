@@ -59,6 +59,8 @@ import me.kavishdevar.librepods.services.AirPodsService
 @Suppress("ArrayInDataClass")
 data class AirPodsUiState(
     val deviceName: String = "AirPods",
+    // AirPods don't send the case engraving over Bluetooth, so the user types it in.
+    val engraving: String = "",
 
     val isLocallyConnected: Boolean = false,
 
@@ -203,6 +205,7 @@ class AirPodsViewModel(
 
         observeBroadcasts()
         loadName()
+        loadEngraving()
         loadInstance()
         loadSharedPreferences()
         observeAACP()
@@ -278,6 +281,11 @@ class AirPodsViewModel(
         _uiState.update { it.copy(deviceName = name) }
     }
 
+    private fun loadEngraving() {
+        val engraving = sharedPreferences.getString("engraving", "") ?: ""
+        _uiState.update { it.copy(engraving = engraving) }
+    }
+
     private fun observeBilling() {
         if (isDemoMode) return
         viewModelScope.launch {
@@ -306,6 +314,7 @@ class AirPodsViewModel(
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 "name" -> loadName()
+                "engraving" -> loadEngraving()
                 "automatic_ear_detection", "automatic_connection_ctrl_cmd",
                 "head_gestures", "left_long_press_action", "right_long_press_action",
                 "dynamic_end_of_charge", "foss_upgraded", "premium_expiry_time" -> loadSharedPreferences()
@@ -616,6 +625,12 @@ class AirPodsViewModel(
 
     fun setName(name: String) {
         service.setName(name)
+    }
+
+    fun setEngraving(engraving: String) {
+        val trimmed = engraving.trim()
+        sharedPreferences.edit { putString("engraving", trimmed) }
+        _uiState.update { it.copy(engraving = trimmed) }
     }
 
     fun startHeadTracking() {

@@ -132,6 +132,7 @@ import kotlin.time.Duration.Companion.seconds
 fun AirPodsSettingsRoute(
     viewModel: AirPodsViewModel,
     navigateToRename: () -> Unit,
+    navigateToEngraving: () -> Unit,
     navigateToHearingProtection: () -> Unit,
     navigateToHearingAid: () -> Unit,
     navigateToLeftLongPress: () -> Unit,
@@ -176,6 +177,7 @@ fun AirPodsSettingsRoute(
             disconnect = viewModel::disconnect,
 
             navigateToRename = navigateToRename,
+            navigateToEngraving = navigateToEngraving,
             navigateToHearingProtection = navigateToHearingProtection,
             navigateToHearingAid = navigateToHearingAid,
             navigateToLeftLongPress = navigateToLeftLongPress,
@@ -217,6 +219,7 @@ fun AirPodsSettingsScreen(
         disconnect: () -> Unit,
 
         navigateToRename: () -> Unit,
+        navigateToEngraving: () -> Unit,
         navigateToHearingProtection: () -> Unit,
         navigateToHearingAid: () -> Unit,
         navigateToLeftLongPress: () -> Unit,
@@ -310,7 +313,8 @@ fun AirPodsSettingsScreen(
                 BatteryView(
                     batteryList = state.battery,
                     budsRes = state.instance?.model?.budsRes ?: R.drawable.airpods_pro_2_buds,
-                    caseRes = state.instance?.model?.caseRes ?: R.drawable.airpods_pro_2_case
+                    caseRes = state.instance?.model?.caseRes ?: R.drawable.airpods_pro_2_case,
+                    engraving = state.engraving
                 )
             }
             item(key = "spacer_battery") {
@@ -322,6 +326,14 @@ fun AirPodsSettingsScreen(
                     name = stringResource(R.string.name),
                     description = deviceName.text,
                     onClick = navigateToRename,
+                )
+            }
+
+            item(key = "engraving") {
+                StyledListItem(
+                    name = stringResource(R.string.engraving),
+                    description = state.engraving.ifEmpty { stringResource(R.string.engraving_not_set) },
+                    onClick = navigateToEngraving,
                 )
             }
 
@@ -446,8 +458,8 @@ fun AirPodsSettingsScreen(
                             checked
                         )
                     },
-                    conversationalAwarenessChecked = conversationalAwarenessChecked,
-                    onConversationalAwarenessCheckedChange = { checked ->
+                    conversationAwarenessChecked = conversationAwarenessChecked,
+                    onConversationAwarenessCheckedChange = { checked ->
                         setControlCommandBoolean(
                             AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG,
                             checked
@@ -937,6 +949,7 @@ fun AirPodsSettingsScreenPreviewApple() {
                 disconnect = {},
 
                 navigateToRename = {},
+                navigateToEngraving = {},
                 navigateToHearingProtection = {},
                 navigateToHearingAid = {},
                 navigateToLeftLongPress = {},
@@ -983,6 +996,7 @@ fun AirPodsSettingsScreenPreviewMaterial() {
                 disconnect = {},
 
                 navigateToRename = {},
+                navigateToEngraving = {},
                 navigateToHearingProtection = {},
                 navigateToHearingAid = {},
                 navigateToLeftLongPress = {},

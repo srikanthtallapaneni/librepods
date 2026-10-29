@@ -36,6 +36,7 @@ import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothSocket
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.ContentResolver
@@ -57,6 +58,7 @@ import android.os.Looper
 import android.os.ParcelUuid
 import android.os.UserHandle
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.telecom.TelecomManager
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
@@ -89,6 +91,7 @@ import me.kavishdevar.librepods.bluetooth.ATTHandles
 import me.kavishdevar.librepods.bluetooth.ATTManagerv2
 import me.kavishdevar.librepods.bluetooth.BLEManager
 import me.kavishdevar.librepods.bluetooth.BluetoothConnectionManager
+import me.kavishdevar.librepods.bluetooth.VoiceRecognitionManager
 import me.kavishdevar.librepods.bluetooth.createBluetoothSocket
 import me.kavishdevar.librepods.data.AirPodsInstance
 import me.kavishdevar.librepods.data.AirPodsModels
@@ -234,6 +237,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     private var handleIncomingCallOnceConnected = false
 
     lateinit var bleManager: BLEManager
+    private lateinit var voiceRecognitionManager: VoiceRecognitionManager
 
     companion object {
         init {
@@ -383,6 +387,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         initializeAACPManagerCallback()
 
         attManager = ATTManagerv2()
+
+        voiceRecognitionManager = VoiceRecognitionManager(this)
 
         sharedPreferences.registerOnSharedPreferenceChangeListener(this)
 
@@ -1213,19 +1219,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             StemAction.PLAY_PAUSE -> MediaController.sendPlayPause()
             StemAction.PREVIOUS_TRACK -> MediaController.sendPreviousTrack()
             StemAction.NEXT_TRACK -> MediaController.sendNextTrack()
-            StemAction.DIGITAL_ASSISTANT -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    startActivity(intent)
-                } else {
-                    Log.w(
-                        "AirPodsParser",
-                        "Digital Assistant action is not supported on this Android version."
-                    )
-                }
-            }
+            StemAction.DIGITAL_ASSISTANT -> launchDigitalAssistant()
 
             StemAction.CYCLE_NOISE_CONTROL_MODES -> {
                 Log.d("AirPodsParser", "Cycling noise control modes")
@@ -1234,6 +1228,67 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 })
             }
         }
+    }
+
+    private fun launchDigitalAssistant() {
+        // Android silently drops activity starts from a background service unless the app may
+        // draw over other apps, so without it a press would look like it did nothing.
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w(TAG, "Display over other apps isn't allowed, the assistant may not open")
+            showDigitalAssistantPermissionNotification()
+        }
+        // Open the AirPods mic before the assistant starts listening, as Siri would use it.
+        device?.let { voiceRecognitionManager.start(it) }
+        // ACTION_VOICE_COMMAND is what Android's Bluetooth stack sends when a headset asks for
+        // voice recognition (AT+BVRA), so it opens the same assistant (Google Assistant or Gemini)
+        // other headsets do. Not every assistant app handles it, hence the fallbacks.
+        val actions = listOf(
+            Intent.ACTION_VOICE_COMMAND,
+            Intent.ACTION_ASSIST,
+            RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE
+        )
+        for (action in actions) {
+            try {
+                startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                Log.d(TAG, "Opened digital assistant with $action")
+                return
+            } catch (e: ActivityNotFoundException) {
+                Log.d(TAG, "No app handles $action: ${e.message}")
+            }
+        }
+        Log.w(TAG, "No digital assistant app found")
+        voiceRecognitionManager.stop()
+    }
+
+    private fun showDigitalAssistantPermissionNotification() {
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.createNotificationChannel(
+            NotificationChannel(
+                "digital_assistant",
+                getString(R.string.digital_assistant),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+        )
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.fromParts("package", packageName, null)
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, "digital_assistant")
+            .setSmallIcon(R.drawable.airpods)
+            .setContentTitle(getString(R.string.digital_assistant_permission_title))
+            .setContentText(getString(R.string.digital_assistant_permission_description))
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(getString(R.string.digital_assistant_permission_description))
+            )
+            .setContentIntent(pendingIntent).setCategory(Notification.CATEGORY_ERROR)
+            .setOnlyAlertOnce(true).setAutoCancel(true).build()
+        notificationManager.notify(4, notification)
     }
 
     private fun processEarDetectionChange(earDetection: ByteArray) {
@@ -1674,7 +1729,14 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             return
         }
         val popupWindow = PopupWindow(service.applicationContext)
-        popupWindow.open(name, batteryNotification)
+        popupWindow.open(
+            name = name,
+            engraving = sharedPreferences.getString("engraving", "") ?: "",
+            caseRes = (airpodsInstance?.model
+                ?: AirPodsModels.getModelByModelNumber(config.airpodsModelNumber))?.caseRes
+                ?: R.drawable.airpods_pro_2_case,
+            batteryNotification = batteryNotification
+        )
         popupShown = true
     }
 
@@ -3112,6 +3174,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         Log.d(TAG, "Service stopped is being destroyed for some reason!")
 
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
+        voiceRecognitionManager.close()
 
         try {
             unregisterReceiver(bluetoothReceiver)

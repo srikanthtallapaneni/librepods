@@ -134,6 +134,7 @@ These parts of the app were completely AI-generated:
 - Head Gestures - all of it, including logic and the UI
 - The offset setup with r2+the xposed module (both versions)
 - Troubleshooter and LogCollector
+- Opening the digital assistant from Press and Hold, with the AirPods mic (`VoiceRecognitionManager`), in this fork
 
 Rest everything- the background service, the Bluetooth manager classes (AACP and ATT), the entire UI, even the smallest components were written manually.
 

@@ -62,10 +62,10 @@ fun AudioSettings(
 
             if (conversationAwarenessCapability) {
                 StyledToggle(
-                    label = stringResource(R.string.conversational_awareness),
-                    description = stringResource(R.string.conversational_awareness_description),
-                    checked = conversationalAwarenessChecked,
-                    onCheckedChange = onConversationalAwarenessCheckedChange,
+                    label = stringResource(R.string.conversation_awareness),
+                    description = stringResource(R.string.conversation_awareness_description),
+                    checked = conversationAwarenessChecked,
+                    onCheckedChange = onConversationAwarenessCheckedChange,
                     enabled = true,
                 )
             }

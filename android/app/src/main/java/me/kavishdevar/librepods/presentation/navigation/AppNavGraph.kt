@@ -22,6 +22,7 @@ import me.kavishdevar.librepods.presentation.screens.AdaptiveStrengthScreen
 import me.kavishdevar.librepods.presentation.screens.AirPodsSettingsRoute
 import me.kavishdevar.librepods.presentation.screens.AppSettingsScreen
 import me.kavishdevar.librepods.presentation.screens.CallControlScreen
+import me.kavishdevar.librepods.presentation.screens.EngravingScreen
 import me.kavishdevar.librepods.presentation.screens.EqualizerRoute
 import me.kavishdevar.librepods.presentation.screens.HeadTrackingScreen
 import me.kavishdevar.librepods.presentation.screens.HearingAidAdjustmentsScreen
@@ -90,6 +91,7 @@ fun AppNavGraph(
                             AirPodsSettingsRoute(
                                 viewModel = airPodsViewModel,
                                 navigateToRename = { navigate(Screen.Rename) },
+                                navigateToEngraving = { navigate(Screen.Engraving) },
                                 navigateToHearingProtection = { navigate(Screen.HearingProtection) },
                                 navigateToHearingAid = { navigate(Screen.HearingAid) },
                                 navigateToLeftLongPress = {
@@ -118,6 +120,17 @@ fun AppNavGraph(
                         NavEntry(screen) {
                             if (!airPodsViewModel.isReady) LoadingScreen()
                             RenameScreen(airPodsViewModel)
+                        }
+
+                    Screen.Engraving ->
+                        NavEntry(screen) {
+                            if (!airPodsViewModel.isReady) LoadingScreen()
+                            EngravingScreen(
+                                viewModel = airPodsViewModel,
+                                onSaved = {
+                                    if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+                                }
+                            )
                         }
 
                     Screen.AppSettings ->

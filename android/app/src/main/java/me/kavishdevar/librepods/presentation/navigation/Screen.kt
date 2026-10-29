@@ -20,6 +20,9 @@ sealed interface Screen: NavKey {
     data object Rename: Screen
 
     @Serializable
+    data object Engraving: Screen
+
+    @Serializable
     data object AppSettings: Screen
 
     @Serializable

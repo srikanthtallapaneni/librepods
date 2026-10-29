@@ -12,6 +12,10 @@
     <string name="buds">Buds</string>
     <string name="case_alt">Case</string>
     <string name="name">Name</string>
+    <string name="engraving">Engraving</string>
+    <string name="engraving_not_set">Not set</string>
+    <string name="engraving_placeholder">Text engraved on your case</string>
+    <string name="save">Save</string>
     <string name="listening_mode">Listening Mode</string>
     <string name="off">Off</string>
     <string name="transparency">Transparency</string>
@@ -175,6 +179,8 @@
     <string name="error_converting_hex">Error converting hex:</string>
     <string name="found_offset_restart_bluetooth">Please restart the Bluetooth process</string>
     <string name="digital_assistant">Digital Assistant</string>
+    <string name="digital_assistant_permission_title">Allow LibrePods to open your assistant</string>
+    <string name="digital_assistant_permission_description">Android only lets LibrePods open your digital assistant from Press and Hold when it may display over other apps. Tap to allow it.</string>
     <string name="on">On</string>
     <string name="camera_remote">Camera Remote</string>
     <string name="camera_control">Camera Control</string>

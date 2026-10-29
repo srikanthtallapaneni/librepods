@@ -28,6 +28,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.Build
@@ -42,9 +48,11 @@ import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.VideoView
+import androidx.core.content.res.ResourcesCompat
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.Battery
@@ -130,7 +138,12 @@ class PopupWindow(
     }
 
     @SuppressLint("InlinedApi", "SetTextI18s")
-    fun open(name: String = "AirPods Pro", batteryNotification: AirPodsNotifications.BatteryNotification) {
+    fun open(
+        name: String = "AirPods Pro",
+        engraving: String = "",
+        caseRes: Int = R.drawable.airpods_pro_2_case,
+        batteryNotification: AirPodsNotifications.BatteryNotification
+    ) {
         try {
             if (mView.windowToken == null && mView.parent == null && !isClosing) {
                 mView.findViewById<TextView>(R.id.name).text = name
@@ -138,12 +151,30 @@ class PopupWindow(
                 updateBatteryStatus(batteryNotification)
 
                 val vid = mView.findViewById<VideoView>(R.id.video)
-                vid.setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
-                vid.setVideoPath("android.resource://me.kavishdevar.librepods/" + R.raw.connected)
-                vid.resolveAdjustedSize(vid.width, vid.height)
-                vid.start()
-                vid.setOnCompletionListener {
+                val caseImage = mView.findViewById<ImageView>(R.id.case_image)
+                val engravedCase = if (engraving.isNotBlank()) engraveCase(caseRes, engraving) else null
+                if (engravedCase != null) {
+                    // The video spins the case, so the engraving can't be drawn on it. Show the
+                    // case front with the engraving instead, popping in like the video does.
+                    vid.visibility = View.GONE
+                    caseImage.setImageBitmap(engravedCase)
+                    caseImage.visibility = View.VISIBLE
+                    caseImage.scaleX = 0.85f
+                    caseImage.scaleY = 0.85f
+                    caseImage.alpha = 0f
+                    caseImage.animate().scaleX(1f).scaleY(1f).alpha(1f)
+                        .setStartDelay(250).setDuration(600)
+                        .setInterpolator(DecelerateInterpolator()).start()
+                } else {
+                    caseImage.visibility = View.GONE
+                    vid.visibility = View.VISIBLE
+                    vid.setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
+                    vid.setVideoPath("android.resource://me.kavishdevar.librepods/" + R.raw.connected)
+                    vid.resolveAdjustedSize(vid.width, vid.height)
                     vid.start()
+                    vid.setOnCompletionListener {
+                        vid.start()
+                    }
                 }
 
                 try {
@@ -175,6 +206,30 @@ class PopupWindow(
             Log.e("PopupWindow", "Error opening popup: ${e.message}")
             onCloseCallback()
         }
+    }
+
+    // Same look and placement as the engraving on the home screen's case (BatteryView): grey,
+    // semibold SF Pro just below the status light, letters about 5% of the case width tall, and
+    // emoji in greyscale.
+    private fun engraveCase(caseRes: Int, engraving: String): Bitmap? {
+        val case = BitmapFactory.decodeResource(context.resources, caseRes) ?: return null
+        val bitmap = case.copy(Bitmap.Config.ARGB_8888, true)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = ResourcesCompat.getFont(context, R.font.sf_pro)
+            isFakeBoldText = true
+            color = 0xFFA2A2A4.toInt()
+            letterSpacing = 0.06f
+            textAlign = Paint.Align.CENTER
+            textSize = bitmap.width * 0.08f
+            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        }
+        val maxWidth = bitmap.width * 0.75f
+        val measured = paint.measureText(engraving)
+        if (measured > maxWidth) paint.textSize *= maxWidth / measured
+        val centerY = bitmap.height / 2f * (1f + 0.28f)
+        val baseline = centerY - (paint.descent() + paint.ascent()) / 2f
+        Canvas(bitmap).drawText(engraving, bitmap.width / 2f, baseline, paint)
+        return bitmap
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
