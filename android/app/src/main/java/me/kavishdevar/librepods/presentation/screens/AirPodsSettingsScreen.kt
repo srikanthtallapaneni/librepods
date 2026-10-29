@@ -351,7 +351,7 @@ fun AirPodsSettingsScreen(
                 item(key = "spacer_noise") {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                item(key = "noise_control") {
+                item(key = "listening_mode") {
                     NoiseControlSettings(
                         noiseControlModeValue = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE]?.getOrNull(
                             0
@@ -417,7 +417,7 @@ fun AirPodsSettingsScreen(
                 val model = state.instance?.model ?: AirPodsPro3()
                 val adaptiveVolumeCapability =
                     model.capabilities.contains(Capability.ADAPTIVE_VOLUME)
-                val conversationalAwarenessCapability =
+                val conversationAwarenessCapability =
                     model.capabilities.contains(Capability.CONVERSATION_AWARENESS)
                 val loudSoundReductionCapability =
                     model.capabilities.contains(Capability.LOUD_SOUND_REDUCTION)
@@ -428,14 +428,14 @@ fun AirPodsSettingsScreen(
                     state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.ADAPTIVE_VOLUME_CONFIG]?.getOrNull(
                         0
                     ) == 0x01.toByte()
-                val conversationalAwarenessChecked =
+                val conversationAwarenessChecked =
                     state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG]?.getOrNull(
                         0
                     ) == 0x01.toByte()
 
                 AudioSettings(
                     adaptiveVolumeCapability = adaptiveVolumeCapability,
-                    conversationalAwarenessCapability = conversationalAwarenessCapability,
+                    conversationAwarenessCapability = conversationAwarenessCapability,
                     loudSoundReductionCapability = loudSoundReductionCapability,
                     adaptiveAudioCapability = adaptiveAudioCapability,
                     customEqCapability = true,
