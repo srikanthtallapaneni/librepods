@@ -56,7 +56,7 @@ fun AudioSettings(
                     description = stringResource(R.string.personalized_volume_description),
                     checked = adaptiveVolumeChecked,
                     onCheckedChange = onAdaptiveVolumeCheckedChange,
-                    enabled = isPremium,
+                    enabled = true,
                 )
             }
 
@@ -66,7 +66,7 @@ fun AudioSettings(
                     description = stringResource(R.string.conversational_awareness_description),
                     checked = conversationalAwarenessChecked,
                     onCheckedChange = onConversationalAwarenessCheckedChange,
-                    enabled = isPremium,
+                    enabled = true,
                 )
             }
 
@@ -76,7 +76,7 @@ fun AudioSettings(
                     description = stringResource(R.string.loud_sound_reduction_description),
                     checked = loudSoundReductionChecked,
                     onCheckedChange = onLoudSoundReductionCheckedChange,
-                    enabled = isPremium,
+                    enabled = true,
                 )
             }
 

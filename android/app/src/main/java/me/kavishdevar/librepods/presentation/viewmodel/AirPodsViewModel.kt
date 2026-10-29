@@ -66,7 +66,6 @@ data class AirPodsUiState(
     val capabilities: Set<Capability> = emptySet(),
 
     val controlStates: Map<ControlCommandIdentifiers, ByteArray> = emptyMap(),
-    val offListeningMode: Boolean = true,
 
     val battery: List<Battery> = emptyList(),
     val ancMode: Int = 3,
@@ -130,7 +129,6 @@ val demoState = AirPodsUiState(
     ),
 
     ancMode = 3,
-    offListeningMode = false,
 
     modelName = demoInstance.model.displayName,
     actualModel = demoInstance.actualModelNumber,
@@ -308,7 +306,7 @@ class AirPodsViewModel(
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 "name" -> loadName()
-                "off_listening_mode", "automatic_ear_detection", "automatic_connection_ctrl_cmd",
+                "automatic_ear_detection", "automatic_connection_ctrl_cmd",
                 "head_gestures", "left_long_press_action", "right_long_press_action",
                 "dynamic_end_of_charge", "foss_upgraded", "premium_expiry_time" -> loadSharedPreferences()
             }
@@ -473,7 +471,6 @@ class AirPodsViewModel(
     }
 
     private fun loadSharedPreferences() {
-        val offListeningModeEnabled = sharedPreferences.getBoolean("off_listening_mode", true)
         val automaticEarDetectionEnabled =
             sharedPreferences.getBoolean("automatic_ear_detection", true)
         val automaticConnectionEnabled =
@@ -498,7 +495,6 @@ class AirPodsViewModel(
 
         _uiState.update {
             it.copy(
-                offListeningMode = offListeningModeEnabled,
                 automaticEarDetectionEnabled = automaticEarDetectionEnabled,
                 automaticConnectionEnabled = automaticConnectionEnabled,
                 headGesturesEnabled = headGesturesEnabled,
@@ -557,14 +553,6 @@ class AirPodsViewModel(
                     }
                 }
             }
-        }
-    }
-
-    fun setOffListeningMode(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean("off_listening_mode", enabled) }
-        setControlCommandBoolean(ControlCommandIdentifiers.ALLOW_OFF_OPTION, enabled)
-        _uiState.update {
-            it.copy(offListeningMode = enabled)
         }
     }
 

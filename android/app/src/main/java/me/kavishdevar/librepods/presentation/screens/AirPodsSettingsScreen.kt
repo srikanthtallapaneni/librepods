@@ -173,7 +173,6 @@ fun AirPodsSettingsRoute(
             onAutomaticEarDetectionChanged = viewModel::setAutomaticEarDetectionEnabled,
             onAutomaticConnectionChanged = viewModel::setAutomaticConnectionEnabled,
             setDynamicEndOfCharge = viewModel::setDynamicEndOfCharge,
-            setOffListeningMode = viewModel::setOffListeningMode,
             disconnect = viewModel::disconnect,
 
             navigateToRename = navigateToRename,
@@ -215,7 +214,6 @@ fun AirPodsSettingsScreen(
         onAutomaticEarDetectionChanged: (Boolean) -> Unit,
         onAutomaticConnectionChanged: (Boolean) -> Unit,
         setDynamicEndOfCharge: (Boolean) -> Unit,
-        setOffListeningMode: (Boolean) -> Unit,
         disconnect: () -> Unit,
 
         navigateToRename: () -> Unit,
@@ -355,7 +353,6 @@ fun AirPodsSettingsScreen(
                 }
                 item(key = "noise_control") {
                     NoiseControlSettings(
-                        showOffListeningMode = state.offListeningMode,
                         noiseControlModeValue = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE]?.getOrNull(
                             0
                         )?.toInt() ?: 3,
@@ -414,25 +411,6 @@ fun AirPodsSettingsScreen(
 //                    }
 //                }
 
-            item(key = "upgrade_button") {
-                if (!state.isPremium) {
-                    Spacer(modifier = Modifier.height(28.dp))
-                    StyledButton(
-                        onClick = navigateToPurchase,
-                        backdrop = rememberLayerBackdrop(),
-                        modifier = Modifier.fillMaxWidth(),
-                        maxScale = 0.05f,
-                        surfaceColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Text(
-                            stringResource(R.string.unlock_advanced_features),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
 
             item(key = "spacer_audio") { Spacer(modifier = Modifier.height(16.dp)) }
             item(key = "audio") {
@@ -468,7 +446,7 @@ fun AirPodsSettingsScreen(
                             checked
                         )
                     },
-                    conversationalAwarenessChecked = conversationalAwarenessChecked && state.isPremium,
+                    conversationalAwarenessChecked = conversationalAwarenessChecked,
                     onConversationalAwarenessCheckedChange = { checked ->
                         setControlCommandBoolean(
                             AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG,
@@ -485,7 +463,7 @@ fun AirPodsSettingsScreen(
                     navigateToAdaptiveStrength = navigateToAdaptiveStrength,
                     navigateToEqualizer = navigateToEqualizer,
                     vendorIdHook = state.vendorIdHook,
-                    isPremium = state.isPremium
+                    isPremium = true
                 )
             }
 
@@ -525,7 +503,7 @@ fun AirPodsSettingsScreen(
                         label = stringResource(R.string.sleep_detection),
                         checked = state.controlStates[id]?.getOrNull(0) == 0x01.toByte(),
                         onCheckedChange = { setControlCommandBoolean(id, it) },
-                        enabled = state.isPremium
+                        enabled = true
                     )
                 }
             }
@@ -559,19 +537,6 @@ fun AirPodsSettingsScreen(
                 StyledListItem(
                     name = stringResource(R.string.accessibility), onClick = navigateToAccessibility
                 )
-            }
-
-            if (capabilities.contains(Capability.LOUD_SOUND_REDUCTION)) {
-                item(key = "spacer_off_listening") { Spacer(modifier = Modifier.height(16.dp)) }
-                item(key = "off_listening") {
-                    val id = AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION
-                    StyledToggle(
-                        label = stringResource(R.string.off_listening_mode),
-                        description = stringResource(R.string.off_listening_mode_description),
-                        checked = state.controlStates[id]?.getOrNull(0) == 0x01.toByte(),
-                        onCheckedChange = setOffListeningMode
-                    )
-                }
             }
 
             item(key = "spacer_about") { Spacer(modifier = Modifier.height(32.dp)) }
@@ -969,7 +934,6 @@ fun AirPodsSettingsScreenPreviewApple() {
                 onAutomaticEarDetectionChanged = {},
                 onAutomaticConnectionChanged = {},
                 setDynamicEndOfCharge = {},
-                setOffListeningMode = {},
                 disconnect = {},
 
                 navigateToRename = {},
@@ -1016,7 +980,6 @@ fun AirPodsSettingsScreenPreviewMaterial() {
                 onAutomaticEarDetectionChanged = {},
                 onAutomaticConnectionChanged = {},
                 setDynamicEndOfCharge = {},
-                setOffListeningMode = {},
                 disconnect = {},
 
                 navigateToRename = {},
