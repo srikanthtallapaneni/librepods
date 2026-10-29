@@ -91,7 +91,6 @@ fun AppNavGraph(
                             AirPodsSettingsRoute(
                                 viewModel = airPodsViewModel,
                                 navigateToRename = { navigate(Screen.Rename) },
-                                navigateToEngraving = { navigate(Screen.Engraving) },
                                 navigateToHearingProtection = { navigate(Screen.HearingProtection) },
                                 navigateToHearingAid = { navigate(Screen.HearingAid) },
                                 navigateToLeftLongPress = {
@@ -138,6 +137,7 @@ fun AppNavGraph(
                             val vm: AppSettingsViewModel = viewModel()
                             AppSettingsScreen(
                                 viewModel = vm,
+                                navigateToEngraving = { navigate(Screen.Engraving) },
                                 navigateToPurchase = ::navigateToPurchase,
                                 navigateToTroubleshooting = { navigate(Screen.Troubleshooting) },
                                 navigateToOpenSourceLicenses = { navigate(Screen.OpenSourceLicenses) },

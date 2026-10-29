@@ -1732,9 +1732,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         popupWindow.open(
             name = name,
             engraving = sharedPreferences.getString("engraving", "") ?: "",
-            caseRes = (airpodsInstance?.model
-                ?: AirPodsModels.getModelByModelNumber(config.airpodsModelNumber))?.caseRes
-                ?: R.drawable.airpods_pro_2_case,
             batteryNotification = batteryNotification
         )
         popupShown = true

@@ -37,7 +37,8 @@ data class AppSettingsUiState(
     val showBottomSheetPopup: Boolean = true,
     val showIslandPopup: Boolean = true,
     val timeUntilFOSSPremiumExpiry: Long = 0L,
-    val m3eEnabled: Boolean = false
+    val m3eEnabled: Boolean = false,
+    val engraving: String = ""
 )
 
 class AppSettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,8 +50,9 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     private val xposedRemotePref = XposedRemotePrefProvider.create()
 
     val sharedPrefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPref, key ->
-        if (key == "connection_successful") {
-            _uiState.update { it.copy(connectionSuccessful = sharedPref.getBoolean(key, false)) }
+        when (key) {
+            "connection_successful" -> _uiState.update { it.copy(connectionSuccessful = sharedPref.getBoolean(key, false)) }
+            "engraving" -> _uiState.update { it.copy(engraving = sharedPref.getString(key, "") ?: "") }
         }
     }
 
@@ -152,7 +154,8 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false),
                 showBottomSheetPopup = sharedPreferences.getBoolean("show_bottom_sheet_popup", true),
                 showIslandPopup = sharedPreferences.getBoolean("show_island_popup", true),
-                m3eEnabled = sharedPreferences.getBoolean("m3e_enabled", true)
+                m3eEnabled = sharedPreferences.getBoolean("m3e_enabled", true),
+                engraving = sharedPreferences.getString("engraving", "") ?: ""
             )
         }
     }

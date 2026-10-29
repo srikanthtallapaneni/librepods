@@ -216,8 +216,8 @@ fun BatteryView(
     }
 }
 
-// Apple engraves in grey, semibold SF Pro, and emoji come out uncoloured, so the text is drawn
-// through a greyscale layer.
+// Apple engraves in grey, semibold SF Pro Rounded, and emoji come out uncoloured, so the text is
+// drawn through a greyscale layer.
 @Composable
 private fun CaseEngraving(
     engraving: String,
@@ -240,7 +240,7 @@ private fun CaseEngraving(
             },
         style = TextStyle(
             fontSize = fontSize,
-            fontFamily = FontFamily(Font(R.font.sf_pro)),
+            fontFamily = FontFamily(Font(R.font.sf_pro_rounded, FontWeight.SemiBold)),
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFFA2A2A4),
             letterSpacing = 0.06.em,

@@ -29,7 +29,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -39,6 +38,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -58,6 +58,21 @@ import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.Battery
 import me.kavishdevar.librepods.data.BatteryComponent
 import me.kavishdevar.librepods.data.BatteryStatus
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+
+// Geometry of the spinning case inside R.raw.connected (1050x354, 6.0s 360° turntable loop):
+// the case rotates around x = 70% of the video width, its front face is offset by ~7.85% of the
+// video width from the rotation axis, and the engraving sits just below the status light at
+// ~62.5% of the video height (matching BatteryView's 0.28 vertical bias on the case body).
+private const val VIDEO_DURATION_MS = 6000
+private const val CASE_WIDTH_FRACTION = 0.395f
+private const val CASE_AXIS_X_FRACTION = 0.700f
+private const val CASE_DEPTH_RADIUS_FRACTION = 0.0785f
+private const val ENGRAVING_Y_FRACTION = 0.625f
+private const val EDGE_COS_CUTOFF = 0.12f
+private const val EDGE_FADE_RANGE = 0.25f
 
 @SuppressLint("InflateParams", "ClickableViewAccessibility")
 class PopupWindow(
@@ -68,6 +83,7 @@ class PopupWindow(
     private var isClosing = false
     private var autoCloseHandler = Handler(Looper.getMainLooper())
     private var autoCloseRunnable: Runnable? = null
+    private var engravingSyncRunnable: Runnable? = null
     private var batteryUpdateReceiver: BroadcastReceiver? = null
 
     @Suppress("DEPRECATION")
@@ -141,7 +157,6 @@ class PopupWindow(
     fun open(
         name: String = "AirPods Pro",
         engraving: String = "",
-        caseRes: Int = R.drawable.airpods_pro_2_case,
         batteryNotification: AirPodsNotifications.BatteryNotification
     ) {
         try {
@@ -152,29 +167,19 @@ class PopupWindow(
 
                 val vid = mView.findViewById<VideoView>(R.id.video)
                 val caseImage = mView.findViewById<ImageView>(R.id.case_image)
-                val engravedCase = if (engraving.isNotBlank()) engraveCase(caseRes, engraving) else null
-                if (engravedCase != null) {
-                    // The video spins the case, so the engraving can't be drawn on it. Show the
-                    // case front with the engraving instead, popping in like the video does.
-                    vid.visibility = View.GONE
-                    caseImage.setImageBitmap(engravedCase)
-                    caseImage.visibility = View.VISIBLE
-                    caseImage.scaleX = 0.85f
-                    caseImage.scaleY = 0.85f
-                    caseImage.alpha = 0f
-                    caseImage.animate().scaleX(1f).scaleY(1f).alpha(1f)
-                        .setStartDelay(250).setDuration(600)
-                        .setInterpolator(DecelerateInterpolator()).start()
+                vid.visibility = View.VISIBLE
+                vid.setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
+                vid.setVideoPath("android.resource://me.kavishdevar.librepods/" + R.raw.connected)
+                vid.resolveAdjustedSize(vid.width, vid.height)
+                vid.start()
+                vid.setOnCompletionListener {
+                    vid.start()
+                }
+
+                if (engraving.isNotBlank()) {
+                    startEngravingSync(vid, caseImage, engraving)
                 } else {
                     caseImage.visibility = View.GONE
-                    vid.visibility = View.VISIBLE
-                    vid.setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
-                    vid.setVideoPath("android.resource://me.kavishdevar.librepods/" + R.raw.connected)
-                    vid.resolveAdjustedSize(vid.width, vid.height)
-                    vid.start()
-                    vid.setOnCompletionListener {
-                        vid.start()
-                    }
                 }
 
                 try {
@@ -208,27 +213,88 @@ class PopupWindow(
         }
     }
 
+    private fun startEngravingSync(vid: VideoView, engravingView: ImageView, engraving: String) {
+        var engravingBitmap: Bitmap? = null
+        var renderedForWidth = 0
+        var lastRawVideoPos = -1
+        var lastRawVideoPosTimeMs = 0L
+
+        engravingView.alpha = 0f
+        engravingView.visibility = View.VISIBLE
+
+        val runnable = object : Runnable {
+            override fun run() {
+                if (isClosing) return
+
+                val vw = vid.width
+                val vh = vid.height
+                if (vw > 0 && vh > 0 && vid.isPlaying) {
+                    if (engravingBitmap == null || renderedForWidth != vw) {
+                        engravingBitmap = renderEngraving(engraving, vw * CASE_WIDTH_FRACTION)
+                        engravingView.setImageBitmap(engravingBitmap)
+                        renderedForWidth = vw
+                    }
+
+                    val duration = vid.duration.takeIf { it > 0 } ?: VIDEO_DURATION_MS
+                    val rawPos = vid.currentPosition
+                    val now = SystemClock.uptimeMillis()
+                    if (rawPos != lastRawVideoPos) {
+                        lastRawVideoPos = rawPos
+                        lastRawVideoPosTimeMs = now
+                    }
+                    val elapsed = (now - lastRawVideoPosTimeMs).coerceIn(0L, 100L)
+                    val posMs = (rawPos + elapsed) % duration
+
+                    val theta = (posMs.toDouble() / duration.toDouble()) * 2.0 * PI
+                    val cosTheta = cos(theta).toFloat()
+                    val sinTheta = sin(theta).toFloat()
+
+                    val bmp = engravingBitmap
+                    if (bmp != null && cosTheta > EDGE_COS_CUTOFF) {
+                        val centerX = vid.left + vw * (CASE_AXIS_X_FRACTION + CASE_DEPTH_RADIUS_FRACTION * sinTheta)
+                        val centerY = vid.top + vh * ENGRAVING_Y_FRACTION
+                        engravingView.pivotX = bmp.width / 2f
+                        engravingView.pivotY = bmp.height / 2f
+                        engravingView.translationX = centerX - bmp.width / 2f
+                        engravingView.translationY = centerY - bmp.height / 2f
+                        engravingView.scaleX = cosTheta
+                        engravingView.alpha = ((cosTheta - EDGE_COS_CUTOFF) / EDGE_FADE_RANGE).coerceIn(0f, 1f)
+                    } else {
+                        engravingView.alpha = 0f
+                    }
+                } else {
+                    engravingView.alpha = 0f
+                }
+
+                mView.postOnAnimation(this)
+            }
+        }
+        engravingSyncRunnable = runnable
+        mView.postOnAnimation(runnable)
+    }
+
     // Same look and placement as the engraving on the home screen's case (BatteryView): grey,
-    // semibold SF Pro just below the status light, letters about 5% of the case width tall, and
-    // emoji in greyscale.
-    private fun engraveCase(caseRes: Int, engraving: String): Bitmap? {
-        val case = BitmapFactory.decodeResource(context.resources, caseRes) ?: return null
-        val bitmap = case.copy(Bitmap.Config.ARGB_8888, true)
+    // semibold SF Pro Rounded just below the status light, letters about 5% of the case width
+    // tall, and emoji in greyscale.
+    private fun renderEngraving(engraving: String, caseWidth: Float): Bitmap? {
+        if (caseWidth <= 0f) return null
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = ResourcesCompat.getFont(context, R.font.sf_pro)
-            isFakeBoldText = true
+            typeface = ResourcesCompat.getFont(context, R.font.sf_pro_rounded)
             color = 0xFFA2A2A4.toInt()
             letterSpacing = 0.06f
             textAlign = Paint.Align.CENTER
-            textSize = bitmap.width * 0.08f
+            textSize = caseWidth * 0.08f
             colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
         }
-        val maxWidth = bitmap.width * 0.75f
+        val maxWidth = caseWidth * 0.75f
         val measured = paint.measureText(engraving)
-        if (measured > maxWidth) paint.textSize *= maxWidth / measured
-        val centerY = bitmap.height / 2f * (1f + 0.28f)
-        val baseline = centerY - (paint.descent() + paint.ascent()) / 2f
-        Canvas(bitmap).drawText(engraving, bitmap.width / 2f, baseline, paint)
+        if (measured > maxWidth && measured > 0f) paint.textSize *= maxWidth / measured
+        val bmpWidth = maxWidth.toInt().coerceAtLeast(1)
+        val textHeight = paint.descent() - paint.ascent()
+        val bmpHeight = (textHeight * 1.4f).toInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+        val baseline = bmpHeight / 2f - (paint.descent() + paint.ascent()) / 2f
+        Canvas(bitmap).drawText(engraving, bmpWidth / 2f, baseline, paint)
         return bitmap
     }
 
@@ -311,6 +377,8 @@ class PopupWindow(
             isClosing = true
 
             autoCloseRunnable?.let { autoCloseHandler.removeCallbacks(it) }
+            engravingSyncRunnable?.let { mView.removeCallbacks(it) }
+            engravingSyncRunnable = null
             unregisterBatteryUpdateReceiver()
 
             val vid = mView.findViewById<VideoView>(R.id.video)

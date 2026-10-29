@@ -102,6 +102,7 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun AppSettingsScreen(
     viewModel: AppSettingsViewModel = viewModel(),
+    navigateToEngraving: () -> Unit,
     navigateToPurchase: () -> Unit,
     navigateToTroubleshooting: () -> Unit,
     navigateToOpenSourceLicenses: () -> Unit,
@@ -175,6 +176,14 @@ fun AppSettingsScreen(
             checked = state.m3eEnabled,
             onCheckedChange = viewModel::setm3eEnabled,
             enabled = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        StyledListItem(
+            name = stringResource(R.string.engraving),
+            description = state.engraving.ifEmpty { stringResource(R.string.engraving_not_set) },
+            onClick = navigateToEngraving,
         )
 
         if (state.connectionSuccessful) {
