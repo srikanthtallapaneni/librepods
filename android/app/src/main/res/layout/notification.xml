@@ -1,13 +1,87 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/notification_title"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        />
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/notification_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textAppearance="@android:style/TextAppearance.Material.Notification.Title" />
+
+        <TextView
+            android:id="@+id/notification_battery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textAppearance="@android:style/TextAppearance.Material.Notification" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/notification_modes_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/notification_off_button"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/notification_mode_unselected_bg"
+            android:contentDescription="@string/off"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/noise_cancellation"
+            android:tint="#FF8E8E93"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/notification_transparency_button"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/notification_mode_unselected_bg"
+            android:contentDescription="@string/transparency"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/transparency"
+            android:tint="#FF8E8E93" />
+
+        <ImageView
+            android:id="@+id/notification_adaptive_button"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/notification_mode_unselected_bg"
+            android:contentDescription="@string/adaptive"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/adaptive"
+            android:tint="#FF8E8E93" />
+
+        <ImageView
+            android:id="@+id/notification_anc_button"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/notification_mode_unselected_bg"
+            android:contentDescription="@string/noise_cancellation"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/noise_cancellation"
+            android:tint="#FF8E8E93" />
+    </LinearLayout>
 </LinearLayout>

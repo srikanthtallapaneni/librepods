@@ -192,7 +192,7 @@ fun BatteryView(
                             // with letters about 5% of the case width tall.
                             CaseEngraving(
                                 engraving = engraving,
-                                fontSize = with(LocalDensity.current) { (caseWidthPx * 0.08f).toSp() },
+                                fontSize = with(LocalDensity.current) { (caseWidthPx * 0.10f + 1f).toSp() },
                                 modifier = Modifier.align(BiasAlignment(0f, 0.28f))
                             )
                         }

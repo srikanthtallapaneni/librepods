@@ -940,6 +940,11 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         ?.get(0) ?: 0x00.toByte()))
                     sendANCBroadcast()
                     updateNoiseControlWidget()
+                    updateNotificationContent(
+                        true,
+                        sharedPreferences.getString("name", device?.name),
+                        batteryNotification.getBattery()
+                    )
                 }
             }
 
@@ -2117,36 +2122,78 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             return
         }
         if (BluetoothConnectionManager.aacpSocket?.isConnected == true) {
+            val titleText = airpodsName ?: config.deviceName
+            val batteryText = listOfNotNull(
+                batteryList?.find { it.component == BatteryComponent.LEFT }?.takeIf { it.status != BatteryStatus.DISCONNECTED }?.let {
+                    "L: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
+                },
+                batteryList?.find { it.component == BatteryComponent.RIGHT }?.takeIf { it.status != BatteryStatus.DISCONNECTED }?.let {
+                    "R: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
+                },
+                batteryList?.find { it.component == BatteryComponent.CASE }?.takeIf { it.status != BatteryStatus.DISCONNECTED }?.let {
+                    "Case: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
+                }
+            ).joinToString("  ")
+
+            val remoteViews = RemoteViews(packageName, R.layout.notification).apply {
+                setTextViewText(R.id.notification_title, titleText)
+                setTextViewText(R.id.notification_battery, batteryText)
+
+                val supportsListeningMode = airpodsInstance?.model?.capabilities?.contains(Capability.LISTENING_MODE) != false
+                if (!disconnectedBecauseReversed && supportsListeningMode) {
+                    setViewVisibility(R.id.notification_modes_container, View.VISIBLE)
+                    val supportsAdaptive = airpodsInstance?.model?.capabilities?.contains(Capability.ADAPTIVE_AUDIO) != false
+                    setViewVisibility(R.id.notification_off_button, if (supportsAdaptive) View.GONE else View.VISIBLE)
+                    setViewVisibility(R.id.notification_adaptive_button, if (supportsAdaptive) View.VISIBLE else View.GONE)
+
+                    val currentAnc = ancNotification.status
+                    val buttons = listOf(
+                        1 to R.id.notification_off_button,
+                        3 to R.id.notification_transparency_button,
+                        4 to R.id.notification_adaptive_button,
+                        2 to R.id.notification_anc_button
+                    )
+                    for ((modeValue, viewId) in buttons) {
+                        val isSelected = currentAnc == modeValue
+                        setInt(
+                            viewId,
+                            "setBackgroundResource",
+                            if (isSelected) R.drawable.notification_mode_selected_bg else R.drawable.notification_mode_unselected_bg
+                        )
+                        setInt(
+                            viewId,
+                            "setColorFilter",
+                            if (isSelected) Color.WHITE else 0xFF8E8E93.toInt()
+                        )
+                        val modeIntent = Intent("me.kavishdevar.librepods.SET_ANC_MODE").apply {
+                            setPackage(packageName)
+                            putExtra("mode", modeValue)
+                        }
+                        val modePendingIntent = PendingIntent.getBroadcast(
+                            this@AirPodsService,
+                            100 + modeValue,
+                            modeIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        setOnClickPendingIntent(viewId, modePendingIntent)
+                    }
+                } else {
+                    setViewVisibility(R.id.notification_modes_container, View.GONE)
+                }
+            }
+
             val updatedNotificationBuilder =
                 NotificationCompat.Builder(this, "airpods_connection_status")
                     .setSmallIcon(R.drawable.airpods)
-                    .setContentTitle(airpodsName ?: config.deviceName).setContentText(
-                        """${
-                        batteryList?.find { it.component == BatteryComponent.LEFT }?.let {
-                            if (it.status != BatteryStatus.DISCONNECTED) {
-                                "L: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                            } else {
-                                ""
-                            }
-                        } ?: ""
-                    } ${
-                        batteryList?.find { it.component == BatteryComponent.RIGHT }?.let {
-                            if (it.status != BatteryStatus.DISCONNECTED) {
-                                "R: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                            } else {
-                                ""
-                            }
-                        } ?: ""
-                    } ${
-                        batteryList?.find { it.component == BatteryComponent.CASE }?.let {
-                            if (it.status != BatteryStatus.DISCONNECTED) {
-                                "Case: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                            } else {
-                                ""
-                            }
-                        } ?: ""
-                    }""").setContentIntent(pendingIntent).setCategory(Notification.CATEGORY_STATUS)
-                    .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true)
+                    .setContentTitle(titleText)
+                    .setContentText(batteryText)
+                    .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+                    .setCustomContentView(remoteViews)
+                    .setCustomBigContentView(remoteViews)
+                    .setContentIntent(pendingIntent)
+                    .setCategory(Notification.CATEGORY_STATUS)
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .setOngoing(true)
 
             if (disconnectedBecauseReversed) {
                 updatedNotificationBuilder.addAction(
@@ -2848,13 +2895,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 val bytes = buffer.copyOfRange(0, bytesRead)
                                 val formattedHex = bytes.joinToString(" ") { "%02X".format(it) }
 //                                    CrossDevice.sendReceivedPacket(bytes)
+                                aacpManager.receivePacket(data)
+
                                 updateNotificationContent(
                                     true,
                                     sharedPreferences.getString("name", device.name),
                                     batteryNotification.getBattery()
                                 )
-
-                                aacpManager.receivePacket(data)
 
                                 if (!isHeadTrackingData(data)) {
                                     Log.d("AirPodsData", "Data received: $formattedHex")

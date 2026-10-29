@@ -283,7 +283,7 @@ class PopupWindow(
             color = 0xFFA2A2A4.toInt()
             letterSpacing = 0.06f
             textAlign = Paint.Align.CENTER
-            textSize = caseWidth * 0.08f
+            textSize = caseWidth * 0.10f + 1f
             colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
         }
         val maxWidth = caseWidth * 0.75f

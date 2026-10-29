@@ -215,7 +215,7 @@ class AACPManager {
         identifier: ControlCommandIdentifiers, value: ByteArray
     ) {
         val existingStatus = getControlCommandStatus(identifier)
-        if (existingStatus?.value.contentEquals(value)) {
+        if (existingStatus != null) {
             controlCommandStatusList.remove(existingStatus)
         }
         controlCommandListeners[identifier]?.forEach { listener ->
@@ -1169,6 +1169,7 @@ class AACPManager {
                     ControlCommandIdentifiers.fromByte(controlCommand.identifier) ?: return false,
                     controlCommand.value
                 )
+                callback?.onControlCommandReceived(packet)
             }
 
             val socket = BluetoothConnectionManager.aacpSocket ?: return false
