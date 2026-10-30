@@ -62,6 +62,16 @@ fun PrivacyPolicyPage(
             )
 
             Text(
+                text = "Health Data",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Text(
+                text = "On AirPods with a heart rate sensor, LibrePods can read your heart rate while you turn on measuring. Readings are shown in the app and kept only in memory. If you allow it, LibrePods also saves them to Health Connect on your phone, where you control which apps can read them. For workouts, LibrePods also saves the workout session and a calorie estimate, worked out from your heart rate and the age, weight and sex you enter. Those details stay on your phone. LibrePods doesn't read data from Health Connect and never sends heart rate or workout data anywhere else.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Text(
                 text = "Third Party Services",
                 style = MaterialTheme.typography.titleLarge
             )

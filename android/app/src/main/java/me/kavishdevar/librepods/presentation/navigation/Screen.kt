@@ -65,6 +65,12 @@ sealed interface Screen: NavKey {
     data object HearingProtection: Screen
 
     @Serializable
+    data object HeartRate: Screen
+
+    @Serializable
+    data object Workout: Screen
+
+    @Serializable
     data object Purchase: Screen
 
     @Serializable

@@ -62,6 +62,7 @@ fun AirPodsDeviceSettings(
     navigateToAdaptiveStrength: () -> Unit,
     navigateToEqualizer: () -> Unit,
     navigateToHeadTracking: () -> Unit,
+    navigateToHeartRate: () -> Unit,
     navigateToAccessibility: () -> Unit,
     navigateToVersion: () -> Unit,
     navigateToCallControlScreen: (action: String) -> Unit,
@@ -232,6 +233,20 @@ fun AirPodsDeviceSettings(
                 onCheckedChange = {
                     setControlCommandBoolean(ControlCommandIdentifiers.IN_CASE_TONE_CONFIG, it)
                 }
+            )
+        }
+
+        if (capabilities.contains(Capability.HRM)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            StyledListItem(
+                name = stringResource(R.string.heart_rate_sensor),
+                description = if (state.controlStates[ControlCommandIdentifiers.HRM_STATE]
+                        ?.getOrNull(0) == 0x01.toByte()) {
+                    stringResource(R.string.on)
+                } else {
+                    stringResource(R.string.off)
+                },
+                onClick = navigateToHeartRate
             )
         }
 

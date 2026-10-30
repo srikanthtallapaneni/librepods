@@ -18,12 +18,17 @@
 
 package me.kavishdevar.librepods.presentation.screens
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.Settings
+import android.text.format.DateUtils
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -64,6 +70,7 @@ import me.kavishdevar.librepods.presentation.theme.DesignSystem
 import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
 import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
+import me.kavishdevar.librepods.services.LeftBehindMonitor
 import me.kavishdevar.librepods.services.NotificationAnnouncerService
 
 @Composable
@@ -79,6 +86,7 @@ fun AirPodsDeviceSettingsScreen(
     navigateToAdaptiveStrength: () -> Unit,
     navigateToEqualizer: () -> Unit,
     navigateToHeadTracking: () -> Unit,
+    navigateToHeartRate: () -> Unit,
     navigateToAccessibility: () -> Unit,
     navigateToVersion: () -> Unit,
     navigateToCallControlScreen: (action: String) -> Unit,
@@ -87,6 +95,33 @@ fun AirPodsDeviceSettingsScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val appState by appSettingsViewModel.uiState.collectAsState()
+
+    // Auto-answer needs to see the call ringing and to pick it up.
+    var hasCallPermissions by remember { mutableStateOf(callPermissionsGranted(context)) }
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        hasCallPermissions = results.values.all { it }
+        if (hasCallPermissions) appSettingsViewModel.setAutoAnswerCalls(true)
+    }
+
+    // Left-behind alerts need location, then "Allow all the time", which Android asks for separately.
+    var hasLocationAccess by remember { mutableStateOf(LeftBehindMonitor.hasLocationPermission(context)) }
+    val backgroundLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { hasLocationAccess = LeftBehindMonitor.hasLocationPermission(context) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        }
+    }
+
+    // Without the mic, a nod can't start a voice reply, but a shake can still dismiss.
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
 
     // Notification access can be granted or revoked in system settings, so re-check on every resume.
     // Without it the Announce prefs are switched off, so they can't come back on by themselves if
@@ -97,6 +132,8 @@ fun AirPodsDeviceSettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
             hasNotificationAccess = hasNotificationListenerAccess(context)
+            hasCallPermissions = callPermissionsGranted(context)
+            hasLocationAccess = LeftBehindMonitor.hasLocationPermission(context)
             if (!hasNotificationAccess) {
                 val current = appSettingsViewModel.uiState.value
                 if (current.announceNotifications) appSettingsViewModel.setAnnounceNotifications(false)
@@ -135,6 +172,7 @@ fun AirPodsDeviceSettingsScreen(
             navigateToAdaptiveStrength = navigateToAdaptiveStrength,
             navigateToEqualizer = navigateToEqualizer,
             navigateToHeadTracking = navigateToHeadTracking,
+            navigateToHeartRate = navigateToHeartRate,
             navigateToAccessibility = navigateToAccessibility,
             navigateToVersion = navigateToVersion,
             navigateToCallControlScreen = navigateToCallControlScreen,
@@ -203,6 +241,55 @@ fun AirPodsDeviceSettingsScreen(
                             }
                         )
 
+                        // Nod to reply by voice (needs the mic), shake to dismiss.
+                        StyledToggle(
+                            label = stringResource(R.string.announce_head_gestures),
+                            description = stringResource(R.string.announce_head_gestures_description),
+                            checked = appState.announceHeadGestures && appState.announceNotifications &&
+                                hasNotificationAccess,
+                            enabled = appState.announceNotifications && hasNotificationAccess,
+                            onCheckedChange = { enabled ->
+                                appSettingsViewModel.setAnnounceHeadGestures(enabled)
+                                if (enabled && ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.RECORD_AUDIO
+                                    ) != PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            }
+                        )
+
+                        // Needs background location, which only the FOSS build asks for.
+                        StyledToggle(
+                            label = stringResource(R.string.left_behind_alerts),
+                            description = stringResource(R.string.left_behind_alerts_description),
+                            checked = appState.leftBehindAlerts && hasLocationAccess,
+                            onCheckedChange = { enabled ->
+                                appSettingsViewModel.setLeftBehindAlerts(enabled)
+                                if (enabled && !hasLocationAccess) {
+                                    locationPermissionLauncher.launch(LeftBehindMonitor.LOCATION_PERMISSIONS)
+                                }
+                            }
+                        )
+
+                        LeftBehindMonitor.lastSeenMapUri(context)?.let { uri ->
+                            val lastSeen = remember(uri) {
+                                context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                                    .getLong(LeftBehindMonitor.PREF_LAST_TIME, 0L)
+                            }
+                            StyledListItem(
+                                name = stringResource(R.string.last_seen_location),
+                                description = DateUtils.getRelativeTimeSpanString(lastSeen).toString(),
+                                onClick = {
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                                    } catch (_: ActivityNotFoundException) {
+                                        Log.w("AirPodsDeviceSettings", "No maps app to show the last-seen location")
+                                    }
+                                }
+                            )
+                        }
+
                         StyledToggle(
                             label = stringResource(R.string.announce_calls),
                             description = stringResource(R.string.announce_calls_description),
@@ -214,11 +301,34 @@ fun AirPodsDeviceSettingsScreen(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                StyledToggle(
+                    label = stringResource(R.string.auto_answer_calls),
+                    description = stringResource(R.string.auto_answer_calls_description),
+                    checked = appState.autoAnswerCalls && hasCallPermissions,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasCallPermissions) {
+                            callPermissionLauncher.launch(CALL_PERMISSIONS)
+                        } else {
+                            appSettingsViewModel.setAutoAnswerCalls(enabled)
+                        }
+                    }
+                )
             },
         )
 
         Spacer(modifier = Modifier.height(bottomPadding + 16.dp))
     }
+}
+
+private val CALL_PERMISSIONS = arrayOf(
+    Manifest.permission.READ_PHONE_STATE,
+    Manifest.permission.ANSWER_PHONE_CALLS
+)
+
+private fun callPermissionsGranted(context: Context): Boolean = CALL_PERMISSIONS.all {
+    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
 }
 
 private fun hasNotificationListenerAccess(context: Context): Boolean =

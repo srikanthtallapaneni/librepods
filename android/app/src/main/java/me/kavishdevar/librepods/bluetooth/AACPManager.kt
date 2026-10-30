@@ -209,6 +209,17 @@ class AACPManager {
 
     var customEqCallback: ((CustomEq) -> Unit)? = null
 
+    /** Gets heart rate readings (BPM) from the sensor channel. See [SensorData]. */
+    var heartRateListener: HeartRateListener? = null
+
+    /** Run on every disconnect path (it may run more than once for one disconnect). */
+    val disconnectListeners = CopyOnWriteArrayList<() -> Unit>()
+
+    interface HeartRateListener {
+        fun onHeartRate(bpm: Int)
+        fun onDisconnected()
+    }
+
     fun getControlCommandStatus(identifier: ControlCommandIdentifiers): ControlCommandStatus? {
         return controlCommandStatusList.find { it.identifier == identifier }
     }
@@ -476,6 +487,12 @@ class AACPManager {
             }
 
             Opcodes.HEADTRACKING -> {
+                // Head tracking data and heart rate both arrive on the sensor channel (opcode 0x17).
+                val heartRate = SensorData.parseCommand(packet)?.let(SensorData::parseHeartRate)
+                if (heartRate != null) {
+                    heartRateListener?.onHeartRate(heartRate)
+                    return
+                }
                 if (packet.size < 70) {
                     Log.w(
                         TAG, "Received HEADTRACKING packet too short: ${
@@ -720,6 +737,16 @@ class AACPManager {
             0x00
         )
         return opcode + data
+    }
+
+    /**
+     * Starts heart rate readings every [intervalMicros], or stops them with 0. Firmware 9 and later
+     * use a different sensor service (from upstream LibrePods captures).
+     */
+    fun sendHeartRateInterval(firmwareVersion: String?, intervalMicros: Long): Boolean {
+        val major = firmwareVersion?.firstOrNull()?.digitToIntOrNull() ?: 8
+        val service = if (major >= 9) SensorData.SERVICE_HEARTRATE_COMMAND else SensorData.SERVICE_HEARTRATE
+        return sendDataPacket(SensorData.createReportIntervalPacket(service, intervalMicros))
     }
 
     fun sendStopHeadTracking(): Boolean {
@@ -1288,6 +1315,8 @@ class AACPManager {
         oldConnectedDevices = listOf()
         connectedDevices = listOf()
         audioSource = null
+        heartRateListener?.onDisconnected()
+        disconnectListeners.forEach { it() }
     }
 
     fun parseInformationPacket(packet: ByteArray): AirPodsInformation {

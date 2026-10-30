@@ -42,7 +42,10 @@ data class AppSettingsUiState(
     val engraving: String = "",
     val batteryAlerts: Boolean = true,
     val announceNotifications: Boolean = false,
-    val announceCalls: Boolean = false
+    val announceCalls: Boolean = false,
+    val autoAnswerCalls: Boolean = false,
+    val announceHeadGestures: Boolean = false,
+    val leftBehindAlerts: Boolean = false
 )
 
 class AppSettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -162,7 +165,10 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 engraving = Engraving.read(sharedPreferences),
                 batteryAlerts = sharedPreferences.getBoolean("battery_alerts", true),
                 announceNotifications = sharedPreferences.getBoolean("announce_notifications", false),
-                announceCalls = sharedPreferences.getBoolean("announce_calls", false)
+                announceCalls = sharedPreferences.getBoolean("announce_calls", false),
+                autoAnswerCalls = sharedPreferences.getBoolean("auto_answer_calls", false),
+                announceHeadGestures = sharedPreferences.getBoolean("announce_head_gestures", false),
+                leftBehindAlerts = sharedPreferences.getBoolean("left_behind_alerts", false)
             )
         }
     }
@@ -281,5 +287,20 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     fun setAnnounceCalls(enabled: Boolean) {
         sharedPreferences.edit { putBoolean("announce_calls", enabled) }
         _uiState.update { it.copy(announceCalls = enabled) }
+    }
+
+    fun setAnnounceHeadGestures(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("announce_head_gestures", enabled) }
+        _uiState.update { it.copy(announceHeadGestures = enabled) }
+    }
+
+    fun setLeftBehindAlerts(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("left_behind_alerts", enabled) }
+        _uiState.update { it.copy(leftBehindAlerts = enabled) }
+    }
+
+    fun setAutoAnswerCalls(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("auto_answer_calls", enabled) }
+        _uiState.update { it.copy(autoAnswerCalls = enabled) }
     }
 }

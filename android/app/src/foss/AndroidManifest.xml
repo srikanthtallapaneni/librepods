@@ -3,6 +3,14 @@
      Announce Calls ship in the FOSS build only. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Voice replies to announced messages. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Left-behind alerts: where the AirPods disconnected, checked in the background. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
     <application>
         <service
             android:name="me.kavishdevar.librepods.services.NotificationAnnouncerService"
@@ -13,6 +21,13 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <activity
+            android:name="me.kavishdevar.librepods.VoiceReplyActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TransparentDialog"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
     </application>
 
 </manifest>

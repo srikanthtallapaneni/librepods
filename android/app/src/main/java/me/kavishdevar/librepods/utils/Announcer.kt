@@ -46,7 +46,9 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
     // Tracking the IDs in flight means a late onStop for an utterance stop() already dropped can't
     // release audio focus while a newer announcement is playing.
     private val inFlight = mutableSetOf<String>()
-    private val pending = mutableListOf<String>()
+    private val pending = mutableListOf<Pair<String, (() -> Unit)?>>()
+    // Run when an utterance finishes playing (not when it's stopped or fails).
+    private val onDoneCallbacks = mutableMapOf<String, () -> Unit>()
     @Volatile
     private var ready = false
 
@@ -70,7 +72,7 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
 
-            override fun onDone(utteranceId: String?) = onUtteranceFinished(utteranceId)
+            override fun onDone(utteranceId: String?) = onUtteranceFinished(utteranceId, completed = true)
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) = onUtteranceFinished(utteranceId)
@@ -79,17 +81,18 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
         })
         synchronized(inFlight) {
             ready = true
-            pending.forEach(::speakNow)
+            pending.forEach { (text, onDone) -> speakNow(text, onDone) }
             pending.clear()
         }
     }
 
-    fun speak(text: String) {
+    /** Speaks [text]; [onDone] runs on a TTS thread once it has played to the end. */
+    fun speak(text: String, onDone: (() -> Unit)? = null) {
         synchronized(inFlight) {
             when {
                 failed -> return
-                ready -> speakNow(text)
-                else -> pending.add(text)
+                ready -> speakNow(text, onDone)
+                else -> pending.add(text to onDone)
             }
         }
     }
@@ -101,6 +104,7 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
             // tts.stop() drops queued utterances without callbacks, so release focus here. Cleared
             // first, so the onStop that does arrive for the current utterance is ignored.
             inFlight.clear()
+            onDoneCallbacks.clear()
             audioManager.abandonAudioFocusRequest(focusRequest)
         }
         tts.stop()
@@ -112,17 +116,21 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
     }
 
     // Called with the inFlight lock held.
-    private fun speakNow(text: String) {
+    private fun speakNow(text: String, onDone: (() -> Unit)?) {
         val utteranceId = "librepods_${System.nanoTime()}"
         if (inFlight.isEmpty()) audioManager.requestAudioFocus(focusRequest)
         inFlight.add(utteranceId)
+        onDone?.let { onDoneCallbacks[utteranceId] = it }
         tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
     }
 
-    private fun onUtteranceFinished(utteranceId: String?) {
-        synchronized(inFlight) {
+    private fun onUtteranceFinished(utteranceId: String?, completed: Boolean = false) {
+        val onDone = synchronized(inFlight) {
             if (utteranceId == null || !inFlight.remove(utteranceId)) return
             if (inFlight.isEmpty()) audioManager.abandonAudioFocusRequest(focusRequest)
+            onDoneCallbacks.remove(utteranceId)
         }
+        // Outside the lock: the callback may start another announcement.
+        if (completed) onDone?.invoke()
     }
 }

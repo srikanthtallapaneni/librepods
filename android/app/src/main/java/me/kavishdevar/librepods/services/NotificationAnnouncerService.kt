@@ -22,10 +22,12 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.Person
 import android.media.AudioManager
+import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.VoiceReplyActivity
 
 /**
  * Feeds "Announce Notifications" and "Announce Calls": reads new messages and incoming callers
@@ -57,7 +59,35 @@ class NotificationAnnouncerService : NotificationListenerService() {
         recentAnnouncements.addLast(dedupeKey)
         if (recentAnnouncements.size > MAX_RECENT) recentAnnouncements.removeFirst()
 
-        service.announce(text)
+        if (!prefs.getBoolean("announce_head_gestures", false)) {
+            service.announce(text)
+            return
+        }
+        service.announce(text) {
+            service.listenForAnnouncementGesture(
+                onNod = { reply(sbn, service) },
+                onShake = { cancelNotification(sbn.key) }
+            )
+        }
+    }
+
+    /** Nod after an announcement: opens a voice reply if the app's notification takes replies. */
+    private fun reply(sbn: StatusBarNotification, service: AirPodsService) {
+        val actions = sbn.notification.actions ?: return
+        val withInput = actions.filter { !it.remoteInputs.isNullOrEmpty() }
+        val action = withInput.firstOrNull { it.semanticAction == Notification.Action.SEMANTIC_ACTION_REPLY }
+            ?: withInput.firstOrNull()
+        if (action == null) {
+            service.announce(getString(R.string.voice_reply_not_supported))
+            return
+        }
+        // Starting the reply window from the background needs "Display over other apps".
+        if (!Settings.canDrawOverlays(this)) {
+            service.announce(getString(R.string.voice_reply_needs_overlay))
+            return
+        }
+        val sender = sbn.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        startActivity(VoiceReplyActivity.intent(this, action, sender))
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {

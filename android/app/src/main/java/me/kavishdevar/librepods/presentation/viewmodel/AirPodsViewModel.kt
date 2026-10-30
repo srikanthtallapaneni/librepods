@@ -56,6 +56,7 @@ import me.kavishdevar.librepods.data.Engraving
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import me.kavishdevar.librepods.services.AirPodsService
+import me.kavishdevar.librepods.services.WorkoutTracker
 
 @Suppress("ArrayInDataClass")
 data class AirPodsUiState(
@@ -396,6 +397,18 @@ class AirPodsViewModel(
         )
     }
 
+    /** Live heart rate (BPM), or null when there's no reading. */
+    val heartRate: StateFlow<Int?> get() = service.heartRateMonitor.bpm
+    val heartRateMeasuring: StateFlow<Boolean> get() = service.heartRateMonitor.measuring
+
+    fun setHeartRateMeasuring(enabled: Boolean) = service.heartRateMonitor.setMeasuring(enabled)
+
+    var saveHeartRateToHealthConnect: Boolean
+        get() = service.heartRateMonitor.saveToHealthConnect
+        set(value) { service.heartRateMonitor.saveToHealthConnect = value }
+
+    val workoutTracker: WorkoutTracker get() = service.workoutTracker
+
     fun setControlCommandInt(
         identifier: ControlCommandIdentifiers, value: Int
     ) {
@@ -459,7 +472,8 @@ class AirPodsViewModel(
             ControlCommandIdentifiers.OWNS_CONNECTION,
             ControlCommandIdentifiers.PPE_TOGGLE_CONFIG,
             ControlCommandIdentifiers.DYNAMIC_END_OF_CHARGE,
-            ControlCommandIdentifiers.IN_CASE_TONE_CONFIG
+            ControlCommandIdentifiers.IN_CASE_TONE_CONFIG,
+            ControlCommandIdentifiers.HRM_STATE
         )
         for (identifier in identifiersList) {
             observeControl(identifier)

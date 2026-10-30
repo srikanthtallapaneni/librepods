@@ -96,6 +96,9 @@ class GestureDetector(
     private val minConfidenceThreshold = 0.7
 
     private var isRunning = false
+
+    val isDetecting: Boolean
+        get() = isRunning
     private var detectionJob: Job? = null
     private var gestureDetectedCallback: ((Boolean) -> Unit)? = null
 

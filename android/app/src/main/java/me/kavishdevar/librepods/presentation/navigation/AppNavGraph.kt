@@ -32,6 +32,8 @@ import me.kavishdevar.librepods.presentation.screens.HeadTrackingScreen
 import me.kavishdevar.librepods.presentation.screens.HearingAidAdjustmentsScreen
 import me.kavishdevar.librepods.presentation.screens.HearingAidScreen
 import me.kavishdevar.librepods.presentation.screens.HearingProtectionScreen
+import me.kavishdevar.librepods.presentation.screens.HeartRateScreen
+import me.kavishdevar.librepods.presentation.screens.WorkoutScreen
 import me.kavishdevar.librepods.presentation.screens.LoadingScreen
 import me.kavishdevar.librepods.presentation.screens.LongPress
 import me.kavishdevar.librepods.presentation.screens.MicrophoneSettingsRoute
@@ -58,7 +60,7 @@ private val Screen.requiresAirPods: Boolean
         Screen.AirPodsDeviceSettings, Screen.Rename, Screen.HeadTracking, Screen.Accessibility,
         Screen.TransparencyCustomization, Screen.HearingAid, Screen.HearingAidAdjustments,
         Screen.AdaptiveStrength, Screen.UpdateHearingTest, Screen.VersionInfo,
-        Screen.HearingProtection, Screen.Equalizer, Screen.MicrophoneSettings,
+        Screen.HearingProtection, Screen.HeartRate, Screen.Workout, Screen.Equalizer, Screen.MicrophoneSettings,
         is Screen.LongPress, is Screen.CallControl -> true
         else -> false
     }
@@ -166,6 +168,7 @@ fun AppNavGraph(
                                 navigateToAdaptiveStrength = { navigate(Screen.AdaptiveStrength) },
                                 navigateToEqualizer = { navigate(Screen.Equalizer) },
                                 navigateToHeadTracking = { navigate(Screen.HeadTracking) },
+                                navigateToHeartRate = { navigate(Screen.HeartRate) },
                                 navigateToAccessibility = { navigate(Screen.Accessibility) },
                                 navigateToVersion = { navigate(Screen.VersionInfo) },
                                 navigateToCallControlScreen = { navigate(Screen.CallControl(it)) },
@@ -250,6 +253,19 @@ fun AppNavGraph(
                                 viewModel = airPodsViewModel,
                                 navigateToPurchase = ::navigateToPurchase
                             )
+                        }
+
+                    Screen.HeartRate ->
+                        NavEntry(screen) {
+                            // The heart rate flows live in the service, so wait until it's bound.
+                            if (!airPodsViewModel.isReady) LoadingScreen() else {
+                                HeartRateScreen(airPodsViewModel, navigateToWorkout = { navigate(Screen.Workout) })
+                            }
+                        }
+
+                    Screen.Workout ->
+                        NavEntry(screen) {
+                            if (!airPodsViewModel.isReady) LoadingScreen() else WorkoutScreen(airPodsViewModel)
                         }
 
                     Screen.Purchase ->

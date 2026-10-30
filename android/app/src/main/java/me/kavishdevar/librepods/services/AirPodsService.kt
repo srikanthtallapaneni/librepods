@@ -77,6 +77,7 @@ import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -142,6 +143,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "AirPodsService"
+// Long enough to shake your head to decline first when head gestures are on.
+private const val AUTO_ANSWER_DELAY_MS = 5_000L
+// How long to wait for a nod or shake after an announced message.
+private const val ANNOUNCEMENT_GESTURE_WINDOW_MS = 6_000L
 
 object ServiceManager {
     private var service: AirPodsService? = null
@@ -389,6 +394,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         aacpManager = AACPManager()
         initializeAACPManagerCallback()
+        aacpManager.disconnectListeners.add { leftBehindMonitor.onDisconnected() }
 
         attManager = ATTManagerv2()
 
@@ -618,6 +624,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                         if (config.headGestures) {
                             handleIncomingCall()
                         }
+                        scheduleAutoAnswer()
                     }
 
                     TelephonyManager.CALL_STATE_OFFHOOK -> {
@@ -630,11 +637,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                             takeOver("call")
                         }
                         isInCall = true
+                        autoAnswerJob?.cancel()
                         announcer?.stop()
                     }
 
                     TelephonyManager.CALL_STATE_IDLE -> {
                         isInCall = false
+                        autoAnswerJob?.cancel()
                         gestureDetector?.stopDetection()
                     }
                 }
@@ -1723,6 +1732,22 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     private var gestureDetector: GestureDetector? = null
     private var isInCall = false
+    private var autoAnswerJob: Job? = null
+
+    /**
+     * Auto-answer, like iOS: answers a ringing call after a few seconds if an AirPod is in an ear.
+     * A head-gesture decline or picking up on the phone first ends the ringing, which cancels it.
+     */
+    private fun scheduleAutoAnswer() {
+        autoAnswerJob?.cancel()
+        if (!sharedPreferences.getBoolean("auto_answer_calls", false)) return
+        if (BluetoothConnectionManager.aacpSocket?.isConnected != true || !isWearing()) return
+        autoAnswerJob = CoroutineScope(Dispatchers.Main).launch {
+            delay(AUTO_ANSWER_DELAY_MS)
+            if (isInCall || !isWearing()) return@launch
+            answerCall(getString(R.string.auto_answer_toast))
+        }
+    }
     private var callNumber: String? = null
 
     private fun initGestureDetector() {
@@ -2256,6 +2281,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         if (isInCall) return
         if (config.headGestures) {
             initGestureDetector()
+            // A call takes over from a pending nod/shake for an announced message.
+            if (awaitingAnnouncementGesture) {
+                awaitingAnnouncementGesture = false
+                mainHandler.removeCallbacks(announcementGestureTimeout)
+                gestureDetector?.stopDetection(doNotStop = true)
+            }
             startHeadTracking()
             // While ringing the AirPods send head tracking at the slow in-call rate.
             gestureDetector?.startDetection(expectSlowSamples = true) { accepted ->
@@ -2284,7 +2315,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
     }
 
-    private fun answerCall() {
+    private fun answerCall(toast: String = "Call answered via head gesture") {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val telecomManager = getSystemService(TELECOM_SERVICE) as TelecomManager
@@ -2302,7 +2333,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 answerCallMethod.invoke(telephonyInterface)
             }
 
-            sendToast("Call answered via head gesture")
+            sendToast(toast)
         } catch (e: Exception) {
             e.printStackTrace()
             sendToast("Failed to answer call: ${e.message}")
@@ -2917,6 +2948,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                             })
 
                     setupStemActions()
+                    heartRateMonitor.onConnected()
+                    leftBehindMonitor.onConnected()
 
                     while (socket.isConnected) {
                         try {
@@ -2940,6 +2973,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                     batteryNotification.getBattery()
                                 )
 
+                                // Head tracking and mic audio arrive many times a second; don't log them.
                                 if (!isHeadTrackingData(data)) {
                                     Log.d("AirPodsData", "Data received: $formattedHex")
                                     logPacket(data, "AirPods")
@@ -3078,6 +3112,18 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     val ancNotification = AirPodsNotifications.ANC()
     val batteryNotification = AirPodsNotifications.BatteryNotification()
     private val batteryAlertManager by lazy { BatteryAlertManager(this) }
+    val leftBehindMonitor by lazy {
+        LeftBehindMonitor(
+            this,
+            isConnected = { BluetoothConnectionManager.aacpSocket?.isConnected == true },
+            lastSeenNearby = { bleManager.lastSeenMillis }
+        )
+    }
+    // Created after aacpManager (in onCreate) so it can register as its heart rate listener.
+    val heartRateMonitor by lazy {
+        HeartRateMonitor(this, aacpManager) { config.airpodsVersion3.ifEmpty { airpodsInstance?.version3 } }
+    }
+    val workoutTracker by lazy { WorkoutTracker(this, heartRateMonitor) }
     // Created on the main thread, stopped from the AACP reader thread too.
     @Volatile
     private var announcer: Announcer? = null
@@ -3102,14 +3148,53 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
      * Speaks [text] for Announce Notifications/Calls, only while the AirPods are worn, are playing
      * this phone's audio, and no call is active.
      */
-    fun announce(text: String) {
+    fun announce(text: String, onDone: (() -> Unit)? = null) {
         if (BluetoothConnectionManager.aacpSocket?.isConnected != true || !isWearing() || isInCall) return
         if (!isAudioRoutedToAirPods()) return
         val current = announcer?.takeUnless { it.failed } ?: Announcer(this).also {
             announcer?.shutdown()
             announcer = it
         }
-        current.speak(text)
+        current.speak(text, onDone)
+    }
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    // True while waiting for a gesture after an announcement, so the timeout never stops call gestures.
+    private var awaitingAnnouncementGesture = false
+
+    private val announcementGestureTimeout = Runnable {
+        if (!awaitingAnnouncementGesture) return@Runnable
+        Log.d(TAG, "No head gesture after the announcement")
+        awaitingAnnouncementGesture = false
+        gestureDetector?.stopDetection()
+    }
+
+    /**
+     * After an announced message, like Siri on iOS: a nod runs [onNod] (reply), a shake runs
+     * [onShake] (dismiss). Gives up after a few seconds, and never interrupts call gestures.
+     */
+    fun listenForAnnouncementGesture(onNod: () -> Unit, onShake: () -> Unit) {
+        mainHandler.post {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || isInCall || !isWearing()) return@post
+            initGestureDetector()
+            val detector = gestureDetector ?: return@post
+            // Already listening (an incoming call, or an earlier announcement): leave it alone.
+            if (detector.isDetecting) return@post
+            awaitingAnnouncementGesture = true
+            detector.startDetection { nodded ->
+                awaitingAnnouncementGesture = false
+                mainHandler.removeCallbacks(announcementGestureTimeout)
+                if (nodded) onNod() else onShake()
+            }
+            mainHandler.postDelayed(announcementGestureTimeout, ANNOUNCEMENT_GESTURE_WINDOW_MS)
+        }
+    }
+
+    /** Opens the AirPods mic (HFP voice recognition) for a voice reply; it closes once recording stops. */
+    fun startAirPodsMic(): Boolean {
+        val target = device ?: return false
+        voiceRecognitionManager.start(target)
+        return true
     }
     val conversationAwarenessNotification =
         AirPodsNotifications.ConversationAwarenessNotification()

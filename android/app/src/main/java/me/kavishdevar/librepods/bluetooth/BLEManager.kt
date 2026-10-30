@@ -61,6 +61,10 @@ class BLEManager(private val context: Context) {
         val connectionState: String = "Unknown"
     )
 
+    /** When a broadcast from these AirPods (matched by their key) was last received, or 0. */
+    val lastSeenMillis: Long
+        get() = lastBroadcastTime
+
     fun getMostRecentStatus(): AirPodsStatus? {
         return deviceStatusMap.values.maxByOrNull { it.lastSeen }
     }

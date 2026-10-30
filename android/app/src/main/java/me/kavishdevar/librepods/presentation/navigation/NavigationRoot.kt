@@ -63,6 +63,8 @@ fun NavigationRoot(
         Screen.HearingAid -> stringResource(R.string.hearing_aid)
         Screen.HearingAidAdjustments -> stringResource(R.string.adjustments)
         Screen.HearingProtection -> stringResource(R.string.hearing_protection)
+        Screen.HeartRate -> stringResource(R.string.heart_rate_sensor)
+        Screen.Workout -> stringResource(R.string.workout)
         is Screen.LongPress -> currentScreen.bud
         Screen.OpenSourceLicenses -> stringResource(R.string.open_source_licenses)
         Screen.Purchase -> stringResource(R.string.unlock_advanced_features)
