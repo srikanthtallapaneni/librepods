@@ -122,6 +122,15 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+        <service
+            android:name=".services.NotificationAnnouncerService"
+            android:exported="true"
+            android:label="@string/announcements"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 <!--        <service-->
 <!--            android:name=".services.AppListenerService"-->
 <!--            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"-->

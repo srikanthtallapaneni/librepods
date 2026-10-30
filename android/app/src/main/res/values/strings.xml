@@ -295,4 +295,25 @@
     <string name="eq_low">Low</string>
     <string name="eq_mid">Mid</string>
     <string name="eq_high">High</string>
+    <string name="case_sounds">Enable Charging Case Sounds</string>
+    <string name="airpods_settings">AirPods Settings</string>
+    <string name="airpods_settings_description">Controls, audio, hearing health, charging and more</string>
+    <string name="announcements">Alerts and Announcements</string>
+    <string name="battery_alerts">Battery Alerts</string>
+    <string name="battery_alerts_description" formatted="false">Notify when an AirPod or the case drops to 20% and 10%, and when the case finishes charging.</string>
+    <string name="battery_alerts_channel">AirPods battery alerts</string>
+    <string name="battery_low_left">Left AirPod battery low</string>
+    <string name="battery_low_right">Right AirPod battery low</string>
+    <string name="battery_low_case">Charging case battery low</string>
+    <string name="battery_level_remaining">%1$d%% remaining</string>
+    <string name="case_fully_charged">Charging case fully charged</string>
+    <string name="announce_notifications">Announce Notifications</string>
+    <string name="announce_notifications_description">Read new messages aloud while you\'re wearing your AirPods. Needs notification access for LibrePods.</string>
+    <string name="announce_calls">Announce Calls</string>
+    <string name="announce_calls_description">Say who is calling while you\'re wearing your AirPods. Needs notification access for LibrePods.</string>
+    <string name="announce_message">Message from %1$s. %2$s</string>
+    <string name="announce_group_message">%1$s in %2$s. %3$s</string>
+    <string name="announce_call">%1$s calling</string>
+    <string name="announce_call_unknown">Incoming call</string>
+    <string name="case_sounds_description">Play sounds from the charging case, for example when charging starts or when the case battery is low.</string>
 </resources>

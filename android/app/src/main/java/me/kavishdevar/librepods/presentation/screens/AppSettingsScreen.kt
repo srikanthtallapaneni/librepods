@@ -53,7 +53,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +88,6 @@ import me.kavishdevar.librepods.presentation.components.StyledIconButton
 import me.kavishdevar.librepods.presentation.components.StyledInputField
 import me.kavishdevar.librepods.presentation.components.StyledList
 import me.kavishdevar.librepods.presentation.components.StyledListItem
-import me.kavishdevar.librepods.presentation.components.StyledSlider
 import me.kavishdevar.librepods.presentation.components.StyledToggle
 import me.kavishdevar.librepods.presentation.theme.DesignSystem
 import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
@@ -102,7 +100,6 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun AppSettingsScreen(
     viewModel: AppSettingsViewModel = viewModel(),
-    navigateToEngraving: () -> Unit,
     navigateToPurchase: () -> Unit,
     navigateToTroubleshooting: () -> Unit,
     navigateToOpenSourceLicenses: () -> Unit,
@@ -178,14 +175,6 @@ fun AppSettingsScreen(
             enabled = true
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        StyledListItem(
-            name = stringResource(R.string.engraving),
-            description = state.engraving.ifEmpty { stringResource(R.string.engraving_not_set) },
-            onClick = navigateToEngraving,
-        )
-
         if (state.connectionSuccessful) {
             StyledToggle(
                 title = stringResource(R.string.widget),
@@ -212,48 +201,6 @@ fun AppSettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            StyledList (title = stringResource(R.string.conversation_awareness)) {
-                StyledToggle(
-                    label = stringResource(R.string.conversation_awareness_pause_music),
-                    description = stringResource(R.string.conversation_awareness_pause_music_description),
-                    checked = state.conversationAwarenessPauseMusicEnabled,
-                    onCheckedChange = viewModel::setConversationAwarenessPauseMusicEnabled,
-                    enabled = true
-                )
-
-                StyledToggle(
-                    label = stringResource(R.string.relative_conversation_awareness_volume),
-                    description = stringResource(R.string.relative_conversation_awareness_volume_description),
-                    checked = state.relativeConversationAwarenessVolumeEnabled,
-                    onCheckedChange = viewModel::setRelativeConversationAwarenessVolumeEnabled,
-                    enabled = true,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val conversationAwarenessVolume = state.conversationAwarenessVolume
-            LaunchedEffect(conversationAwarenessVolume) {
-                viewModel.setConversationAwarenessVolume(conversationAwarenessVolume)
-            }
-
-            StyledSlider(
-                label = stringResource(R.string.conversation_awareness_volume),
-                value = conversationAwarenessVolume,
-                valueRange = 10f..85f,
-                snapPoints = listOf(44f),
-                startLabel = "10%",
-                endLabel = "85%",
-                onValueChange = { newValue ->
-                    viewModel.setConversationAwarenessVolume(
-                        newValue
-                    )
-                },
-                independent = true,
-                enabled = true
-            )
 
 //            if (!BuildConfig.PLAY_BUILD) {
 //                Spacer(modifier = Modifier.height(16.dp))

@@ -38,7 +38,10 @@ data class AppSettingsUiState(
     val showIslandPopup: Boolean = true,
     val timeUntilFOSSPremiumExpiry: Long = 0L,
     val m3eEnabled: Boolean = false,
-    val engraving: String = ""
+    val engraving: String = "",
+    val batteryAlerts: Boolean = true,
+    val announceNotifications: Boolean = false,
+    val announceCalls: Boolean = false
 )
 
 class AppSettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -155,7 +158,10 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 showBottomSheetPopup = sharedPreferences.getBoolean("show_bottom_sheet_popup", true),
                 showIslandPopup = sharedPreferences.getBoolean("show_island_popup", true),
                 m3eEnabled = sharedPreferences.getBoolean("m3e_enabled", true),
-                engraving = sharedPreferences.getString("engraving", "") ?: ""
+                engraving = sharedPreferences.getString("engraving", "") ?: "",
+                batteryAlerts = sharedPreferences.getBoolean("battery_alerts", true),
+                announceNotifications = sharedPreferences.getBoolean("announce_notifications", false),
+                announceCalls = sharedPreferences.getBoolean("announce_calls", false)
             )
         }
     }
@@ -259,5 +265,20 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     fun setm3eEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean("m3e_enabled", enabled) }
         _uiState.update { it.copy(m3eEnabled = enabled) }
+    }
+
+    fun setBatteryAlerts(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("battery_alerts", enabled) }
+        _uiState.update { it.copy(batteryAlerts = enabled) }
+    }
+
+    fun setAnnounceNotifications(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("announce_notifications", enabled) }
+        _uiState.update { it.copy(announceNotifications = enabled) }
+    }
+
+    fun setAnnounceCalls(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("announce_calls", enabled) }
+        _uiState.update { it.copy(announceCalls = enabled) }
     }
 }

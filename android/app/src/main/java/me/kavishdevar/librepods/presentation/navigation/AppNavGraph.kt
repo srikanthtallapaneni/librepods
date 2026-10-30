@@ -19,6 +19,7 @@ import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.data.updates.updates
 import me.kavishdevar.librepods.presentation.screens.AccessibilitySettingsScreen
 import me.kavishdevar.librepods.presentation.screens.AdaptiveStrengthScreen
+import me.kavishdevar.librepods.presentation.screens.AirPodsDeviceSettingsScreen
 import me.kavishdevar.librepods.presentation.screens.AirPodsSettingsRoute
 import me.kavishdevar.librepods.presentation.screens.AppSettingsScreen
 import me.kavishdevar.librepods.presentation.screens.CallControlScreen
@@ -90,28 +91,9 @@ fun AppNavGraph(
                             if (!airPodsViewModel.isReady) LoadingScreen()
                             AirPodsSettingsRoute(
                                 viewModel = airPodsViewModel,
-                                navigateToRename = { navigate(Screen.Rename) },
-                                navigateToHearingProtection = { navigate(Screen.HearingProtection) },
-                                navigateToHearingAid = { navigate(Screen.HearingAid) },
-                                navigateToLeftLongPress = {
-                                    navigate(
-                                        Screen.LongPress("Left")
-                                    )
-                                },
-                                navigateToRightLongPress = {
-                                    navigate(
-                                        Screen.LongPress("Right")
-                                    )
-                                },
                                 navigateToPurchase = { navigate(Screen.Purchase) },
-                                navigateToAdaptiveStrength = { navigate(Screen.AdaptiveStrength) },
-                                navigateToEqualizer = { navigate(Screen.Equalizer) },
-                                navigateToHeadTracking = { navigate(Screen.HeadTracking) },
-                                navigateToAccessibility = { navigate(Screen.Accessibility) },
-                                navigateToVersion = { navigate(Screen.VersionInfo) },
                                 navigateToTroubleshooting = { navigate(Screen.Troubleshooting) },
-                                navigateToCallControlScreen = { navigate(Screen.CallControl(it)) },
-                                navigateToMicrophoneSettings = { navigate(Screen.MicrophoneSettings) },
+                                navigateToAirPodsSettings = { navigate(Screen.AirPodsDeviceSettings) },
                             )
                         }
 
@@ -137,11 +119,32 @@ fun AppNavGraph(
                             val vm: AppSettingsViewModel = viewModel()
                             AppSettingsScreen(
                                 viewModel = vm,
-                                navigateToEngraving = { navigate(Screen.Engraving) },
                                 navigateToPurchase = ::navigateToPurchase,
                                 navigateToTroubleshooting = { navigate(Screen.Troubleshooting) },
                                 navigateToOpenSourceLicenses = { navigate(Screen.OpenSourceLicenses) },
                                 navigateToReleaseNotesScreen = { navigate(Screen.ReleaseNotes) }
+                            )
+                        }
+
+                    Screen.AirPodsDeviceSettings ->
+                        NavEntry(screen) {
+                            if (!airPodsViewModel.isReady) LoadingScreen()
+                            AirPodsDeviceSettingsScreen(
+                                viewModel = airPodsViewModel,
+                                appSettingsViewModel = viewModel(),
+                                navigateToEngraving = { navigate(Screen.Engraving) },
+                                navigateToRename = { navigate(Screen.Rename) },
+                                navigateToHearingProtection = { navigate(Screen.HearingProtection) },
+                                navigateToHearingAid = { navigate(Screen.HearingAid) },
+                                navigateToLeftLongPress = { navigate(Screen.LongPress("Left")) },
+                                navigateToRightLongPress = { navigate(Screen.LongPress("Right")) },
+                                navigateToAdaptiveStrength = { navigate(Screen.AdaptiveStrength) },
+                                navigateToEqualizer = { navigate(Screen.Equalizer) },
+                                navigateToHeadTracking = { navigate(Screen.HeadTracking) },
+                                navigateToAccessibility = { navigate(Screen.Accessibility) },
+                                navigateToVersion = { navigate(Screen.VersionInfo) },
+                                navigateToCallControlScreen = { navigate(Screen.CallControl(it)) },
+                                navigateToMicrophoneSettings = { navigate(Screen.MicrophoneSettings) },
                             )
                         }
 

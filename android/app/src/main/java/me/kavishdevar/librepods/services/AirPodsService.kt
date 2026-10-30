@@ -109,6 +109,7 @@ import me.kavishdevar.librepods.presentation.overlays.IslandWindow
 import me.kavishdevar.librepods.presentation.overlays.PopupWindow
 import me.kavishdevar.librepods.presentation.widgets.BatteryWidget
 import me.kavishdevar.librepods.presentation.widgets.NoiseControlWidget
+import me.kavishdevar.librepods.utils.Announcer
 import me.kavishdevar.librepods.utils.GestureDetector
 import me.kavishdevar.librepods.utils.HeadTracking
 import me.kavishdevar.librepods.utils.MediaController
@@ -626,6 +627,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                             takeOver("call")
                         }
                         isInCall = true
+                        announcer?.stop()
                     }
 
                     TelephonyManager.CALL_STATE_IDLE -> {
@@ -870,6 +872,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     setPackage(packageName)
                 })
                 updateBattery()
+                if (sharedPreferences.getBoolean("battery_alerts", true)) {
+                    batteryAlertManager.onBatteryUpdate(batteryNotification.getBattery())
+                }
                 updateNotificationContent(
                     true,
                     this@AirPodsService.getSharedPreferences("settings", MODE_PRIVATE)
@@ -1304,6 +1309,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         )
         var justEnabledA2dp = false
         earDetectionNotification.setStatus(earDetection)
+        if (!isWearing()) announcer?.stop()
         if (config.earDetectionEnabled) {
             val data = earDetection.copyOfRange(earDetection.size - 2, earDetection.size)
             inEar = data[0] == 0x00.toByte() && data[1] == 0x00.toByte()
@@ -3040,6 +3046,18 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     val earDetectionNotification = AirPodsNotifications.EarDetection()
     val ancNotification = AirPodsNotifications.ANC()
     val batteryNotification = AirPodsNotifications.BatteryNotification()
+    private val batteryAlertManager by lazy { BatteryAlertManager(this) }
+    private var announcer: Announcer? = null
+
+    // 0x00 is "in ear" in the ear detection status.
+    private fun isWearing(): Boolean = earDetectionNotification.status.any { it == 0x00.toByte() }
+
+    /** Speaks [text] for Announce Notifications/Calls, only while the AirPods are worn and no call is active. */
+    fun announce(text: String) {
+        if (BluetoothConnectionManager.aacpSocket?.isConnected != true || !isWearing() || isInCall) return
+        val current = announcer ?: Announcer(this).also { announcer = it }
+        current.speak(text)
+    }
     val conversationAwarenessNotification =
         AirPodsNotifications.ConversationAwarenessNotification()
 
@@ -3219,6 +3237,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
         voiceRecognitionManager.close()
+        announcer?.shutdown()
+        announcer = null
 
         try {
             unregisterReceiver(bluetoothReceiver)

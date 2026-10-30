@@ -24,7 +24,6 @@ package me.kavishdevar.librepods.presentation.screens
 import android.annotation.SuppressLint
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
-import android.content.SharedPreferences
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -61,7 +60,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -85,7 +83,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -101,19 +98,11 @@ import kotlinx.coroutines.delay
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.bluetooth.AACPManager
-import me.kavishdevar.librepods.bluetooth.ATTHandles
-import me.kavishdevar.librepods.data.AirPodsPro3
 import me.kavishdevar.librepods.data.Capability
 import me.kavishdevar.librepods.presentation.MaterialIcons
-import me.kavishdevar.librepods.presentation.components.AboutCard
-import me.kavishdevar.librepods.presentation.components.AudioSettings
 import me.kavishdevar.librepods.presentation.components.BatteryView
-import me.kavishdevar.librepods.presentation.components.CallControlSettings
-import me.kavishdevar.librepods.presentation.components.ConnectionSettings
-import me.kavishdevar.librepods.presentation.components.HearingHealthSettings
 import me.kavishdevar.librepods.presentation.components.MaterialButtonStyle
 import me.kavishdevar.librepods.presentation.components.NoiseControlSettings
-import me.kavishdevar.librepods.presentation.components.PressAndHoldSettings
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledListItem
 import me.kavishdevar.librepods.presentation.components.StyledToggle
@@ -131,20 +120,9 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun AirPodsSettingsRoute(
     viewModel: AirPodsViewModel,
-    navigateToRename: () -> Unit,
-    navigateToHearingProtection: () -> Unit,
-    navigateToHearingAid: () -> Unit,
-    navigateToLeftLongPress: () -> Unit,
-    navigateToRightLongPress: () -> Unit,
     navigateToPurchase: () -> Unit,
-    navigateToAdaptiveStrength: () -> Unit,
-    navigateToEqualizer: () -> Unit,
-    navigateToHeadTracking: () -> Unit,
-    navigateToAccessibility: () -> Unit,
-    navigateToVersion: () -> Unit,
     navigateToTroubleshooting: () -> Unit,
-    navigateToCallControlScreen: (action: String) -> Unit,
-    navigateToMicrophoneSettings: () -> Unit
+    navigateToAirPodsSettings: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -168,27 +146,11 @@ fun AirPodsSettingsRoute(
 //        setControlCommandValue = viewModel::setControlCommandValue,
             setControlCommandByte = viewModel::setControlCommandByte,
 
-            setATTCharacteristicValue = viewModel::setATTCharacteristicValue,
-
-            onAutomaticEarDetectionChanged = viewModel::setAutomaticEarDetectionEnabled,
-            onAutomaticConnectionChanged = viewModel::setAutomaticConnectionEnabled,
-            setDynamicEndOfCharge = viewModel::setDynamicEndOfCharge,
             disconnect = viewModel::disconnect,
 
-            navigateToRename = navigateToRename,
-            navigateToHearingProtection = navigateToHearingProtection,
-            navigateToHearingAid = navigateToHearingAid,
-            navigateToLeftLongPress = navigateToLeftLongPress,
-            navigateToRightLongPress = navigateToRightLongPress,
             navigateToPurchase = navigateToPurchase,
-            navigateToAdaptiveStrength = navigateToAdaptiveStrength,
-            navigateToEqualizer = navigateToEqualizer,
-            navigateToHeadTracking = navigateToHeadTracking,
-            navigateToAccessibility = navigateToAccessibility,
-            navigateToVersion = navigateToVersion,
             navigateToTroubleshooting = navigateToTroubleshooting,
-            navigateToCallControlScreen = navigateToCallControlScreen,
-            navigateToMicrophoneSettings = navigateToMicrophoneSettings,
+            navigateToAirPodsSettings = navigateToAirPodsSettings,
 
             activateDemoMode = viewModel::activateDemoMode,
             reconnectFromSavedMac = viewModel::reconnectFromSavedMac
@@ -209,55 +171,17 @@ fun AirPodsSettingsScreen(
         setControlCommandBoolean: (AACPManager.Companion.ControlCommandIdentifiers, Boolean) -> Unit,
 //        setControlCommandValue: (AACPManager.Companion.ControlCommandIdentifiers, ByteArray) -> Unit,
         setControlCommandByte: (AACPManager.Companion.ControlCommandIdentifiers, Byte) -> Unit,
-        setATTCharacteristicValue: (ATTHandles, ByteArray) -> Unit,
 
-        onAutomaticEarDetectionChanged: (Boolean) -> Unit,
-        onAutomaticConnectionChanged: (Boolean) -> Unit,
-        setDynamicEndOfCharge: (Boolean) -> Unit,
         disconnect: () -> Unit,
 
-        navigateToRename: () -> Unit,
-        navigateToHearingProtection: () -> Unit,
-        navigateToHearingAid: () -> Unit,
-        navigateToLeftLongPress: () -> Unit,
-        navigateToRightLongPress: () -> Unit,
         navigateToPurchase: () -> Unit,
-        navigateToAdaptiveStrength: () -> Unit,
-        navigateToEqualizer: () -> Unit,
-        navigateToHeadTracking: () -> Unit,
-        navigateToAccessibility: () -> Unit,
-        navigateToVersion: () -> Unit,
         navigateToTroubleshooting: () -> Unit,
-        navigateToCallControlScreen: (action: String) -> Unit,
-        navigateToMicrophoneSettings: () -> Unit,
+        navigateToAirPodsSettings: () -> Unit,
 
         activateDemoMode: () -> Unit,
         reconnectFromSavedMac: () -> Unit,
 ) {
     val sharedPreferences = LocalContext.current.getSharedPreferences("settings", MODE_PRIVATE)
-    var deviceName by remember {
-        mutableStateOf(
-            TextFieldValue(
-                sharedPreferences.getString("name", state.deviceName).toString()
-            )
-        )
-    }
-
-    val nameChangeListener = remember {
-        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "name") {
-                deviceName =
-                    TextFieldValue(sharedPreferences.getString("name", "AirPods Pro").toString())
-            }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        sharedPreferences.registerOnSharedPreferenceChangeListener(nameChangeListener)
-        onDispose {
-            sharedPreferences.unregisterOnSharedPreferenceChangeListener(nameChangeListener)
-        }
-    }
 
     if (state.isLocallyConnected) {
         val capabilities = state.capabilities
@@ -318,40 +242,7 @@ fun AirPodsSettingsScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
-            item(key = "name") {
-                StyledListItem(
-                    name = stringResource(R.string.name),
-                    description = deviceName.text,
-                    onClick = navigateToRename,
-                )
-            }
-
-            val hasHearingAidCapability =
-                state.instance?.model?.capabilities?.contains(Capability.HEARING_AID) == true
-            val hasPPECapability =
-                state.instance?.model?.capabilities?.contains(Capability.PPE) == true
-
-            if (hasHearingAidCapability || hasPPECapability) {
-                if (hasPPECapability || state.vendorIdHook) {
-                    item(key = "spacer_hearing_health") {
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
-                }
-                item(key = "hearing_health") {
-                    HearingHealthSettings(
-                        hasPPECapability = hasPPECapability,
-                        hasHearingAidCapability = hasHearingAidCapability,
-                        vendorIdHook = state.vendorIdHook,
-                        navigateToHearingProtection = navigateToHearingProtection,
-                        navigateToHearingAid = navigateToHearingAid
-                    )
-                }
-            }
-
             if (capabilities.contains(Capability.LISTENING_MODE)) {
-                item(key = "spacer_noise") {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
                 item(key = "listening_mode") {
                     NoiseControlSettings(
                         noiseControlModeValue = state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.LISTENING_MODE]?.getOrNull(
@@ -364,190 +255,30 @@ fun AirPodsSettingsScreen(
                         },
                     )
                 }
-            }
-
-            if (capabilities.contains(Capability.STEM_CONFIG)) {
-                item(key = "spacer_press_hold") {
+                item(key = "spacer_noise") {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                item(key = "press_hold") {
-                    PressAndHoldSettings(
-                        leftAction = state.leftAction,
-                        rightAction = state.rightAction,
-                        navigateToLeftLongPress = navigateToLeftLongPress,
-                        navigateToRightLongPress = navigateToRightLongPress
-                    )
-                }
             }
 
-            item(key = "spacer_call") {
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            item(key = "call_control") {
-                val bytes =
-                    state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CALL_MANAGEMENT_CONFIG]?.take(
-                        2
-                    )?.toByteArray() ?: byteArrayOf(0x00, 0x00)
-                val flipped = try {
-                    bytes[1] == 0x02.toByte()
-                } catch (_: Exception) {
-                    false
-                }
-                CallControlSettings(
-                    flipped = flipped,
-                    navigateToCallControlScreen = navigateToCallControlScreen
-                )
-            }
-
-//                if (capabilities.contains(Capability.STEM_CONFIG) && !BuildConfig.PLAY_BUILD) {
-//                    item(key = "spacer_camera") { Spacer(modifier = Modifier.height(16.dp)) }
-//                    item(key = "camera_control") {
-//                        StyledListItem(
-//                            to = "camera_control",
-//                            name = stringResource(R.string.camera_remote),
-//                            descriptionRes = stringResource(R.string.camera_control_description),
-//                            titleRes = stringResource(R.string.camera_control),
-//                            navController = navController
-//                        )
-//                    }
-//                }
-
-
-            item(key = "spacer_audio") { Spacer(modifier = Modifier.height(16.dp)) }
-            item(key = "audio") {
-                val model = state.instance?.model ?: AirPodsPro3()
-                val adaptiveVolumeCapability =
-                    model.capabilities.contains(Capability.ADAPTIVE_VOLUME)
-                val conversationAwarenessCapability =
-                    model.capabilities.contains(Capability.CONVERSATION_AWARENESS)
-                val loudSoundReductionCapability =
-                    model.capabilities.contains(Capability.LOUD_SOUND_REDUCTION)
-                val adaptiveAudioCapability =
-                    model.capabilities.contains(Capability.ADAPTIVE_VOLUME)
-
-                val adaptiveVolumeChecked =
-                    state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.ADAPTIVE_VOLUME_CONFIG]?.getOrNull(
-                        0
-                    ) == 0x01.toByte()
-                val conversationAwarenessChecked =
-                    state.controlStates[AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG]?.getOrNull(
-                        0
-                    ) == 0x01.toByte()
-
-                AudioSettings(
-                    adaptiveVolumeCapability = adaptiveVolumeCapability,
-                    conversationAwarenessCapability = conversationAwarenessCapability,
-                    loudSoundReductionCapability = loudSoundReductionCapability,
-                    adaptiveAudioCapability = adaptiveAudioCapability,
-                    customEqCapability = true,
-                    adaptiveVolumeChecked = adaptiveVolumeChecked,
-                    onAdaptiveVolumeCheckedChange = { checked ->
-                        setControlCommandBoolean(
-                            AACPManager.Companion.ControlCommandIdentifiers.ADAPTIVE_VOLUME_CONFIG,
-                            checked
-                        )
-                    },
-                    conversationAwarenessChecked = conversationAwarenessChecked,
-                    onConversationAwarenessCheckedChange = { checked ->
-                        setControlCommandBoolean(
-                            AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG,
-                            checked
-                        )
-                    },
-                    loudSoundReductionChecked = state.loudSoundReductionEnabled,
-                    onLoudSoundReductionCheckedChange = { checked ->
-                        setATTCharacteristicValue(
-                            ATTHandles.LOUD_SOUND_REDUCTION,
-                            byteArrayOf(if (checked) 0x01.toByte() else 0x00.toByte())
-                        )
-                    },
-                    navigateToAdaptiveStrength = navigateToAdaptiveStrength,
-                    navigateToEqualizer = navigateToEqualizer,
-                    vendorIdHook = state.vendorIdHook,
-                    isPremium = true
-                )
-            }
-
-            item(key = "spacer_connection") { Spacer(modifier = Modifier.height(16.dp)) }
-            item(key = "connection") {
-                ConnectionSettings(
-                    automaticEarDetectionEnabled = state.automaticEarDetectionEnabled,
-                    onAutomaticEarDetectionChanged = onAutomaticEarDetectionChanged,
-                    automaticConnectionEnabled = state.automaticConnectionEnabled,
-                    onAutomaticConnectionChanged = onAutomaticConnectionChanged
-                )
-            }
-
-            item(key = "spacer_microphone") { Spacer(modifier = Modifier.height(16.dp)) }
-            item(key = "microphone") {
-                val id = AACPManager.Companion.ControlCommandIdentifiers.MIC_MODE
-
-                val selectedModeText = when (state.controlStates[id]?.getOrNull(0) ?: 0x00.toByte()) {
-                    0x00.toByte() -> stringResource(R.string.microphone_automatic)
-                    0x01.toByte() -> stringResource(R.string.microphone_always_right)
-                    0x02.toByte() -> stringResource(R.string.microphone_always_left)
-                    else -> stringResource(R.string.microphone_automatic)
-                }
-
-                StyledListItem(
-                    name = stringResource(R.string.microphone_mode),
-                    description = selectedModeText,
-                    onClick = navigateToMicrophoneSettings
-                )
-            }
-
-            if (capabilities.contains(Capability.SLEEP_DETECTION)) {
-                item(key = "spacer_sleep") { Spacer(modifier = Modifier.height(16.dp)) }
-                item(key = "sleep_detection") {
-                    val id = AACPManager.Companion.ControlCommandIdentifiers.SLEEP_DETECTION_CONFIG
+            if (capabilities.contains(Capability.CONVERSATION_AWARENESS)) {
+                item(key = "conversation_awareness") {
+                    val id = AACPManager.Companion.ControlCommandIdentifiers.CONVERSATION_DETECT_CONFIG
                     StyledToggle(
-                        label = stringResource(R.string.sleep_detection),
+                        label = stringResource(R.string.conversation_awareness),
                         checked = state.controlStates[id]?.getOrNull(0) == 0x01.toByte(),
-                        onCheckedChange = { setControlCommandBoolean(id, it) },
-                        enabled = true
+                        onCheckedChange = { setControlCommandBoolean(id, it) }
                     )
+                }
+                item(key = "spacer_conversation_awareness") {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            if (capabilities.contains(Capability.HEAD_GESTURES)) {
-                item(key = "spacer_head_tracking") { Spacer(modifier = Modifier.height(16.dp)) }
-                item(key = "head_tracking") {
-                    StyledListItem(
-                        name = stringResource(R.string.head_gestures),
-                        description = if (sharedPreferences.getBoolean(
-                                "head_gestures", false
-                            )
-                        ) stringResource(R.string.on) else stringResource(R.string.off),
-                        onClick = navigateToHeadTracking
-                    )
-                }
-            }
-
-            item(key = "spacer_dynamic_end_of_charge") { Spacer(modifier = Modifier.height(16.dp)) }
-            item(key = "dynamic_end_of_charge") {
-                StyledToggle(
-                    label = stringResource(R.string.optimized_charging),
-                    description = stringResource(R.string.optimized_charging_description),
-                    checked = state.dynamicEndOfCharge,
-                    onCheckedChange = setDynamicEndOfCharge
-                )
-            }
-
-            item(key = "spacer_accessibility") { Spacer(modifier = Modifier.height(16.dp)) }
-            item(key = "accessibility") {
+            item(key = "settings") {
                 StyledListItem(
-                    name = stringResource(R.string.accessibility), onClick = navigateToAccessibility
-                )
-            }
-
-            item(key = "spacer_about") { Spacer(modifier = Modifier.height(32.dp)) }
-            item(key = "about") {
-                AboutCard(
-                    modelName = state.modelName,
-                    actualModel = state.actualModel,
-                    serialNumbers = state.serialNumbers,
-                    version = state.version3,
-                    navigateToVersion = navigateToVersion
+                    name = stringResource(R.string.airpods_settings),
+                    description = stringResource(R.string.airpods_settings_description),
+                    onClick = navigateToAirPodsSettings
                 )
             }
 
@@ -930,27 +661,12 @@ fun AirPodsSettingsScreenPreviewApple() {
                 setControlCommandInt = { _, _ -> },
                 setControlCommandBoolean = { _, _ -> },
                 setControlCommandByte = { _, _ -> },
-                setATTCharacteristicValue = { _, _ -> },
 
-                onAutomaticEarDetectionChanged = {},
-                onAutomaticConnectionChanged = {},
-                setDynamicEndOfCharge = {},
                 disconnect = {},
 
-                navigateToRename = {},
-                navigateToHearingProtection = {},
-                navigateToHearingAid = {},
-                navigateToLeftLongPress = {},
-                navigateToRightLongPress = {},
                 navigateToPurchase = {},
-                navigateToAdaptiveStrength = {},
-                navigateToEqualizer = {},
-                navigateToHeadTracking = {},
-                navigateToAccessibility = {},
-                navigateToVersion = {},
                 navigateToTroubleshooting = {},
-                navigateToCallControlScreen = {},
-                navigateToMicrophoneSettings = {},
+                navigateToAirPodsSettings = {},
 
                 activateDemoMode = {},
                 reconnectFromSavedMac = {}
@@ -958,7 +674,6 @@ fun AirPodsSettingsScreenPreviewApple() {
         }
     }
 }
-
 
 @Preview(name = "Material")
 @Composable
@@ -976,27 +691,12 @@ fun AirPodsSettingsScreenPreviewMaterial() {
                 setControlCommandInt = { _, _ -> },
                 setControlCommandBoolean = { _, _ -> },
                 setControlCommandByte = { _, _ -> },
-                setATTCharacteristicValue = { _, _ -> },
 
-                onAutomaticEarDetectionChanged = {},
-                onAutomaticConnectionChanged = {},
-                setDynamicEndOfCharge = {},
                 disconnect = {},
 
-                navigateToRename = {},
-                navigateToHearingProtection = {},
-                navigateToHearingAid = {},
-                navigateToLeftLongPress = {},
-                navigateToRightLongPress = {},
                 navigateToPurchase = {},
-                navigateToAdaptiveStrength = {},
-                navigateToEqualizer = {},
-                navigateToHeadTracking = {},
-                navigateToAccessibility = {},
-                navigateToVersion = {},
                 navigateToTroubleshooting = {},
-                navigateToCallControlScreen = {},
-                navigateToMicrophoneSettings = {},
+                navigateToAirPodsSettings = {},
 
                 activateDemoMode = {},
                 reconnectFromSavedMac = {}
