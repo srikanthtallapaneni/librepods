@@ -22,8 +22,6 @@ package me.kavishdevar.librepods.presentation.overlays
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
@@ -32,6 +30,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Resources
 import android.graphics.PixelFormat
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.os.Build
@@ -43,9 +43,9 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
-import android.view.animation.AnticipateOvershootInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
@@ -129,6 +129,29 @@ class IslandWindow(private val context: Context) {
     val isVisible: Boolean
         get() = containerView.parent != null && containerView.visibility == View.VISIBLE
 
+    private fun statusBarHeight(): Int =
+        windowManager.currentWindowMetrics.windowInsets.getInsets(WindowInsets.Type.statusBars()).top
+
+    private fun applyContentReveal(progress: Float) {
+        val clamped = progress.coerceIn(0f, 1f)
+        val videoView = islandView.findViewById<View>(R.id.island_video_view)
+        val textContainer = islandView.findViewById<View>(R.id.island_text_container)
+        val batteryContainer = islandView.findViewById<View>(R.id.island_battery_container)
+        val views = listOfNotNull(videoView, textContainer, batteryContainer)
+
+        val blurPx = (1f - clamped) * 10f * Resources.getSystem().displayMetrics.density
+        val renderEffect = if (blurPx > 0.5f) {
+            RenderEffect.createBlurEffect(blurPx, blurPx, Shader.TileMode.DECAL)
+        } else {
+            null
+        }
+
+        for (view in views) {
+            view.alpha = clamped
+            view.setRenderEffect(renderEffect)
+        }
+    }
+
     @SuppressLint("SetTextI18n")
     private fun updateBatteryDisplay(batteryList: ArrayList<Battery>?) {
         if (batteryList == null || batteryList.isEmpty()) return
@@ -152,7 +175,7 @@ class IslandWindow(private val context: Context) {
         }
 
         if (displayBatteryLevel != null) {
-            batteryText.text = "$displayBatteryLevel%"
+            batteryText.text = displayBatteryLevel.toString()
             batteryProgressBar.progress = displayBatteryLevel
             batteryProgressBar.isIndeterminate = false
         } else {
@@ -170,7 +193,7 @@ class IslandWindow(private val context: Context) {
         else ServiceManager.getService()?.islandOpen = true
 
         val displayMetrics = Resources.getSystem().displayMetrics
-        val width = (displayMetrics.widthPixels * 0.95).toInt()
+        val width = (displayMetrics.widthPixels * 0.96).toInt()
         screenHeight = displayMetrics.heightPixels
 
         val batteryList = ServiceManager.getService()?.getBattery()
@@ -196,7 +219,7 @@ class IslandWindow(private val context: Context) {
         }
 
         if (displayBatteryLevel != null) {
-            batteryText.text = "$displayBatteryLevel%"
+            batteryText.text = displayBatteryLevel.toString()
             batteryProgressBar.progress = displayBatteryLevel
         } else {
             batteryText.text = "?"
@@ -252,6 +275,8 @@ class IslandWindow(private val context: Context) {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = statusBarHeight()
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
         islandView.visibility = View.VISIBLE
@@ -395,16 +420,33 @@ class IslandWindow(private val context: Context) {
 
         springAnimation = SpringAnimation(containerView, DynamicAnimation.TRANSLATION_Y, 0f).apply {
             spring = SpringForce(0f)
-                .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
-                .setStiffness(SpringForce.STIFFNESS_MEDIUM)
+                .setDampingRatio(0.78f)
+                .setStiffness(SpringForce.STIFFNESS_LOW)
         }
 
-        val scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, 0.5f, 1f)
-        val scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.5f, 1f)
-        val translationY = PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, -200f, 0f)
-        ObjectAnimator.ofPropertyValuesHolder(containerView, scaleX, scaleY, translationY).apply {
-            duration = 700
-            interpolator = AnticipateOvershootInterpolator()
+        // Starts as a dot below the camera and grows out of it with a slight overshoot like iOS.
+        containerView.alpha = 1f
+        containerView.translationY = 0f
+        containerView.pivotX = width / 2f
+        containerView.pivotY = 0f
+        containerView.scaleX = 0.25f
+        containerView.scaleY = 0.35f
+        applyContentReveal(0f)
+
+        SpringAnimation(containerView, DynamicAnimation.SCALE_X, 1f).apply {
+            spring = SpringForce(1f).setDampingRatio(0.78f).setStiffness(SpringForce.STIFFNESS_LOW)
+            start()
+        }
+        SpringAnimation(containerView, DynamicAnimation.SCALE_Y, 1f).apply {
+            spring = SpringForce(1f).setDampingRatio(0.78f).setStiffness(SpringForce.STIFFNESS_LOW)
+            start()
+        }
+
+        // Content blurs in once the island has room for it.
+        ValueAnimator.ofFloat(0f, 1f).apply {
+            startDelay = 90L
+            duration = 250L
+            addUpdateListener { applyContentReveal(it.animatedValue as Float) }
             start()
         }
 
@@ -638,10 +680,10 @@ class IslandWindow(private val context: Context) {
             deviceTextParams.topMargin = targetMargin
             deviceText.layoutParams = deviceTextParams
 
-            val baseTextSize = 24f
+            val baseTextSize = 17f
             deviceText.textSize = baseTextSize + (progress * 8f)
 
-            val baseSubTextSize = 16f
+            val baseSubTextSize = 13f
             connectedText.textSize = baseSubTextSize + (progress * 4f)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -675,12 +717,32 @@ class IslandWindow(private val context: Context) {
                 e.printStackTrace()
             }
 
-            val scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, containerView.scaleX, 0.5f)
-            val scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, containerView.scaleY, 0.5f)
-            val translationY = PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, containerView.translationY, -200f)
-            ObjectAnimator.ofPropertyValuesHolder(containerView, scaleX, scaleY, translationY).apply {
-                duration = 700
-                interpolator = AnticipateOvershootInterpolator()
+            // Content blurs out before the island shrinks.
+            ValueAnimator.ofFloat(1f, 0f).apply {
+                duration = 120L
+                addUpdateListener { applyContentReveal(it.animatedValue as Float) }
+                start()
+            }
+
+            // Closes without overshoot, staying visible while shrinking and fading out at the end.
+            containerView.pivotX = containerView.width / 2f
+            containerView.pivotY = 0f
+            SpringAnimation(containerView, DynamicAnimation.SCALE_X, 0.25f).apply {
+                spring = SpringForce(0.25f)
+                    .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY)
+                    .setStiffness(SpringForce.STIFFNESS_MEDIUM)
+                start()
+            }
+            SpringAnimation(containerView, DynamicAnimation.SCALE_Y, 0.35f).apply {
+                spring = SpringForce(0.35f)
+                    .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY)
+                    .setStiffness(SpringForce.STIFFNESS_MEDIUM)
+                start()
+            }
+            ValueAnimator.ofFloat(1f, 0f).apply {
+                startDelay = 200L
+                duration = 150L
+                addUpdateListener { containerView.alpha = it.animatedValue as Float }
                 addListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
                         cleanupAndRemoveView()
