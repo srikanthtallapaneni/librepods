@@ -10,7 +10,118 @@ Scope: the last six commits on `srikanth-pixel10-no-premium`:
 
 The review also covers nearby code those commits touch. Line numbers refer to the files as they are at `904a510`.
 
-Not done: no Gradle build or device test was run (the review shell has no Android SDK), and nothing was fixed.
+Not done: no Gradle build or device test was run (the review shell has no Android SDK).
+
+Note: the history rewrite for C1 changed every commit ID from the engraving commit onward. The hashes above are the old ones. The same commits are now `7e6b7ff`, `a45145b`, `3c49bde`, `7744291` and `3d7753c`.
+
+---
+
+# Round 2 review (2026-10-30, at `9552f41`)
+
+Round 2 re-checked the 21 original bugs against `9552f41`, which contains the fixes, and reviewed every line those fixes changed. Line numbers in this section refer to `9552f41`. No build or device test was run this time either.
+
+## Status of the original bugs
+
+| ID | Bug | Status | Notes |
+| --- | --- | --- | --- |
+| C1 | `engraving.txt` with serials pushed | ✅ Fixed | Untracked, git-ignored, removed from history and force-pushed. Treat the serials as already exposed. |
+| H1 | Announcements on the phone speaker | ✅ Fixed | `announce()` checks `isAudioRoutedToAirPods()` (`AirPodsService.kt:3080`). |
+| H2 | Assistant holds SCO for up to 5 min | ⚠️ Fixed, with a regression | The fix runs into a race; see **R2-M1**. |
+| M1 | Notification rebuilt on every packet | ✅ Fixed | Content de-dupe. This adds the small regression **R2-L1**. |
+| M2 | Control command recorded before send | ✅ Fixed | Recorded after the write; the ViewModel keeps the old value on failure. |
+| M3 | `controlCommandStatusList` thread safety | ✅ Fixed | `CopyOnWriteArrayList` with synchronized updates. |
+| M4 | Own replies read aloud | ✅ Fixed | |
+| M5 | Announcer focus race / TTS failure | ✅ Fixed | |
+| M6 | Announce toggles without access | ✅ Fixed, with a side effect | See **R2-L3**. |
+| M7 | Raw/smoothed gesture samples mixed | ✅ Fixed, with a side effect | See **R2-L5**. |
+| M8 | `VoiceRecognitionManager` threading | ✅ Fixed | Posting work to the main thread causes **R2-M1**. |
+| L1 | Case sounds shown on before data | ✅ Fixed | |
+| L2 | Off hidden in the notification | ✅ Fixed | |
+| L3 | Case-full alert / repeat alerts | ✅ Mostly fixed | The case-full alert still depends on a bud being in the case. Persisted thresholds aren't per pair; see **R2-L2**. |
+| L4 | Slider pref write / hard-coded labels | ✅ Fixed | |
+| L5 | Settings usable after disconnect | ✅ Partly fixed | See **R2-L6**. |
+| L6 | Engraving length / per device / popup | ✅ Partly fixed | Capped and per-device. The popup still uses one case video for all models. The cap can split an emoji; see **R2-L4**. |
+| L7 | Island springs fight | ✅ Fixed | |
+| L8 | `announcer` not volatile | ✅ Fixed | |
+| L9 | Personal JDK path in `gradle.properties` | ❌ Open | `android/gradle.properties:10` still sets `org.gradle.java.home=/opt/homebrew/...`. |
+| L10 | Hard-coded notification text / Play policy | ✅ Fixed | |
+
+## New bugs found in round 2
+
+| Severity | Count |
+| --- | --- |
+| Critical | 0 |
+| High | 0 |
+| Medium | 1 |
+| Low | 6 |
+
+**Fix status (uncommitted in the local copy, not built):**
+
+- **R2-M1:** the snapshot of running recordings is taken in `start()` before the post.
+- **R2-L1:** an unchanged notification is reposted if it's gone; the system is asked at most every 2 s.
+- **R2-L2:** thresholds are stored per MAC address and reloaded when the pair changes.
+- **R2-L3:** the Announce prefs are switched off on resume when notification access is missing.
+- **R2-L4:** `Engraving.cap()` cuts on a character boundary (ICU `BreakIterator`).
+- **R2-L5:** `startDetection(expectSlowSamples = true)` is used for incoming calls, and the timing uses `elapsedRealtime`.
+- **R2-L6:** `AppNavGraph` closes every AirPods screen after a 2 s disconnect. The per-screen check is removed.
+- **L9:** still open. It is a change on the Mac.
+
+### Critical
+
+None.
+
+### High
+
+None.
+
+### Medium
+
+#### R2-M1. The assistant's own recording can be treated as already running, so the AirPods mic drops after 10 s
+- **Where:** `bluetooth/VoiceRecognitionManager.kt:104-106` and `:137-139`, `services/AirPodsService.kt` `launchDigitalAssistant()`.
+- **Problem:**
+  - `start()` now posts `startOnMain()` to the main thread, and `launchDigitalAssistant()` starts the assistant activity right after.
+  - If the main thread is busy (UI work, a popup or island animation), the assistant may already be recording when `startOnMain()` takes the `preexistingSessions` snapshot. Its session is then ignored, `assistantRecording` never turns true, and `stopRunnable` ends voice recognition after 10 s, cutting the AirPods mic mid-request.
+  - In the worst case the assistant keeps listening through the phone mic.
+- **Fix:** Take the snapshot synchronously in `start()`, on the calling thread and before the post (`audioManager.activeRecordingConfigurations` can be called from any thread). Pass it into `startOnMain(device, preexisting)`.
+
+### Low
+
+#### R2-L1. A dismissed connection notification doesn't come back until something changes
+- **Where:** `services/AirPodsService.kt:2164`.
+- **Problem:** Since Android 14, users can swipe away ongoing notifications that don't belong to a foreground service, and notification 2 is one of them. Before the de-dupe it reappeared on the next packet. Now it stays gone until the battery, mode or name changes.
+- **Fix:** Skip the repost only when the content is unchanged and `notificationManager.activeNotifications.any { it.id == 2 }`.
+
+#### R2-L2. Persisted battery-alert thresholds aren't per AirPods
+- **Where:** `services/BatteryAlertManager.kt:42-47`, `:123`.
+- **Problem:** The key is `battery_alert_threshold_<component>`. After one pair triggers a 20% alert, a second pair won't alert at 20% until it charges or goes above 25%.
+- **Fix:** Include the MAC in the key (`battery_alert_threshold_<mac>_<component>`), the same way `Engraving` does.
+
+#### R2-L3. An Announce toggle can't really be turned off while notification access is missing
+- **Where:** `presentation/screens/AirPodsDeviceSettingsScreen.kt:198`, `:208`.
+- **Problem:** With the pref on and access missing, the toggle shows off. Tapping it sends `true`, so the pref stays on and the access screen opens again. If the user later grants access for another reason, announcements start although the toggle looked off.
+- **Fix:** When access is missing, call `setAnnounce…(false)` once (for example in the `ON_RESUME` observer), so the pref matches what the toggle shows.
+
+#### R2-L4. The 30-character engraving cap can cut an emoji in half
+- **Where:** `presentation/screens/EngravingScreen.kt:78`, `presentation/viewmodel/AirPodsViewModel.kt:635`, `data/Engraving.kt:54`.
+- **Problem:** The cap counts UTF-16 units. A surrogate pair or ZWJ emoji at the boundary is split and shows as a broken glyph.
+- **Fix:** Cut on a grapheme boundary (`BreakIterator.getCharacterInstance()`), or count with `codePointCount` and step back if the cut lands inside a pair.
+
+#### R2-L5. Nods in the first ~1 s of a ringing call are dropped
+- **Where:** `utils/GestureDetector.kt:195-208`.
+- **Problem:**
+  - Detection starts in fast (smoothed) mode and needs 5 intervals to switch. At ~5 Hz during a call, that is about 1.2 s.
+  - The switch then clears the detection window, so a nod in that first second is lost.
+  - It also uses `System.currentTimeMillis()`, which can jump when the clock changes.
+- **Fix:** Pass a hint from `handleIncomingCall()` to start in slow mode, or decide after 2 intervals. Use `SystemClock.elapsedRealtime()`.
+
+#### R2-L6. Auto-back after disconnect only covers the AirPods Settings screen itself
+- **Where:** `presentation/screens/AirPodsDeviceSettingsScreen.kt:94-96`, `presentation/navigation/AppNavGraph.kt` `navigateBack`.
+- **Problem:** Screens opened from it (Equalizer, Press and Hold, Hearing Aid, Microphone…) stay usable when the AirPods disconnect, and their changes now silently don't apply (M2). Also, a short reconnect blip sends the user back home from AirPods Settings.
+- **Fix:** Watch `isLocallyConnected` once in `AppNavGraph`, and pop every AirPods-only screen after it has been disconnected for about 2 s, so short blips don't count.
+
+---
+
+# Round 1 review (original findings, line numbers at `904a510`)
 
 | Severity | Count |
 | --- | --- |

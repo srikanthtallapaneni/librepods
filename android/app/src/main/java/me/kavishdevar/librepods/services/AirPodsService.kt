@@ -57,6 +57,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.ParcelUuid
+import android.os.SystemClock
 import android.os.UserHandle
 import android.provider.Settings
 import android.speech.RecognizerIntent
@@ -2117,6 +2118,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     // What the connection notification last showed, so unchanged updates aren't reposted.
     @Volatile
     private var lastNotificationContent: List<Any?>? = null
+    private var lastNotificationShownCheckAt = 0L
 
     @OptIn(ExperimentalMaterial3Api::class)
     fun updateNotificationContent(
@@ -2161,7 +2163,14 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 titleText, batteryText, supportsListeningMode, supportsAdaptive, currentAnc, showOff,
                 disconnectedBecauseReversed
             )
-            if (contentKey == lastNotificationContent) return
+            if (contentKey == lastNotificationContent) {
+                // Since Android 14 the user can swipe this notification away, so repost it if it's
+                // gone. Checked at most every 2 s, since asking the system is a binder call.
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastNotificationShownCheckAt < 2000) return
+                lastNotificationShownCheckAt = now
+                if (notificationManager.activeNotifications.any { it.id == 2 }) return
+            }
             lastNotificationContent = contentKey
 
             val remoteViews = RemoteViews(packageName, R.layout.notification).apply {
@@ -2248,7 +2257,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         if (config.headGestures) {
             initGestureDetector()
             startHeadTracking()
-            gestureDetector?.startDetection { accepted ->
+            // While ringing the AirPods send head tracking at the slow in-call rate.
+            gestureDetector?.startDetection(expectSlowSamples = true) { accepted ->
                 if (accepted) {
                     answerCall()
                     handleIncomingCallOnceConnected = false

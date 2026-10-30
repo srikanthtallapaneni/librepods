@@ -39,7 +39,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,23 +83,25 @@ fun AirPodsDeviceSettingsScreen(
     navigateToVersion: () -> Unit,
     navigateToCallControlScreen: (action: String) -> Unit,
     navigateToMicrophoneSettings: () -> Unit,
-    navigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val appState by appSettingsViewModel.uiState.collectAsState()
 
-    // These settings write to the AirPods, so leave once they disconnect (demo mode stays connected).
-    LaunchedEffect(state.isLocallyConnected) {
-        if (!state.isLocallyConnected) navigateBack()
-    }
-
     // Notification access can be granted or revoked in system settings, so re-check on every resume.
+    // Without it the Announce prefs are switched off, so they can't come back on by themselves if
+    // access is granted later while the toggles look off.
     var hasNotificationAccess by remember { mutableStateOf(hasNotificationListenerAccess(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) hasNotificationAccess = hasNotificationListenerAccess(context)
+            if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+            hasNotificationAccess = hasNotificationListenerAccess(context)
+            if (!hasNotificationAccess) {
+                val current = appSettingsViewModel.uiState.value
+                if (current.announceNotifications) appSettingsViewModel.setAnnounceNotifications(false)
+                if (current.announceCalls) appSettingsViewModel.setAnnounceCalls(false)
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

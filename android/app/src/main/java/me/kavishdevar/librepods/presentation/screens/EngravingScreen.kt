@@ -74,8 +74,9 @@ fun EngravingScreen(viewModel: AirPodsViewModel, onSaved: () -> Unit) {
 
         val textFieldState = rememberTextFieldState(initialText = viewModel.uiState.value.engraving)
         LaunchedEffect(textFieldState) {
-            snapshotFlow { textFieldState.text.length }.collect { length ->
-                if (length > Engraving.MAX_LENGTH) textFieldState.edit { replace(Engraving.MAX_LENGTH, length, "") }
+            snapshotFlow { textFieldState.text.toString() }.collect { text ->
+                val capped = Engraving.cap(text)
+                if (capped.length < text.length) textFieldState.edit { replace(capped.length, text.length, "") }
             }
         }
 

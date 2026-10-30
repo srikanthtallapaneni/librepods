@@ -632,7 +632,7 @@ class AirPodsViewModel(
     }
 
     fun setEngraving(engraving: String) {
-        val trimmed = engraving.trim().take(Engraving.MAX_LENGTH)
+        val trimmed = Engraving.cap(engraving.trim())
         Engraving.write(sharedPreferences, trimmed)
         _uiState.update { it.copy(engraving = trimmed) }
     }

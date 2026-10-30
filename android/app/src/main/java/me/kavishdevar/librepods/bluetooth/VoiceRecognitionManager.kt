@@ -102,7 +102,12 @@ class VoiceRecognitionManager(private val context: Context) {
     // Stem presses arrive on the AACP reader thread while the recording callback runs on the main
     // thread, so all state changes happen on the main thread.
     fun start(device: BluetoothDevice) {
-        handler.post { startOnMain(device) }
+        // Snapshot the running recordings here, before the assistant opens: by the time the post
+        // runs the assistant may already be recording, and its session must not count as old.
+        val preexisting = audioManager.activeRecordingConfigurations
+            .map { it.clientAudioSessionId }
+            .toSet()
+        handler.post { startOnMain(device, preexisting) }
     }
 
     fun stop() {
@@ -110,7 +115,7 @@ class VoiceRecognitionManager(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    private fun startOnMain(device: BluetoothDevice): Boolean {
+    private fun startOnMain(device: BluetoothDevice, preexisting: Set<Int>): Boolean {
         if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             Log.w(TAG, "BLUETOOTH_CONNECT not granted, can't use the AirPods mic")
             return false
@@ -134,9 +139,7 @@ class VoiceRecognitionManager(private val context: Context) {
         }
         activeDevice = device
         assistantRecording = false
-        preexistingSessions = audioManager.activeRecordingConfigurations
-            .map { it.clientAudioSessionId }
-            .toSet()
+        preexistingSessions = preexisting
         audioManager.registerAudioRecordingCallback(recordingCallback, handler)
         handler.postDelayed(stopRunnable, NO_RECORDING_TIMEOUT_MS)
         return true

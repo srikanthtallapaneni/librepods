@@ -19,6 +19,7 @@
 package me.kavishdevar.librepods.data
 
 import android.content.SharedPreferences
+import android.icu.text.BreakIterator
 import androidx.core.content.edit
 
 /**
@@ -51,7 +52,18 @@ object Engraving {
     }
 
     fun write(prefs: SharedPreferences, engraving: String) {
-        prefs.edit { putString(key(prefs), engraving.trim().take(MAX_LENGTH)) }
+        prefs.edit { putString(key(prefs), cap(engraving.trim())) }
+    }
+
+    /**
+     * [text] cut to at most [MAX_LENGTH] UTF-16 units, on a character boundary so an emoji (a
+     * surrogate pair or a ZWJ sequence) is never split in half.
+     */
+    fun cap(text: String): String {
+        if (text.length <= MAX_LENGTH) return text
+        val boundaries = BreakIterator.getCharacterInstance().apply { setText(text) }
+        val end = boundaries.preceding(MAX_LENGTH + 1).coerceAtLeast(0)
+        return text.substring(0, end)
     }
 
     /** Whether a change to [key] can change what [read] returns. */

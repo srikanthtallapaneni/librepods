@@ -10,11 +10,14 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import kotlinx.coroutines.delay
 import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.data.updates.updates
 import me.kavishdevar.librepods.presentation.screens.AccessibilitySettingsScreen
@@ -47,6 +50,19 @@ import me.kavishdevar.librepods.presentation.viewmodel.AirPodsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
 import me.kavishdevar.librepods.presentation.viewmodel.PurchaseViewModel
 
+private const val DISCONNECT_GRACE_MS = 2000L
+
+// Screens that read or write the connected AirPods.
+private val Screen.requiresAirPods: Boolean
+    get() = when (this) {
+        Screen.AirPodsDeviceSettings, Screen.Rename, Screen.HeadTracking, Screen.Accessibility,
+        Screen.TransparencyCustomization, Screen.HearingAid, Screen.HearingAidAdjustments,
+        Screen.AdaptiveStrength, Screen.UpdateHearingTest, Screen.VersionInfo,
+        Screen.HearingProtection, Screen.Equalizer, Screen.MicrophoneSettings,
+        is Screen.LongPress, is Screen.CallControl -> true
+        else -> false
+    }
+
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun AppNavGraph(
@@ -66,6 +82,15 @@ fun AppNavGraph(
     }
 
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
+
+    // Close every screen that writes to the AirPods once they disconnect, so changes can't silently
+    // go nowhere. Waits a moment first, so a brief reconnect doesn't throw the user out.
+    val isLocallyConnected = airPodsViewModel.uiState.collectAsState().value.isLocallyConnected
+    LaunchedEffect(isLocallyConnected) {
+        if (isLocallyConnected) return@LaunchedEffect
+        delay(DISCONNECT_GRACE_MS)
+        backStack.removeAll { it.requiresAirPods }
+    }
 
     SharedTransitionLayout {
         NavDisplay(
@@ -145,11 +170,6 @@ fun AppNavGraph(
                                 navigateToVersion = { navigate(Screen.VersionInfo) },
                                 navigateToCallControlScreen = { navigate(Screen.CallControl(it)) },
                                 navigateToMicrophoneSettings = { navigate(Screen.MicrophoneSettings) },
-                                navigateBack = {
-                                    if (backStack.lastOrNull() == Screen.AirPodsDeviceSettings && backStack.size > 1) {
-                                        backStack.removeAt(backStack.lastIndex)
-                                    }
-                                },
                             )
                         }
 

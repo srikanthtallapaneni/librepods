@@ -21,6 +21,7 @@
 package me.kavishdevar.librepods.utils
 
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineScope
@@ -106,7 +107,15 @@ class GestureDetector(
         while (verticalAvgBuffer.size < 3) verticalAvgBuffer.add(0.0)
     }
 
-fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> Unit) {
+/**
+ * [expectSlowSamples]: the caller knows the AirPods are sending the slow (~5 Hz) in-call stream, so
+ * detection uses raw samples from the start instead of waiting to measure the rate.
+ */
+fun startDetection(
+        doNotStop: Boolean = false,
+        expectSlowSamples: Boolean = false,
+        onGestureDetected: (Boolean) -> Unit
+    ) {
         if (isRunning) return
 
         Log.d(TAG, "Starting gesture detection...")
@@ -116,6 +125,7 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         Log.d(TAG, "started: ${airPodsService.startHeadTracking()}")
 
         clearData()
+        slowSamples = expectSlowSamples
 
         prevHorizontal = 0.0
         prevVertical = 0.0
@@ -192,7 +202,7 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         // During a call the AirPods send head tracking at ~5 Hz instead of ~25 Hz. At that rate
         // consecutive samples land on opposite sides of a nod, and averaging three of them
         // cancels the motion out, so no peak ever passes peakThreshold. Use raw values then.
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime()
         if (lastSampleAt > 0) {
             recentIntervals.addLast(now - lastSampleAt)
             if (recentIntervals.size > SAMPLE_RATE_WINDOW) recentIntervals.removeFirst()

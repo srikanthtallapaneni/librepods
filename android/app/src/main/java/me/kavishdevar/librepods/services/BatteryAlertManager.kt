@@ -38,10 +38,21 @@ class BatteryAlertManager(private val context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
     // Lowest threshold already alerted per component, so each threshold fires once per discharge.
-    // Kept in prefs so a service restart or reconnect doesn't alert the same low battery again.
-    private val alertedThreshold = mutableMapOf<Int, Int>().apply {
+    // Kept in prefs per AirPods (by MAC address), so a service restart or reconnect doesn't alert the
+    // same low battery again, and one pair's alerts don't silence another's.
+    private val alertedThreshold = mutableMapOf<Int, Int>()
+    private var loadedForMac: String? = null
+
+    private fun currentMac(): String = prefs.getString("mac_address", "") ?: ""
+
+    private fun loadThresholdsIfPairChanged() {
+        val mac = currentMac()
+        if (mac == loadedForMac) return
+        loadedForMac = mac
+        alertedThreshold.clear()
+        caseChargingBelowFull = false
         for (component in COMPONENTS) {
-            prefs.getInt(thresholdKey(component), 0).takeIf { it > 0 }?.let { put(component, it) }
+            prefs.getInt(thresholdKey(component), 0).takeIf { it > 0 }?.let { alertedThreshold[component] = it }
         }
     }
     private var caseChargingBelowFull = false
@@ -57,6 +68,7 @@ class BatteryAlertManager(private val context: Context) {
     }
 
     fun onBatteryUpdate(batteries: List<Battery>) {
+        loadThresholdsIfPairChanged()
         for (battery in batteries) {
             if (battery.status == BatteryStatus.DISCONNECTED || battery.level !in 1..100) continue
             val charging = battery.status == BatteryStatus.CHARGING ||
@@ -120,7 +132,7 @@ class BatteryAlertManager(private val context: Context) {
         return true
     }
 
-    private fun thresholdKey(component: Int) = "battery_alert_threshold_$component"
+    private fun thresholdKey(component: Int) = "battery_alert_threshold_${currentMac()}_$component"
 
     private fun notify(id: Int, title: String, text: String) {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
