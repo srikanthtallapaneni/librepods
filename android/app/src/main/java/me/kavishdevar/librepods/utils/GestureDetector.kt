@@ -55,8 +55,14 @@ class GestureDetector(
         private const val MAX_VALID_ORIENTATION_VALUE = 6000
 
         private const val SLOW_SAMPLE_INTERVAL_MS = 100
-        private var lastSampleAt = 0L
+        private const val SAMPLE_RATE_WINDOW = 5
     }
+
+    // Sample-rate tracking for the slow (in-call) head tracking stream. Decided over a window so a
+    // single Bluetooth hiccup doesn't drop one raw sample between smoothed ones.
+    private var lastSampleAt = 0L
+    private val recentIntervals = ArrayDeque<Long>()
+    private var slowSamples = false
 
     val audio = GestureFeedback(ServiceManager.getService()?.baseContext!!)
 
@@ -187,8 +193,19 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         // consecutive samples land on opposite sides of a nod, and averaging three of them
         // cancels the motion out, so no peak ever passes peakThreshold. Use raw values then.
         val now = System.currentTimeMillis()
-        val slowSamples = lastSampleAt > 0 && now - lastSampleAt > SLOW_SAMPLE_INTERVAL_MS
+        if (lastSampleAt > 0) {
+            recentIntervals.addLast(now - lastSampleAt)
+            if (recentIntervals.size > SAMPLE_RATE_WINDOW) recentIntervals.removeFirst()
+        }
         lastSampleAt = now
+        if (recentIntervals.size == SAMPLE_RATE_WINDOW) {
+            val slow = recentIntervals.sorted()[SAMPLE_RATE_WINDOW / 2] > SLOW_SAMPLE_INTERVAL_MS
+            if (slow != slowSamples) {
+                // Don't mix raw and smoothed values in one detection window.
+                slowSamples = slow
+                clearDetectionWindow()
+            }
+        }
         val smoothHorizontal = if (slowSamples) horizontal.toDouble() else applySmoothing(horizontal.toDouble(), horizontalAvgBuffer)
         val smoothVertical = if (slowSamples) vertical.toDouble() else applySmoothing(vertical.toDouble(), verticalAvgBuffer)
 
@@ -405,7 +422,8 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         return null
     }
 
-    private fun clearData() {
+    // The samples and the extremes found in them (extremes hold buffer indices, so both go together).
+    private fun clearDetectionWindow() {
         horizontalBuffer.clear()
         verticalBuffer.clear()
         horizontalPeaks.clear()
@@ -417,9 +435,15 @@ fun startDetection(doNotStop: Boolean = false, onGestureDetected: (Boolean) -> U
         horizontalIncreasing = null
         verticalIncreasing = null
         lastPeakTime = 0
+    }
+
+    private fun clearData() {
+        clearDetectionWindow()
         significantMotion = false
         lastSignificantMotionTime = 0L
         lastSampleAt = 0L
+        recentIntervals.clear()
+        slowSamples = false
     }
 
     private fun Double.pow(exponent: Int): Double = this.pow(exponent.toDouble())

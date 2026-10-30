@@ -76,8 +76,12 @@ class NotificationAnnouncerService : NotificationListenerService() {
         val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(notification)
         if (style != null) {
             val message = style.messages.lastOrNull() ?: return null
+            // A message without a person (or with the user's own) is one the user sent, for
+            // example a reply from the notification, which apps repost with the reply appended.
+            val person = message.person ?: return null
+            if (person.key != null && person.key == style.user.key) return null
             val body = message.text?.toString()?.trim()?.take(MAX_LENGTH) ?: return null
-            val sender = message.person?.name?.toString()
+            val sender = person.name?.toString()
             val conversation = style.conversationTitle?.toString()
             return when {
                 style.isGroupConversation && sender != null && conversation != null ->

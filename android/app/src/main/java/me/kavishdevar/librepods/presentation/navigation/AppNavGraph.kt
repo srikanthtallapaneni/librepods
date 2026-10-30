@@ -145,6 +145,11 @@ fun AppNavGraph(
                                 navigateToVersion = { navigate(Screen.VersionInfo) },
                                 navigateToCallControlScreen = { navigate(Screen.CallControl(it)) },
                                 navigateToMicrophoneSettings = { navigate(Screen.MicrophoneSettings) },
+                                navigateBack = {
+                                    if (backStack.lastOrNull() == Screen.AirPodsDeviceSettings && backStack.size > 1) {
+                                        backStack.removeAt(backStack.lastIndex)
+                                    }
+                                },
                             )
                         }
 

@@ -65,7 +65,7 @@ class VoiceRecognitionManager(private val context: Context) {
 
     private val stopRunnable = Runnable {
         Log.d(TAG, "Voice recognition timed out")
-        stop()
+        stopOnMain()
     }
 
     private val serviceListener = object : BluetoothProfile.ServiceListener {
@@ -89,7 +89,7 @@ class VoiceRecognitionManager(private val context: Context) {
                 handler.postDelayed(stopRunnable, MAX_SESSION_MS)
             } else if (!recording && assistantRecording) {
                 Log.d(TAG, "Assistant stopped recording")
-                stop()
+                stopOnMain()
             }
         }
     }
@@ -99,8 +99,18 @@ class VoiceRecognitionManager(private val context: Context) {
         bluetoothAdapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HEADSET)
     }
 
+    // Stem presses arrive on the AACP reader thread while the recording callback runs on the main
+    // thread, so all state changes happen on the main thread.
+    fun start(device: BluetoothDevice) {
+        handler.post { startOnMain(device) }
+    }
+
+    fun stop() {
+        if (Looper.myLooper() == Looper.getMainLooper()) stopOnMain() else handler.post { stopOnMain() }
+    }
+
     @SuppressLint("MissingPermission")
-    fun start(device: BluetoothDevice): Boolean {
+    private fun startOnMain(device: BluetoothDevice): Boolean {
         if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             Log.w(TAG, "BLUETOOTH_CONNECT not granted, can't use the AirPods mic")
             return false
@@ -109,7 +119,7 @@ class VoiceRecognitionManager(private val context: Context) {
             Log.w(TAG, "Headset profile not connected yet, can't use the AirPods mic")
             return false
         }
-        stop()
+        stopOnMain()
         val started = try {
             proxy.startVoiceRecognition(device)
         } catch (e: SecurityException) {
@@ -133,7 +143,7 @@ class VoiceRecognitionManager(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun stop() {
+    private fun stopOnMain() {
         val device = activeDevice ?: return
         activeDevice = null
         assistantRecording = false
@@ -147,8 +157,9 @@ class VoiceRecognitionManager(private val context: Context) {
         }
     }
 
+    // Called from the service's onDestroy, on the main thread.
     fun close() {
-        stop()
+        stopOnMain()
         headset?.let { bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HEADSET, it) }
         headset = null
     }

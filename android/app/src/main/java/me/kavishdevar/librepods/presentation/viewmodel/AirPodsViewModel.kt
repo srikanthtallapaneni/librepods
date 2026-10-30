@@ -52,6 +52,7 @@ import me.kavishdevar.librepods.data.BatteryStatus
 import me.kavishdevar.librepods.data.Capability
 import me.kavishdevar.librepods.data.ControlCommandRepository
 import me.kavishdevar.librepods.data.CustomEq
+import me.kavishdevar.librepods.data.Engraving
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import me.kavishdevar.librepods.services.AirPodsService
@@ -283,7 +284,7 @@ class AirPodsViewModel(
     }
 
     private fun loadEngraving() {
-        val engraving = sharedPreferences.getString("engraving", "") ?: ""
+        val engraving = Engraving.read(sharedPreferences)
         _uiState.update { it.copy(engraving = engraving) }
     }
 
@@ -315,10 +316,10 @@ class AirPodsViewModel(
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 "name" -> loadName()
-                "engraving" -> loadEngraving()
                 "automatic_ear_detection", "automatic_connection_ctrl_cmd",
                 "head_gestures", "left_long_press_action", "right_long_press_action",
                 "dynamic_end_of_charge", "foss_upgraded", "premium_expiry_time" -> loadSharedPreferences()
+                else -> if (Engraving.affects(key)) loadEngraving()
             }
         }
         sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
@@ -378,7 +379,8 @@ class AirPodsViewModel(
     fun setControlCommandValue(
         identifier: ControlCommandIdentifiers, value: ByteArray
     ) {
-        if (!isDemoMode) controlRepo.setValue(identifier, value)
+        // Keep the old value on screen if the AirPods never got the new one.
+        if (!isDemoMode && !controlRepo.setValue(identifier, value)) return
         _uiState.update {
             it.copy(
                 controlStates = it.controlStates + (identifier to value)
@@ -630,8 +632,8 @@ class AirPodsViewModel(
     }
 
     fun setEngraving(engraving: String) {
-        val trimmed = engraving.trim()
-        sharedPreferences.edit { putString("engraving", trimmed) }
+        val trimmed = engraving.trim().take(Engraving.MAX_LENGTH)
+        Engraving.write(sharedPreferences, trimmed)
         _uiState.update { it.copy(engraving = trimmed) }
     }
 

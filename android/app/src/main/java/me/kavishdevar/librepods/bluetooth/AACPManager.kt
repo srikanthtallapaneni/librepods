@@ -25,6 +25,7 @@ import me.kavishdevar.librepods.data.Capability
 import me.kavishdevar.librepods.data.CustomEq
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
@@ -176,8 +177,9 @@ class AACPManager {
         )
     }
 
+    // Written from the AACP reader thread and from the UI when sending, so it must be thread-safe.
     var controlCommandStatusList: MutableList<ControlCommandStatus> =
-        mutableListOf<ControlCommandStatus>()
+        CopyOnWriteArrayList<ControlCommandStatus>()
     var controlCommandListeners: MutableMap<ControlCommandIdentifiers, MutableList<ControlCommandListener>> =
         mutableMapOf()
 
@@ -214,14 +216,13 @@ class AACPManager {
     private fun setControlCommandStatusValue(
         identifier: ControlCommandIdentifiers, value: ByteArray
     ) {
-        val existingStatus = getControlCommandStatus(identifier)
-        if (existingStatus != null) {
-            controlCommandStatusList.remove(existingStatus)
+        synchronized(controlCommandStatusList) {
+            controlCommandStatusList.removeAll { it.identifier == identifier }
+            controlCommandStatusList.add(ControlCommandStatus(identifier, value))
         }
         controlCommandListeners[identifier]?.forEach { listener ->
             listener.onControlCommandReceived(ControlCommand(identifier.value, value))
         }
-        controlCommandStatusList.add(ControlCommandStatus(identifier, value))
 
         if (identifier == ControlCommandIdentifiers.OWNS_CONNECTION) {
             owns = value.isNotEmpty() && value[0] == 0x01.toByte()
@@ -309,18 +310,14 @@ class AACPManager {
 
     fun sendControlCommand(identifier: Byte, value: ByteArray): Boolean {
         val controlPacket = createControlCommandPacket(identifier, value)
-        setControlCommandStatusValue(
-            ControlCommandIdentifiers.fromByte(identifier) ?: return false, value
-        )
+        ControlCommandIdentifiers.fromByte(identifier) ?: return false
         return sendDataPacket(controlPacket)
     }
 
     @OptIn(ExperimentalStdlibApi::class)
     fun sendControlCommand(identifier: Byte, value: Byte): Boolean {
         val controlPacket = createControlCommandPacket(identifier, byteArrayOf(value))
-        setControlCommandStatusValue(
-            ControlCommandIdentifiers.fromByte(identifier) ?: return false, byteArrayOf(value)
-        )
+        ControlCommandIdentifiers.fromByte(identifier) ?: return false
         return sendDataPacket(controlPacket)
     }
 
@@ -328,19 +325,13 @@ class AACPManager {
         val controlPacket = createControlCommandPacket(
             identifier, if (value) byteArrayOf(0x01) else byteArrayOf(0x02)
         )
-        setControlCommandStatusValue(
-            ControlCommandIdentifiers.fromByte(identifier) ?: return false,
-            if (value) byteArrayOf(0x01) else byteArrayOf(0x02)
-        )
+        ControlCommandIdentifiers.fromByte(identifier) ?: return false
         return sendDataPacket(controlPacket)
     }
 
     fun sendControlCommand(identifier: Byte, value: Int): Boolean {
         val controlPacket = createControlCommandPacket(identifier, byteArrayOf(value.toByte()))
-        setControlCommandStatusValue(
-            ControlCommandIdentifiers.fromByte(identifier) ?: return false,
-            byteArrayOf(value.toByte())
-        )
+        ControlCommandIdentifiers.fromByte(identifier) ?: return false
         return sendDataPacket(controlPacket)
     }
 
@@ -1153,6 +1144,7 @@ class AACPManager {
         try {
             Log.d(TAG, "Sending packet: ${packet.joinToString(" ") { "%02X".format(it) }}")
 
+            var sentCommand: Pair<ControlCommandIdentifiers, ByteArray>? = null
             if (packet[4] == Opcodes.CONTROL_COMMAND) {
                 val controlCommand = try {
                     ControlCommand.fromByteArray(packet)
@@ -1165,11 +1157,10 @@ class AACPManager {
                     TAG, "Control command: ${controlCommand.identifier.toHexString()} - ${
                     controlCommand.value.joinToString(" ") { "%02X".format(it) }
                 }")
-                setControlCommandStatusValue(
+                sentCommand = Pair(
                     ControlCommandIdentifiers.fromByte(controlCommand.identifier) ?: return false,
                     controlCommand.value
                 )
-                callback?.onControlCommandReceived(packet)
             }
 
             val socket = BluetoothConnectionManager.aacpSocket ?: return false
@@ -1177,11 +1168,18 @@ class AACPManager {
             if (socket.isConnected) {
                 socket.outputStream?.write(packet)
                 socket.outputStream?.flush()
-                return true
             } else {
                 Log.d(TAG, "Can't send packet: Socket not initialized or connected")
                 return false
             }
+
+            // Only record a sent control command once it reached the AirPods, so the UI,
+            // notification and widget never show a value the AirPods didn't get.
+            if (sentCommand != null) {
+                setControlCommandStatusValue(sentCommand.first, sentCommand.second)
+                callback?.onControlCommandReceived(packet)
+            }
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "Error sending packet: ${e.message}")
             return false

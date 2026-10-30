@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.data.Engraving
 import me.kavishdevar.librepods.presentation.components.StyledButton
 import me.kavishdevar.librepods.presentation.components.StyledInputField
 import me.kavishdevar.librepods.presentation.theme.DesignSystem
@@ -71,6 +73,11 @@ fun EngravingScreen(viewModel: AirPodsViewModel, onSaved: () -> Unit) {
         Spacer(modifier = Modifier.height(topPadding))
 
         val textFieldState = rememberTextFieldState(initialText = viewModel.uiState.value.engraving)
+        LaunchedEffect(textFieldState) {
+            snapshotFlow { textFieldState.text.length }.collect { length ->
+                if (length > Engraving.MAX_LENGTH) textFieldState.edit { replace(Engraving.MAX_LENGTH, length, "") }
+            }
+        }
 
         StyledInputField(
             textFieldState,

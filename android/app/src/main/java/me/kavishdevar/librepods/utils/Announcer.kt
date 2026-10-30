@@ -25,7 +25,6 @@ import android.media.AudioManager
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import java.util.concurrent.atomic.AtomicInteger
 
 private const val TAG = "Announcer"
 
@@ -44,29 +43,41 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
         .build()
 
     // Utterance callbacks arrive on a TTS binder thread, and stop() is called from the AACP reader.
-    private val activeUtterances = AtomicInteger(0)
+    // Tracking the IDs in flight means a late onStop for an utterance stop() already dropped can't
+    // release audio focus while a newer announcement is playing.
+    private val inFlight = mutableSetOf<String>()
     private val pending = mutableListOf<String>()
     @Volatile
     private var ready = false
+
+    /** True once the TTS engine failed to start; the owner should drop this instance and retry. */
+    @Volatile
+    var failed = false
+        private set
+
     private val tts = TextToSpeech(context.applicationContext, this)
 
     override fun onInit(status: Int) {
         if (status != TextToSpeech.SUCCESS) {
             Log.w(TAG, "TextToSpeech init failed: $status")
+            synchronized(inFlight) {
+                failed = true
+                pending.clear()
+            }
             return
         }
         tts.setAudioAttributes(audioAttributes)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
 
-            override fun onDone(utteranceId: String?) = onUtteranceFinished()
+            override fun onDone(utteranceId: String?) = onUtteranceFinished(utteranceId)
 
             @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) = onUtteranceFinished()
+            override fun onError(utteranceId: String?) = onUtteranceFinished(utteranceId)
 
-            override fun onStop(utteranceId: String?, interrupted: Boolean) = onUtteranceFinished()
+            override fun onStop(utteranceId: String?, interrupted: Boolean) = onUtteranceFinished(utteranceId)
         })
-        synchronized(pending) {
+        synchronized(inFlight) {
             ready = true
             pending.forEach(::speakNow)
             pending.clear()
@@ -74,18 +85,25 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
     }
 
     fun speak(text: String) {
-        synchronized(pending) {
-            if (ready) speakNow(text) else pending.add(text)
+        synchronized(inFlight) {
+            when {
+                failed -> return
+                ready -> speakNow(text)
+                else -> pending.add(text)
+            }
         }
     }
 
     fun stop() {
-        synchronized(pending) { pending.clear() }
-        if (!ready) return
-        // tts.stop() drops queued utterances without callbacks, so release focus here.
+        synchronized(inFlight) {
+            pending.clear()
+            if (!ready) return
+            // tts.stop() drops queued utterances without callbacks, so release focus here. Cleared
+            // first, so the onStop that does arrive for the current utterance is ignored.
+            inFlight.clear()
+            audioManager.abandonAudioFocusRequest(focusRequest)
+        }
         tts.stop()
-        activeUtterances.set(0)
-        audioManager.abandonAudioFocusRequest(focusRequest)
     }
 
     fun shutdown() {
@@ -93,15 +111,18 @@ class Announcer(context: Context) : TextToSpeech.OnInitListener {
         tts.shutdown()
     }
 
+    // Called with the inFlight lock held.
     private fun speakNow(text: String) {
-        if (activeUtterances.getAndIncrement() == 0) audioManager.requestAudioFocus(focusRequest)
-        tts.speak(text, TextToSpeech.QUEUE_ADD, null, "librepods_${System.nanoTime()}")
+        val utteranceId = "librepods_${System.nanoTime()}"
+        if (inFlight.isEmpty()) audioManager.requestAudioFocus(focusRequest)
+        inFlight.add(utteranceId)
+        tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
     }
 
-    private fun onUtteranceFinished() {
-        if (activeUtterances.decrementAndGet() <= 0) {
-            activeUtterances.set(0)
-            audioManager.abandonAudioFocusRequest(focusRequest)
+    private fun onUtteranceFinished(utteranceId: String?) {
+        synchronized(inFlight) {
+            if (utteranceId == null || !inFlight.remove(utteranceId)) return
+            if (inFlight.isEmpty()) audioManager.abandonAudioFocusRequest(focusRequest)
         }
     }
 }

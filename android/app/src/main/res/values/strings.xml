@@ -316,4 +316,9 @@
     <string name="announce_call">%1$s calling</string>
     <string name="announce_call_unknown">Incoming call</string>
     <string name="case_sounds_description">Play sounds from the charging case, for example when charging starts or when the case battery is low.</string>
+    <string name="percent_value">%1$d%%</string>
+    <string name="notification_battery_left">L: %1$s%2$d%%</string>
+    <string name="notification_battery_right">R: %1$s%2$d%%</string>
+    <string name="notification_battery_case">Case: %1$s%2$d%%</string>
+    <string name="notification_reconnect">Reconnect</string>
 </resources>

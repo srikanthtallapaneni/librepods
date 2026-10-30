@@ -228,7 +228,7 @@ fun AirPodsDeviceSettings(
                 label = stringResource(R.string.case_sounds),
                 description = stringResource(R.string.case_sounds_description),
                 checked = state.controlStates[ControlCommandIdentifiers.IN_CASE_TONE_CONFIG]
-                    ?.getOrNull(0) != 0x02.toByte(),
+                    ?.getOrNull(0) == 0x01.toByte(),
                 onCheckedChange = {
                     setControlCommandBoolean(ControlCommandIdentifiers.IN_CASE_TONE_CONFIG, it)
                 }

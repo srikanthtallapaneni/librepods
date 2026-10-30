@@ -102,6 +102,7 @@ import me.kavishdevar.librepods.data.BatteryComponent
 import me.kavishdevar.librepods.data.BatteryStatus
 import me.kavishdevar.librepods.data.Capability
 import me.kavishdevar.librepods.data.CustomEq
+import me.kavishdevar.librepods.data.Engraving
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import me.kavishdevar.librepods.data.isHeadTrackingData
@@ -1745,7 +1746,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         val popupWindow = PopupWindow(service.applicationContext)
         popupWindow.open(
             name = name,
-            engraving = sharedPreferences.getString("engraving", "") ?: "",
+            engraving = Engraving.read(sharedPreferences),
             batteryNotification = batteryNotification
         )
         popupShown = true
@@ -2113,6 +2114,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         appWidgetManager.updateAppWidget(widgetIds, remoteViews)
     }
 
+    // What the connection notification last showed, so unchanged updates aren't reposted.
+    @Volatile
+    private var lastNotificationContent: List<Any?>? = null
+
     @OptIn(ExperimentalMaterial3Api::class)
     fun updateNotificationContent(
         connected: Boolean, airpodsName: String? = null, batteryList: List<Battery>? = null
@@ -2132,30 +2137,42 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
         if (BluetoothConnectionManager.aacpSocket?.isConnected == true) {
             val titleText = airpodsName ?: config.deviceName
-            val batteryText = listOfNotNull(
-                batteryList?.find { it.component == BatteryComponent.LEFT }?.takeIf { it.status != BatteryStatus.DISCONNECTED }?.let {
-                    "L: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                },
-                batteryList?.find { it.component == BatteryComponent.RIGHT }?.takeIf { it.status != BatteryStatus.DISCONNECTED }?.let {
-                    "R: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                },
-                batteryList?.find { it.component == BatteryComponent.CASE }?.takeIf { it.status != BatteryStatus.DISCONNECTED }?.let {
-                    "Case: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                }
-            ).joinToString("  ")
+            val batteryText = listOf(
+                BatteryComponent.LEFT to R.string.notification_battery_left,
+                BatteryComponent.RIGHT to R.string.notification_battery_right,
+                BatteryComponent.CASE to R.string.notification_battery_case
+            ).mapNotNull { (component, label) ->
+                batteryList?.find { it.component == component }
+                    ?.takeIf { it.status != BatteryStatus.DISCONNECTED }
+                    ?.let { getString(label, if (it.status == BatteryStatus.CHARGING) "⚡" else "", it.level) }
+            }.joinToString("  ")
+
+            val supportsListeningMode = airpodsInstance?.model?.capabilities?.contains(Capability.LISTENING_MODE) != false
+            val supportsAdaptive = airpodsInstance?.model?.capabilities?.contains(Capability.ADAPTIVE_AUDIO) != false
+            val currentAnc = ancNotification.status
+            // Off is only offered when the user enabled it for these AirPods, or when it's the current mode.
+            val showOff = !supportsAdaptive || currentAnc == 1 ||
+                aacpManager.getControlCommandStatus(AACPManager.Companion.ControlCommandIdentifiers.ALLOW_OFF_OPTION)
+                    ?.value?.firstOrNull() == 0x01.toByte()
+
+            // This runs for every packet the AirPods send (including ~25 Hz head tracking), so skip
+            // rebuilding and reposting the notification when nothing on it changed.
+            val contentKey = listOf(
+                titleText, batteryText, supportsListeningMode, supportsAdaptive, currentAnc, showOff,
+                disconnectedBecauseReversed
+            )
+            if (contentKey == lastNotificationContent) return
+            lastNotificationContent = contentKey
 
             val remoteViews = RemoteViews(packageName, R.layout.notification).apply {
                 setTextViewText(R.id.notification_title, titleText)
                 setTextViewText(R.id.notification_battery, batteryText)
 
-                val supportsListeningMode = airpodsInstance?.model?.capabilities?.contains(Capability.LISTENING_MODE) != false
                 if (!disconnectedBecauseReversed && supportsListeningMode) {
                     setViewVisibility(R.id.notification_modes_container, View.VISIBLE)
-                    val supportsAdaptive = airpodsInstance?.model?.capabilities?.contains(Capability.ADAPTIVE_AUDIO) != false
-                    setViewVisibility(R.id.notification_off_button, if (supportsAdaptive) View.GONE else View.VISIBLE)
+                    setViewVisibility(R.id.notification_off_button, if (showOff) View.VISIBLE else View.GONE)
                     setViewVisibility(R.id.notification_adaptive_button, if (supportsAdaptive) View.VISIBLE else View.GONE)
 
-                    val currentAnc = ancNotification.status
                     val buttons = listOf(
                         1 to R.id.notification_off_button,
                         3 to R.id.notification_transparency_button,
@@ -2206,7 +2223,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             if (disconnectedBecauseReversed) {
                 updatedNotificationBuilder.addAction(
-                    R.drawable.ic_bluetooth, "Reconnect", PendingIntent.getService(
+                    R.drawable.ic_bluetooth, getString(R.string.notification_reconnect), PendingIntent.getService(
                         this, 0, Intent(this, AirPodsService::class.java).apply {
                             action = "me.kavishdevar.librepods.RECONNECT_AFTER_REVERSE"
                         }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -2220,6 +2237,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             notificationManager.cancel(1)
         } else if (!connected) {
             notificationManager.cancel(2)
+            lastNotificationContent = null
         } else if (!config.bleOnlyMode && BluetoothConnectionManager.aacpSocket?.isConnected != true) {
             showSocketConnectionFailureNotification("BluetoothConnectionManager.aacpSocket? created, but not connected. Check logs")
         }
@@ -3050,6 +3068,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     val ancNotification = AirPodsNotifications.ANC()
     val batteryNotification = AirPodsNotifications.BatteryNotification()
     private val batteryAlertManager by lazy { BatteryAlertManager(this) }
+    // Created on the main thread, stopped from the AACP reader thread too.
+    @Volatile
     private var announcer: Announcer? = null
 
     // 0x00 is "in ear" in the ear detection status.
@@ -3075,7 +3095,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     fun announce(text: String) {
         if (BluetoothConnectionManager.aacpSocket?.isConnected != true || !isWearing() || isInCall) return
         if (!isAudioRoutedToAirPods()) return
-        val current = announcer ?: Announcer(this).also { announcer = it }
+        val current = announcer?.takeUnless { it.failed } ?: Announcer(this).also {
+            announcer?.shutdown()
+            announcer = it
+        }
         current.speak(text)
     }
     val conversationAwarenessNotification =

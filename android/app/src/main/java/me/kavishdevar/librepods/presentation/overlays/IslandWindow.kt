@@ -104,6 +104,9 @@ class IslandWindow(private val context: Context) {
     private val containerView = FrameLayout(context)
 
     private lateinit var springAnimation: SpringAnimation
+
+    // The grow-in animations, so close() can stop them instead of fighting them on the same properties.
+    private val openAnimations = mutableListOf<Any>()
     private val flingAnimator = ValueAnimator()
 
     private val batteryReceiver = object : BroadcastReceiver() {
@@ -433,17 +436,17 @@ class IslandWindow(private val context: Context) {
         containerView.scaleY = 0.35f
         applyContentReveal(0f)
 
-        SpringAnimation(containerView, DynamicAnimation.SCALE_X, 1f).apply {
+        openAnimations += SpringAnimation(containerView, DynamicAnimation.SCALE_X, 1f).apply {
             spring = SpringForce(1f).setDampingRatio(0.78f).setStiffness(SpringForce.STIFFNESS_LOW)
             start()
         }
-        SpringAnimation(containerView, DynamicAnimation.SCALE_Y, 1f).apply {
+        openAnimations += SpringAnimation(containerView, DynamicAnimation.SCALE_Y, 1f).apply {
             spring = SpringForce(1f).setDampingRatio(0.78f).setStiffness(SpringForce.STIFFNESS_LOW)
             start()
         }
 
         // Content blurs in once the island has room for it.
-        ValueAnimator.ofFloat(0f, 1f).apply {
+        openAnimations += ValueAnimator.ofFloat(0f, 1f).apply {
             startDelay = 90L
             duration = 250L
             addUpdateListener { applyContentReveal(it.animatedValue as Float) }
@@ -716,6 +719,14 @@ class IslandWindow(private val context: Context) {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+
+            openAnimations.forEach {
+                when (it) {
+                    is SpringAnimation -> it.cancel()
+                    is ValueAnimator -> it.cancel()
+                }
+            }
+            openAnimations.clear()
 
             // Content blurs out before the island shrinks.
             ValueAnimator.ofFloat(1f, 0f).apply {

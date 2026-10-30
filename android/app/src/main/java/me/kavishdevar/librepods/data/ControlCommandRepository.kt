@@ -32,11 +32,12 @@ class ControlCommandRepository(
             ?.value
     }
 
+    /** Returns false when the command couldn't be sent to the AirPods. */
     fun setValue(
         id: ControlCommandIdentifiers,
         value: ByteArray
-    ) {
-        aacpManager.sendControlCommand(id.value, value)
+    ): Boolean {
+        return aacpManager.sendControlCommand(id.value, value)
     }
 
 

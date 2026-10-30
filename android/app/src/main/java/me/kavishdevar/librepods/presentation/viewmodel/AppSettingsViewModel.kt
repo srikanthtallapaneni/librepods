@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.billing.BillingManager
+import me.kavishdevar.librepods.data.Engraving
 import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import kotlin.math.roundToInt
 
@@ -55,7 +56,7 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     val sharedPrefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPref, key ->
         when (key) {
             "connection_successful" -> _uiState.update { it.copy(connectionSuccessful = sharedPref.getBoolean(key, false)) }
-            "engraving" -> _uiState.update { it.copy(engraving = sharedPref.getString(key, "") ?: "") }
+            else -> if (Engraving.affects(key)) _uiState.update { it.copy(engraving = Engraving.read(sharedPref)) }
         }
     }
 
@@ -158,7 +159,7 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 showBottomSheetPopup = sharedPreferences.getBoolean("show_bottom_sheet_popup", true),
                 showIslandPopup = sharedPreferences.getBoolean("show_island_popup", true),
                 m3eEnabled = sharedPreferences.getBoolean("m3e_enabled", true),
-                engraving = sharedPreferences.getString("engraving", "") ?: "",
+                engraving = Engraving.read(sharedPreferences),
                 batteryAlerts = sharedPreferences.getBoolean("battery_alerts", true),
                 announceNotifications = sharedPreferences.getBoolean("announce_notifications", false),
                 announceCalls = sharedPreferences.getBoolean("announce_calls", false)

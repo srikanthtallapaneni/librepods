@@ -23,6 +23,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -37,14 +38,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.data.Capability
 import me.kavishdevar.librepods.presentation.components.AirPodsDeviceSettings
@@ -75,10 +84,27 @@ fun AirPodsDeviceSettingsScreen(
     navigateToVersion: () -> Unit,
     navigateToCallControlScreen: (action: String) -> Unit,
     navigateToMicrophoneSettings: () -> Unit,
+    navigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val appState by appSettingsViewModel.uiState.collectAsState()
+
+    // These settings write to the AirPods, so leave once they disconnect (demo mode stays connected).
+    LaunchedEffect(state.isLocallyConnected) {
+        if (!state.isLocallyConnected) navigateBack()
+    }
+
+    // Notification access can be granted or revoked in system settings, so re-check on every resume.
+    var hasNotificationAccess by remember { mutableStateOf(hasNotificationListenerAccess(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) hasNotificationAccess = hasNotificationListenerAccess(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
     val topPadding = if (m3eEnabled) 0.dp else WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 84.dp
@@ -140,17 +166,13 @@ fun AirPodsDeviceSettingsScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    val conversationAwarenessVolume = appState.conversationAwarenessVolume
-                    LaunchedEffect(conversationAwarenessVolume) {
-                        appSettingsViewModel.setConversationAwarenessVolume(conversationAwarenessVolume)
-                    }
                     StyledSlider(
                         label = stringResource(R.string.conversation_awareness_volume),
-                        value = conversationAwarenessVolume,
+                        value = appState.conversationAwarenessVolume,
                         valueRange = 10f..85f,
                         snapPoints = listOf(44f),
-                        startLabel = "10%",
-                        endLabel = "85%",
+                        startLabel = stringResource(R.string.percent_value, 10),
+                        endLabel = stringResource(R.string.percent_value, 85),
                         onValueChange = appSettingsViewModel::setConversationAwarenessVolume,
                         independent = true,
                         enabled = true
@@ -167,25 +189,29 @@ fun AirPodsDeviceSettingsScreen(
                         onCheckedChange = appSettingsViewModel::setBatteryAlerts
                     )
 
-                    StyledToggle(
-                        label = stringResource(R.string.announce_notifications),
-                        description = stringResource(R.string.announce_notifications_description),
-                        checked = appState.announceNotifications,
-                        onCheckedChange = { enabled ->
-                            appSettingsViewModel.setAnnounceNotifications(enabled)
-                            if (enabled) requestNotificationListenerAccess(context)
-                        }
-                    )
+                    // The notification listener is only in the FOSS build (Play restricts notification access).
+                    if (!BuildConfig.PLAY_BUILD) {
+                        // Shown on only when notification access is actually granted.
+                        StyledToggle(
+                            label = stringResource(R.string.announce_notifications),
+                            description = stringResource(R.string.announce_notifications_description),
+                            checked = appState.announceNotifications && hasNotificationAccess,
+                            onCheckedChange = { enabled ->
+                                appSettingsViewModel.setAnnounceNotifications(enabled)
+                                if (enabled) requestNotificationListenerAccess(context)
+                            }
+                        )
 
-                    StyledToggle(
-                        label = stringResource(R.string.announce_calls),
-                        description = stringResource(R.string.announce_calls_description),
-                        checked = appState.announceCalls,
-                        onCheckedChange = { enabled ->
-                            appSettingsViewModel.setAnnounceCalls(enabled)
-                            if (enabled) requestNotificationListenerAccess(context)
-                        }
-                    )
+                        StyledToggle(
+                            label = stringResource(R.string.announce_calls),
+                            description = stringResource(R.string.announce_calls_description),
+                            checked = appState.announceCalls && hasNotificationAccess,
+                            onCheckedChange = { enabled ->
+                                appSettingsViewModel.setAnnounceCalls(enabled)
+                                if (enabled) requestNotificationListenerAccess(context)
+                            }
+                        )
+                    }
                 }
             },
         )
@@ -194,15 +220,22 @@ fun AirPodsDeviceSettingsScreen(
     }
 }
 
+private fun hasNotificationListenerAccess(context: Context): Boolean =
+    NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+
 private fun requestNotificationListenerAccess(context: Context) {
-    if (NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)) return
+    if (hasNotificationListenerAccess(context)) return
     val component = ComponentName(context, NotificationAnnouncerService::class.java)
     try {
         context.startActivity(
             Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
                 .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
         )
-    } catch (e: ActivityNotFoundException) {
-        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    } catch (_: ActivityNotFoundException) {
+        try {
+            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        } catch (_: ActivityNotFoundException) {
+            Log.w("AirPodsDeviceSettings", "No notification access settings screen on this device")
+        }
     }
 }
