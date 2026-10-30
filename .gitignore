@@ -654,3 +654,6 @@ obj/
 
 # End of https://www.toptal.com/developers/gitignore/api/qt,c++,clion,kotlin,python,android,pycharm,androidstudio,visualstudiocode,linux
 linux/.qmlls.ini
+
+# Local AACP packet captures (contain serial numbers)
+android/engraving.txt

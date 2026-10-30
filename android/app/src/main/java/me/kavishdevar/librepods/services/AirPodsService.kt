@@ -47,6 +47,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Color
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.Uri
 import android.os.BatteryManager
@@ -1243,12 +1244,14 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     private fun launchDigitalAssistant() {
         // Android silently drops activity starts from a background service unless the app may
         // draw over other apps, so without it a press would look like it did nothing.
-        if (!Settings.canDrawOverlays(this)) {
+        val canOpenAssistant = Settings.canDrawOverlays(this)
+        if (!canOpenAssistant) {
             Log.w(TAG, "Display over other apps isn't allowed, the assistant may not open")
             showDigitalAssistantPermissionNotification()
         }
-        // Open the AirPods mic before the assistant starts listening, as Siri would use it.
-        device?.let { voiceRecognitionManager.start(it) }
+        // Open the AirPods mic before the assistant starts listening, as Siri would use it. Skipped
+        // when the launch will be blocked, or music would sit in call quality with nothing listening.
+        if (canOpenAssistant) device?.let { voiceRecognitionManager.start(it) }
         // ACTION_VOICE_COMMAND is what Android's Bluetooth stack sends when a headset asks for
         // voice recognition (AT+BVRA), so it opens the same assistant (Google Assistant or Gemini)
         // other headsets do. Not every assistant app handles it, hence the fallbacks.
@@ -3052,9 +3055,26 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     // 0x00 is "in ear" in the ear detection status.
     private fun isWearing(): Boolean = earDetectionNotification.status.any { it == 0x00.toByte() }
 
-    /** Speaks [text] for Announce Notifications/Calls, only while the AirPods are worn and no call is active. */
+    // The AACP link stays up while another device has the AirPods' audio, so check the audio output
+    // too, or announcements would be read out of the phone speaker.
+    private fun isAudioRoutedToAirPods(): Boolean {
+        if (otherDeviceTookOver || disconnectedBecauseReversed) return false
+        val address = device?.address ?: return false
+        return getSystemService(AudioManager::class.java)
+            .getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .any {
+                (it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET) &&
+                    it.address.equals(address, ignoreCase = true)
+            }
+    }
+
+    /**
+     * Speaks [text] for Announce Notifications/Calls, only while the AirPods are worn, are playing
+     * this phone's audio, and no call is active.
+     */
     fun announce(text: String) {
         if (BluetoothConnectionManager.aacpSocket?.isConnected != true || !isWearing() || isInCall) return
+        if (!isAudioRoutedToAirPods()) return
         val current = announcer ?: Announcer(this).also { announcer = it }
         current.speak(text)
     }

@@ -58,6 +58,11 @@ class VoiceRecognitionManager(private val context: Context) {
     private var activeDevice: BluetoothDevice? = null
     private var assistantRecording = false
 
+    // Recordings already running when voice recognition started (a screen recorder, a VoIP app),
+    // so they aren't mistaken for the assistant and don't hold the SCO link open.
+    @Volatile
+    private var preexistingSessions: Set<Int> = emptySet()
+
     private val stopRunnable = Runnable {
         Log.d(TAG, "Voice recognition timed out")
         stop()
@@ -75,7 +80,9 @@ class VoiceRecognitionManager(private val context: Context) {
 
     private val recordingCallback = object : AudioManager.AudioRecordingCallback() {
         override fun onRecordingConfigChanged(configs: List<AudioRecordingConfiguration>) {
-            val recording = configs.any { it.clientAudioSource != AUDIO_SOURCE_HOTWORD }
+            val recording = configs.any {
+                it.clientAudioSource != AUDIO_SOURCE_HOTWORD && it.clientAudioSessionId !in preexistingSessions
+            }
             if (recording && !assistantRecording) {
                 assistantRecording = true
                 handler.removeCallbacks(stopRunnable)
@@ -117,6 +124,9 @@ class VoiceRecognitionManager(private val context: Context) {
         }
         activeDevice = device
         assistantRecording = false
+        preexistingSessions = audioManager.activeRecordingConfigurations
+            .map { it.clientAudioSessionId }
+            .toSet()
         audioManager.registerAudioRecordingCallback(recordingCallback, handler)
         handler.postDelayed(stopRunnable, NO_RECORDING_TIMEOUT_MS)
         return true
@@ -127,6 +137,7 @@ class VoiceRecognitionManager(private val context: Context) {
         val device = activeDevice ?: return
         activeDevice = null
         assistantRecording = false
+        preexistingSessions = emptySet()
         handler.removeCallbacks(stopRunnable)
         audioManager.unregisterAudioRecordingCallback(recordingCallback)
         try {
